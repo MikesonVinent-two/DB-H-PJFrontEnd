@@ -1,69 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user'
-import { User, Lock } from '@element-plus/icons-vue'
-import type { FormInstance } from 'element-plus'
+import LoginForm from '@/components/LoginForm.vue' // 导入新的表单组件
 
 const router = useRouter()
-const userStore = useUserStore()
 
-// 表单引用
-const loginFormRef = ref<FormInstance>()
-
-// 登录表单数据
-const loginForm = ref({
-  username: '',
-  password: '',
-})
-
-// 表单验证规则
-const loginRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 4, max: 50, message: '用户名长度应在4-50个字符之间', trigger: 'blur' },
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 100, message: '密码长度应在6-100个字符之间', trigger: 'blur' },
-  ],
+const handleLoginSuccess = () => {
+  router.push('/') // 登录成功后跳转到首页
 }
 
-// 状态
-const isLoading = ref(false)
-const error = ref<string | null>(null)
-
-// 处理登录
-const handleLogin = async () => {
-  if (!loginFormRef.value) return
-
-  try {
-    // 表单验证
-    await loginFormRef.value.validate()
-
-    isLoading.value = true
-    error.value = null
-
-    // 调用登录接口
-    const success = await userStore.loginUser({
-      username: loginForm.value.username,
-      password: loginForm.value.password,
-    })
-
-    if (success) {
-      // 登录成功，跳转到首页
-      router.push('/')
-    }
-  } catch (err: any) {
-    error.value = err.message || '登录失败，请重试'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// 跳转到注册页面
-const goToRegister = () => {
-  router.push('/register')
+const navigateToRegister = () => {
+  router.push('/register') // 跳转到注册页面
 }
 </script>
 
@@ -75,163 +21,84 @@ const goToRegister = () => {
         <h2>欢迎使用 AI 问答系统</h2>
         <p class="subtitle">登录您的账号以开始对话</p>
       </div>
-
-      <el-card class="login-card" shadow="never">
-        <el-form
-          ref="loginFormRef"
-          :model="loginForm"
-          :rules="loginRules"
-          label-position="top"
-          class="login-form"
-          @submit.prevent="handleLogin"
-        >
-          <el-form-item label="用户名" prop="username">
-            <el-input
-              v-model="loginForm.username"
-              placeholder="请输入用户名"
-              :prefix-icon="User"
-              :disabled="isLoading"
-            />
-          </el-form-item>
-
-          <el-form-item label="密码" prop="password">
-            <el-input
-              v-model="loginForm.password"
-              type="password"
-              placeholder="请输入密码"
-              show-password
-              :prefix-icon="Lock"
-              :disabled="isLoading"
-            />
-          </el-form-item>
-
-          <div class="form-footer">
-            <el-button
-              type="primary"
-              native-type="submit"
-              :loading="isLoading"
-              class="submit-button"
-            >
-              {{ isLoading ? '登录中...' : '登录' }}
-            </el-button>
-
-            <div class="additional-links">
-              <el-link type="primary" :underline="false" @click="goToRegister">
-                还没有账号？立即注册
-              </el-link>
-            </div>
-          </div>
-        </el-form>
-
-        <!-- 错误提示 -->
-        <el-alert v-if="error" :title="error" type="error" show-icon closable class="error-alert" />
-      </el-card>
+      <LoginForm @login-success="handleLoginSuccess" @navigate-to-register="navigateToRegister" />
     </div>
   </div>
 </template>
 
 <style scoped>
 .login-container {
-  min-height: calc(100vh - 60px);
+  min-height: 100vh; /* 使用100vh而不是减去导航栏高度，因为main-content已经有padding-top */
   display: flex;
   justify-content: center;
   align-items: center;
   background: linear-gradient(135deg, #e6f7ff 0%, #f0f5ff 100%);
-  padding: 20px;
+  padding: 80px 20px 40px;
+  box-sizing: border-box;
 }
 
 .login-content {
   width: 100%;
-  max-width: 440px;
+  max-width: 800px; /* 将最大宽度从600px增加到800px */
+  padding: 40px 50px; /* 增加内边距 */
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 36px; /* 增加下边距 */
 }
 
 .logo {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 16px;
+  width: 80px; /* 稍微增大logo */
+  height: 80px;
+  margin-bottom: 24px;
 }
 
 .login-header h2 {
-  margin: 0 0 8px;
+  margin: 0 0 16px;
   color: #1f1f1f;
-  font-size: 28px;
+  font-size: 32px; /* 增大字体 */
   font-weight: 600;
 }
 
 .subtitle {
   margin: 0;
   color: #666;
-  font-size: 16px;
+  font-size: 18px; /* 增大字体 */
 }
 
-.login-card {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border-radius: 8px;
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+/* LoginForm.vue 将处理卡片样式，这里可以移除或调整 login-card 相关样式 */
+
+@media (max-width: 900px) {
+  .login-content {
+    max-width: 85%;
+    padding: 35px 45px;
+  }
 }
 
-.login-form {
-  padding: 24px 0 0;
-}
+@media (max-width: 768px) {
+  .login-content {
+    max-width: 90%;
+    padding: 30px 35px;
+  }
 
-:deep(.el-form-item__label) {
-  padding-bottom: 8px;
-  font-weight: 500;
-}
+  .login-header h2 {
+    font-size: 28px;
+  }
 
-:deep(.el-input__wrapper) {
-  box-shadow: 0 0 0 1px #dcdfe6 inset;
-}
-
-:deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px #a3a6ad inset;
-}
-
-:deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #409eff inset !important;
-}
-
-.form-footer {
-  margin-top: 32px;
-}
-
-.submit-button {
-  width: 100%;
-  height: 40px;
-  font-size: 16px;
-  font-weight: 500;
-  background: linear-gradient(135deg, #1890ff 0%, #1d39c4 100%);
-  border: none;
-  margin-bottom: 16px;
-}
-
-.submit-button:hover {
-  opacity: 0.9;
-}
-
-.additional-links {
-  text-align: center;
-}
-
-:deep(.el-link) {
-  font-size: 14px;
-}
-
-.error-alert {
-  margin-top: 16px;
+  .subtitle {
+    font-size: 16px;
+  }
 }
 
 @media (max-width: 480px) {
   .login-content {
     max-width: 100%;
+    padding: 20px 15px;
   }
 
   .login-header h2 {
@@ -240,6 +107,12 @@ const goToRegister = () => {
 
   .subtitle {
     font-size: 14px;
+  }
+
+  .logo {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
   }
 }
 </style>

@@ -41,33 +41,54 @@ export interface LogoutResponse {
  * 用户登录
  */
 export const login = (data: LoginData) => {
-  return api.post<any, UserInfo>('/api/users/login', data)
+  return api.post<unknown, UserInfo>('/api/users/login', data)
 }
 
 /**
  * 用户注册
  */
 export const register = (data: RegisterData) => {
-  return api.post<any, UserInfo>('/api/users/register', data)
+  return api.post<unknown, UserInfo>('/api/users/register', data)
 }
 
 /**
  * 获取当前用户信息
  */
 export const getUserInfo = () => {
-  return api.get<any, UserInfo>('/api/users/profile')
+  // 从本地存储获取当前用户ID
+  const userJson = localStorage.getItem('user')
+  let userId = '1' // 默认用户ID
+
+  if (userJson) {
+    try {
+      const user = JSON.parse(userJson)
+      userId = user.id.toString()
+    } catch (e) {
+      console.error('解析用户信息失败', e)
+    }
+  }
+
+  // 使用getUserById实现
+  return getUserById(userId)
+}
+
+/**
+ * 根据用户ID获取用户信息
+ */
+export const getUserById = (userId: string | number) => {
+  return api.get<unknown, UserInfo>(`/api/users/profile/${userId}`)
 }
 
 /**
  * 更新用户信息
  */
 export const updateUserInfo = (data: Partial<UserInfo>) => {
-  return api.put<any, UserInfo>('/api/users/profile', data)
+  return api.put<unknown, UserInfo>('/api/users/profile', data)
 }
 
 /**
  * 登出
  */
 export const logout = (data: LogoutData) => {
-  return api.post<any, LogoutResponse>('/api/users/logout', data)
+  return api.post<unknown, LogoutResponse>('/api/users/logout', data)
 }

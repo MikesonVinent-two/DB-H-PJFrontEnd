@@ -2,21 +2,40 @@
 import { RouterView } from 'vue-router'
 import TheNavbar from '@/components/TheNavbar.vue'
 import { useUserStore } from '@/stores/user'
-import { computed, onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 
 const userStore = useUserStore()
-const isLoggedIn = computed(() => userStore.isLoggedIn)
 
-// 在组件挂载时获取用户信息
-onMounted(async () => {
-  if (localStorage.getItem('token')) {
-    await userStore.fetchUserInfo()
+// 监听storage事件，当localStorage发生变化时（比如在其他标签页登出）更新状态
+const handleStorageChange = (event: StorageEvent) => {
+  if (event.key === 'user') {
+    if (!event.newValue) {
+      // 用户被清除，立即清除本地状态
+      userStore.currentUser = null
+      console.log('用户登出: 检测到本地存储变化，已清除用户状态')
+    } else if (event.newValue !== event.oldValue) {
+      // 用户信息变化，重新加载
+      userStore.fetchUserInfo()
+      console.log('用户信息变化: 检测到本地存储变化，已更新用户状态')
+    }
   }
+}
+
+// 在组件挂载时获取用户信息并添加事件监听器
+onMounted(async () => {
+  console.log('应用挂载: 开始获取用户信息')
+  // 检查本地存储中是否有用户信息
+  await userStore.fetchUserInfo()
+  console.log('应用挂载: 用户信息获取完成', !!userStore.currentUser)
+
+  // 添加事件监听器
+  window.addEventListener('storage', handleStorageChange)
 })
 
-const handleLogout = () => {
-  userStore.logout()
-}
+// 在组件卸载时移除事件监听器
+onUnmounted(() => {
+  window.removeEventListener('storage', handleStorageChange)
+})
 </script>
 
 <template>
@@ -38,6 +57,10 @@ const handleLogout = () => {
   --border-color: #eee;
   --background-color: #f5f7fa;
   --white: #fff;
+  --container-width: 1600px;
+  --container-padding: 40px;
+  --navbar-height: 60px;
+  --navbar-with-margin: 80px;
 }
 
 * {
@@ -51,13 +74,14 @@ body {
   color: var(--text-color);
   line-height: 1.6;
   background-color: var(--background-color);
+  min-width: 320px;
 }
 
 .container {
   width: 100%;
-  max-width: 1200px;
+  max-width: var(--container-width);
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 var(--container-padding);
 }
 
 a {
@@ -70,6 +94,7 @@ a {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 .app-main {
@@ -151,8 +176,38 @@ body {
 
 .main-content {
   flex: 1;
-  padding-top: 60px;
+  padding-top: var(--navbar-with-margin);
   width: 100%;
   box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* 响应式布局调整 */
+@media (max-width: 1700px) {
+  :root {
+    --container-width: 1400px;
+    --container-padding: 30px;
+  }
+}
+
+@media (max-width: 1500px) {
+  :root {
+    --container-width: 1200px;
+    --container-padding: 25px;
+  }
+}
+
+@media (max-width: 1300px) {
+  :root {
+    --container-width: 1000px;
+    --container-padding: 20px;
+  }
+}
+
+@media (max-width: 1100px) {
+  :root {
+    --container-width: 90%;
+    --container-padding: 15px;
+  }
 }
 </style>

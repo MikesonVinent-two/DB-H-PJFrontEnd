@@ -1,4 +1,6 @@
 import api from './index'
+import axios from 'axios'
+import { appConfig } from '@/config'
 
 // 系统提示类型
 export interface SystemPrompt {
@@ -81,7 +83,49 @@ export interface ChatResponse {
  * @returns 聊天响应
  */
 export const sendChatRequest = (data: ChatRequest) => {
-  return api.post<ChatRequest, ChatResponse>('/api/llm/chat', data)
+  // 使用单独的实例并配置更长的超时时间
+  const llmApi = axios.create({
+    baseURL: appConfig.api.baseUrl,
+    timeout: appConfig.api.llm.chatTimeout, // 使用LLM专用超时设置
+    headers: {
+      'Content-Type': appConfig.api.contentType,
+    },
+  })
+
+  // 设置与主API相同的拦截器
+  llmApi.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token')
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+      return config
+    },
+    (error) => {
+      return Promise.reject(error)
+    }
+  )
+
+  llmApi.interceptors.response.use(
+    (response) => {
+      return response.data
+    },
+    (error) => {
+      if (error.response) {
+        console.error('LLM请求错误:', error.response.status, error.response.data)
+        if (error.response.status === 401) {
+          localStorage.removeItem('token')
+        }
+      } else if (error.request) {
+        console.error('LLM网络错误，未收到响应')
+      } else {
+        console.error('LLM请求配置错误:', error.message)
+      }
+      return Promise.reject(error)
+    }
+  )
+
+  return llmApi.post<ChatRequest, ChatResponse>('/api/llm/chat', data)
 }
 
 /**

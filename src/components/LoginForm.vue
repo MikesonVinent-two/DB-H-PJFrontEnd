@@ -1,157 +1,205 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { login } from '@/api/user'
-import { useRouter } from 'vue-router'
+import { ref } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { User, Lock } from '@element-plus/icons-vue'
+import type { FormInstance } from 'element-plus'
 
-const router = useRouter()
-const loading = ref(false)
-const errorMessage = ref('')
+const emit = defineEmits(['login-success', 'navigate-to-register'])
 
-const form = reactive({
+const userStore = useUserStore()
+
+// 表单引用
+const loginFormRef = ref<FormInstance>()
+
+// 登录表单数据
+const loginForm = ref({
   username: '',
   password: '',
 })
 
+// 表单验证规则
+const loginRules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 4, max: 50, message: '用户名长度应在4-50个字符之间', trigger: 'blur' },
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 100, message: '密码长度应在6-100个字符之间', trigger: 'blur' },
+  ],
+}
+
+// 状态
+const isLoading = ref(false)
+const error = ref<string | null>(null)
+
+// 处理登录
 const handleLogin = async () => {
-  if (!form.username || !form.password) {
-    errorMessage.value = '用户名和密码不能为空'
-    return
-  }
+  if (!loginFormRef.value) return
 
   try {
-    loading.value = true
-    errorMessage.value = ''
+    // 表单验证
+    await loginFormRef.value.validate()
 
-    const userInfo = await login({
-      username: form.username,
-      password: form.password,
+    isLoading.value = true
+    error.value = null
+
+    // 调用登录接口
+    const success = await userStore.loginUser({
+      username: loginForm.value.username,
+      password: loginForm.value.password,
     })
 
-    // 将用户信息存储到localStorage
-    localStorage.setItem('userInfo', JSON.stringify(userInfo))
-    // 设置一个模拟的token（因为API没有返回token）
-    localStorage.setItem('token', 'mock-token')
-
-    // 跳转到首页
-    router.push('/')
-  } catch (error: any) {
-    errorMessage.value = error.response?.data?.message || '登录失败，请检查用户名和密码'
+    if (success) {
+      // 登录成功，通知父组件
+      emit('login-success')
+    }
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : '登录失败，请重试'
+    error.value = errorMessage
   } finally {
-    loading.value = false
+    isLoading.value = false
   }
+}
+
+const goToRegister = () => {
+  emit('navigate-to-register')
 }
 </script>
 
 <template>
-  <div class="login-form">
-    <h2>用户登录</h2>
+  <el-card class="login-card" shadow="never">
+    <el-form
+      ref="loginFormRef"
+      :model="loginForm"
+      :rules="loginRules"
+      label-position="top"
+      class="login-form-component"
+      @submit.prevent="handleLogin"
+    >
+      <el-form-item label="用户名" prop="username" class="form-item">
+        <el-input
+          v-model="loginForm.username"
+          placeholder="请输入用户名"
+          :prefix-icon="User"
+          :disabled="isLoading"
+          class="form-input"
+        />
+      </el-form-item>
 
-    <div v-if="errorMessage" class="error-message">
-      {{ errorMessage }}
-    </div>
+      <el-form-item label="密码" prop="password" class="form-item">
+        <el-input
+          v-model="loginForm.password"
+          type="password"
+          placeholder="请输入密码"
+          show-password
+          :prefix-icon="Lock"
+          :disabled="isLoading"
+          class="form-input"
+        />
+      </el-form-item>
 
-    <div class="form-group">
-      <label for="username">用户名</label>
-      <input
-        id="username"
-        v-model="form.username"
-        type="text"
-        placeholder="请输入用户名"
-        :disabled="loading"
-      />
-    </div>
+      <div class="form-footer">
+        <el-button
+          type="primary"
+          native-type="submit"
+          :loading="isLoading"
+          class="submit-button"
+        >
+          {{ isLoading ? '登录中...' : '登录' }}
+        </el-button>
 
-    <div class="form-group">
-      <label for="password">密码</label>
-      <input
-        id="password"
-        v-model="form.password"
-        type="password"
-        placeholder="请输入密码"
-        :disabled="loading"
-      />
-    </div>
+        <div class="additional-links">
+          <el-link type="primary" underline="never" @click="goToRegister">
+            还没有账号？立即注册
+          </el-link>
+        </div>
+      </div>
+    </el-form>
 
-    <div class="form-actions">
-      <button @click="handleLogin" :disabled="loading" class="login-button">
-        {{ loading ? '登录中...' : '登录' }}
-      </button>
-    </div>
-  </div>
+    <!-- 错误提示 -->
+    <el-alert v-if="error" :title="error" type="error" show-icon closable class="error-alert" />
+  </el-card>
 </template>
 
 <style scoped>
-.login-form {
-  max-width: 400px;
+.login-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 30px 20px;
+  width: 100%;
+}
+
+.login-form-component {
+  padding: 20px 30px;
+  max-width: 600px;
   margin: 0 auto;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  background-color: #fff;
 }
 
-h2 {
-  text-align: center;
-  margin-bottom: 20px;
-  color: #333;
+.form-item {
+  margin-bottom: 25px;
 }
 
-.form-group {
-  margin-bottom: 15px;
-}
-
-label {
-  display: block;
-  margin-bottom: 5px;
+:deep(.el-form-item__label) {
+  padding-bottom: 10px;
   font-weight: 500;
-  color: #333;
+  font-size: 17px;
 }
 
-input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+:deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px #dcdfe6 inset;
+  padding: 0 15px;
+  height: 52px;
+}
+
+:deep(.el-input__inner) {
   font-size: 16px;
 }
 
-input:focus {
-  outline: none;
-  border-color: #4c84ff;
-  box-shadow: 0 0 0 2px rgba(76, 132, 255, 0.2);
+:deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #a3a6ad inset;
 }
 
-.form-actions {
-  margin-top: 20px;
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #409eff inset !important;
 }
 
-.login-button {
+.form-footer {
+  margin-top: 45px;
+}
+
+.submit-button {
   width: 100%;
-  padding: 12px;
-  background-color: #4c84ff;
-  color: white;
+  height: 52px;
+  font-size: 18px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #1890ff 0%, #1d39c4 100%);
   border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s;
+  margin-bottom: 30px;
+  letter-spacing: 2px;
+  border-radius: 8px;
 }
 
-.login-button:hover {
-  background-color: #3a70e3;
+.submit-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(29, 57, 196, 0.2);
 }
 
-.login-button:disabled {
-  background-color: #a0b7e9;
-  cursor: not-allowed;
-}
-
-.error-message {
-  padding: 10px;
-  background-color: #ffebee;
-  color: #d32f2f;
-  border-radius: 4px;
-  margin-bottom: 15px;
+.additional-links {
   text-align: center;
+  margin-bottom: 15px;
+}
+
+:deep(.el-link) {
+  font-size: 16px;
+}
+
+.error-alert {
+  margin-top: 25px;
 }
 </style>

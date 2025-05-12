@@ -1,11 +1,12 @@
 import axios from 'axios'
+import { appConfig } from '@/config'
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: 'https://m1.apifoxmock.com/m1/6367019-6063223-default', // Apifox Mock地址
-  timeout: 10000, // 请求超时时间
+  baseURL: appConfig.api.baseUrl, // 使用配置文件中的baseUrl
+  timeout: appConfig.api.timeout, // 使用配置文件中的timeout
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': appConfig.api.contentType,
   },
 })
 
