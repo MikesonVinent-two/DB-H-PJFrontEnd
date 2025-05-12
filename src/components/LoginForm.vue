@@ -1,43 +1,45 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import { login } from '@/api/user';
-import { useRouter } from 'vue-router';
+import { ref, reactive } from 'vue'
+import { login } from '@/api/user'
+import { useRouter } from 'vue-router'
 
-const router = useRouter();
-const loading = ref(false);
-const errorMessage = ref('');
+const router = useRouter()
+const loading = ref(false)
+const errorMessage = ref('')
 
 const form = reactive({
   username: '',
   password: '',
-});
+})
 
 const handleLogin = async () => {
   if (!form.username || !form.password) {
-    errorMessage.value = '用户名和密码不能为空';
-    return;
+    errorMessage.value = '用户名和密码不能为空'
+    return
   }
 
   try {
-    loading.value = true;
-    errorMessage.value = '';
+    loading.value = true
+    errorMessage.value = ''
 
-    const response = await login({
+    const userInfo = await login({
       username: form.username,
       password: form.password,
-    });
+    })
 
-    // 保存token到本地存储
-    localStorage.setItem('token', response.token);
+    // 将用户信息存储到localStorage
+    localStorage.setItem('userInfo', JSON.stringify(userInfo))
+    // 设置一个模拟的token（因为API没有返回token）
+    localStorage.setItem('token', 'mock-token')
 
-    // 跳转到首页或其他页面
-    router.push('/');
+    // 跳转到首页
+    router.push('/')
   } catch (error: any) {
-    errorMessage.value = error.response?.data?.message || '登录失败，请检查用户名和密码';
+    errorMessage.value = error.response?.data?.message || '登录失败，请检查用户名和密码'
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 </script>
 
 <template>
@@ -71,11 +73,7 @@ const handleLogin = async () => {
     </div>
 
     <div class="form-actions">
-      <button
-        @click="handleLogin"
-        :disabled="loading"
-        class="login-button"
-      >
+      <button @click="handleLogin" :disabled="loading" class="login-button">
         {{ loading ? '登录中...' : '登录' }}
       </button>
     </div>

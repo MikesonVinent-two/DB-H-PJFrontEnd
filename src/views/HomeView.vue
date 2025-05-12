@@ -1,9 +1,23 @@
 <script setup lang="ts">
-import { useUserStore } from '@/stores/user';
-import { computed } from 'vue';
+import { useUserStore } from '@/stores/user'
+import { computed } from 'vue'
+import { UserRole } from '@/api/user'
 
-const userStore = useUserStore();
-const currentUser = computed(() => userStore.currentUser);
+const userStore = useUserStore()
+const currentUser = computed(() => userStore.currentUser)
+
+const getRoleName = (role: UserRole) => {
+  switch (role) {
+    case UserRole.USER:
+      return '普通用户'
+    case UserRole.ADMIN:
+      return '管理员'
+    case UserRole.EXPERT:
+      return '专家'
+    default:
+      return '未知角色'
+  }
+}
 </script>
 
 <template>
@@ -17,14 +31,23 @@ const currentUser = computed(() => userStore.currentUser);
           <h2>用户信息</h2>
           <div class="user-card">
             <div class="user-avatar">
-              <img v-if="currentUser.avatar" :src="currentUser.avatar" alt="用户头像">
-              <div v-else class="avatar-placeholder">{{ currentUser.username.charAt(0).toUpperCase() }}</div>
+              <img v-if="currentUser.avatar" :src="currentUser.avatar" alt="用户头像" />
+              <div v-else class="avatar-placeholder">
+                {{ currentUser.username.charAt(0).toUpperCase() }}
+              </div>
             </div>
             <div class="user-details">
               <p><strong>用户名:</strong> {{ currentUser.username }}</p>
               <p><strong>邮箱:</strong> {{ currentUser.email }}</p>
-              <p><strong>角色:</strong> {{ currentUser.role }}</p>
-              <p><strong>注册时间:</strong> {{ new Date(currentUser.createdAt).toLocaleString() }}</p>
+              <p>
+                <strong>角色:</strong>
+                <span :class="['role-badge', `role-${currentUser.role.toLowerCase()}`]">
+                  {{ getRoleName(currentUser.role) }}
+                </span>
+              </p>
+              <p>
+                <strong>注册时间:</strong> {{ new Date(currentUser.createdAt).toLocaleString() }}
+              </p>
             </div>
           </div>
         </div>
@@ -153,7 +176,9 @@ h2 {
   border-radius: 8px;
   padding: 30px 20px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s;
 }
 
 .feature-card:hover {
@@ -194,5 +219,28 @@ h2 {
   .features-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.role-user {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.role-admin {
+  background-color: #fce4ec;
+  color: #c2185b;
+}
+
+.role-expert {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
 }
 </style>

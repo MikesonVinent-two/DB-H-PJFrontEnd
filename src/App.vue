@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import { useUserStore } from './stores/user'
-import { onMounted, computed } from 'vue'
+import { RouterView } from 'vue-router'
+import TheNavbar from '@/components/TheNavbar.vue'
+import { useUserStore } from '@/stores/user'
+import { computed, onMounted } from 'vue'
 
 const userStore = useUserStore()
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -19,31 +20,12 @@ const handleLogout = () => {
 </script>
 
 <template>
-  <header class="app-header">
-    <div class="container">
-      <div class="logo">
-        <RouterLink to="/">前端项目</RouterLink>
-      </div>
-
-      <nav class="main-nav">
-        <RouterLink to="/" v-if="isLoggedIn">首页</RouterLink>
-        <RouterLink to="/about" v-if="isLoggedIn">关于</RouterLink>
-        <RouterLink to="/login" v-if="!isLoggedIn">登录</RouterLink>
-        <RouterLink to="/register" v-if="!isLoggedIn">注册</RouterLink>
-        <a href="#" @click.prevent="handleLogout" v-if="isLoggedIn" class="logout-link">退出</a>
-      </nav>
-    </div>
-  </header>
-
-  <main class="app-main">
-    <RouterView />
-  </main>
-
-  <footer class="app-footer">
-    <div class="container">
-      <p>&copy; {{ new Date().getFullYear() }} 前端项目. 保留所有权利.</p>
-    </div>
-  </footer>
+  <div class="app">
+    <TheNavbar />
+    <main class="main-content">
+      <RouterView />
+    </main>
+  </div>
 </template>
 
 <style>
@@ -148,5 +130,29 @@ a {
   text-align: center;
   color: var(--light-text);
   font-size: 0.9rem;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  background-color: #f0f2f5;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  padding-top: 60px;
+  width: 100%;
+  box-sizing: border-box;
 }
 </style>
