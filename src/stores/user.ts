@@ -4,15 +4,36 @@ import { getUserInfo, getUserById, login, logout as apiLogout, register as apiRe
 import type { UserInfo, LoginData, LogoutData, RegisterData } from '@/api/user'
 import { useRouter } from 'vue-router'
 
+// 用户信息缓存
+let userInfoCache: Record<number, UserInfo> = {}
+
 export const useUserStore = defineStore('user', () => {
   const router = useRouter()
   const currentUser = ref<UserInfo | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  // 获取缓存的用户信息
+  const getCachedUserInfo = (userId: number): UserInfo | null => {
+    return userInfoCache[userId] || null
+  }
+
+  // 更新用户信息缓存
+  const updateUserInfoCache = (userInfo: UserInfo) => {
+    if (userInfo && userInfo.id) {
+      userInfoCache[userInfo.id] = userInfo
+    }
+  }
+
+  // 清除用户信息缓存
+  const clearUserInfoCache = () => {
+    userInfoCache = {}
+  }
+
   const isLoggedIn = computed(() => {
-    // 同时检查本地存储和当前用户对象
-    return !!localStorage.getItem('user') && !!currentUser.value
+    const hasLocalStorage = !!localStorage.getItem('user')
+    const hasCurrentUser = !!currentUser.value
+    return hasLocalStorage && hasCurrentUser
   })
 
   // 从localStorage加载用户信息
@@ -39,31 +60,33 @@ export const useUserStore = defineStore('user', () => {
       return
     }
 
-    // 如果没有本地存储，则尝试通过API获取（会默认获取ID为1的用户或本地存储中的用户）
-    try {
-      loading.value = true
-      error.value = null
-      currentUser.value = await getUserInfo()
-      // 获取成功后保存到本地存储
-      if (currentUser.value) {
-        localStorage.setItem('user', JSON.stringify(currentUser.value))
-      }
-    } catch (err: Error | unknown) {
-      error.value = err instanceof Error ? err.message : '获取用户信息失败'
-      // 如果获取用户信息失败，清除本地存储
-      localStorage.removeItem('user')
-      currentUser.value = null
-    } finally {
-      loading.value = false
-    }
+    // 如果没有本地存储，则不自动获取默认用户
+    error.value = '未登录'
+    currentUser.value = null
+    return null
   }
 
   // 根据ID获取用户信息
   async function getUserInfoById(userId: string | number) {
+    const numericId = Number(userId)
+
+    // 先检查缓存
+    const cachedInfo = getCachedUserInfo(numericId)
+    if (cachedInfo) {
+      return cachedInfo
+    }
+
     try {
       loading.value = true
       error.value = null
-      return await getUserById(userId)
+      const userInfo = await getUserById(userId)
+
+      // 更新缓存
+      if (userInfo) {
+        updateUserInfoCache(userInfo)
+      }
+
+      return userInfo
     } catch (err: Error | unknown) {
       error.value = err instanceof Error ? err.message : `获取用户ID=${userId}的信息失败`
       return null
@@ -77,10 +100,22 @@ export const useUserStore = defineStore('user', () => {
     try {
       loading.value = true
       error.value = null
-      const response = await login(loginData)
-      // 将整个用户对象存储在本地存储中
-      localStorage.setItem('user', JSON.stringify(response))
-      currentUser.value = response
+
+      // 登录并获取完整用户信息
+      const userInfo = await login(loginData)
+
+      // 更新状态和本地存储
+      currentUser.value = userInfo
+      localStorage.setItem('user', JSON.stringify(userInfo))
+
+      // 更新缓存
+      updateUserInfoCache(userInfo)
+
+      // 触发登录成功事件
+      window.dispatchEvent(new CustomEvent('user-login', {
+        detail: userInfo
+      }))
+
       return true
     } catch (err: Error | unknown) {
       error.value = err instanceof Error ? err.message : '登录失败'
@@ -111,7 +146,6 @@ export const useUserStore = defineStore('user', () => {
       loading.value = true
       error.value = null
 
-      // 先保存必要的信息用于API调用
       let logoutData: LogoutData | null = null
       if (currentUser.value) {
         logoutData = {
@@ -120,12 +154,12 @@ export const useUserStore = defineStore('user', () => {
         }
       }
 
-      // 立即清除本地存储和状态，确保UI能立即响应
+      // 清除状态和存储
       localStorage.removeItem('user')
       currentUser.value = null
       error.value = null
+      clearUserInfoCache()
 
-      // 然后调用登出API
       if (logoutData) {
         try {
           await apiLogout(logoutData)
@@ -134,15 +168,30 @@ export const useUserStore = defineStore('user', () => {
         }
       }
 
-      // 跳转到登录页
       router.push('/login')
     } catch (err: Error | unknown) {
       error.value = err instanceof Error ? err.message : '登出失败'
-      // 确保本地状态已清除
       localStorage.removeItem('user')
       currentUser.value = null
+      clearUserInfoCache()
     } finally {
       loading.value = false
+    }
+  }
+
+  // 从localStorage初始化用户信息
+  function initializeFromStorage() {
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      try {
+        const userInfo = JSON.parse(storedUser)
+        currentUser.value = userInfo
+        // 更新缓存
+        updateUserInfoCache(userInfo)
+      } catch (e) {
+        console.error('Failed to parse stored user data:', e)
+        localStorage.removeItem('user')
+      }
     }
   }
 
@@ -156,5 +205,9 @@ export const useUserStore = defineStore('user', () => {
     loginUser,
     register,
     logout,
+    initializeFromStorage,
+    getCachedUserInfo,
+    updateUserInfoCache,
+    clearUserInfoCache,
   }
 })

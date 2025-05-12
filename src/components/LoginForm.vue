@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { User, Lock } from '@element-plus/icons-vue'
 import type { FormInstance } from 'element-plus'
@@ -50,7 +50,20 @@ const handleLogin = async () => {
       password: loginForm.value.password,
     })
 
-    if (success) {
+    if (success && userStore.currentUser) {
+      // 显式地将用户信息写入内存和localStorage
+      const userInfo = userStore.currentUser
+      window.userInfo = userInfo  // 写入全局内存
+      localStorage.setItem('userInfo', JSON.stringify(userInfo))  // 写入localStorage
+      sessionStorage.setItem('userInfo', JSON.stringify(userInfo))  // 写入sessionStorage
+
+      // 打印日志确认写入成功
+      console.log('✅ 用户信息已写入内存:', {
+        memory: window.userInfo,
+        localStorage: JSON.parse(localStorage.getItem('userInfo') || '{}'),
+        sessionStorage: JSON.parse(sessionStorage.getItem('userInfo') || '{}')
+      })
+
       // 登录成功，通知父组件
       emit('login-success')
     }
@@ -61,6 +74,14 @@ const handleLogin = async () => {
     isLoading.value = false
   }
 }
+
+// 在组件卸载时清理内存
+onUnmounted(() => {
+  // 仅在登出时才清理，避免影响其他组件
+  if (!userStore.isLoggedIn) {
+    window.userInfo = undefined
+  }
+})
 
 const goToRegister = () => {
   emit('navigate-to-register')
@@ -80,7 +101,7 @@ const goToRegister = () => {
       <el-form-item label="用户名" prop="username" class="form-item">
         <el-input
           v-model="loginForm.username"
-          placeholder="请输入用户名"
+        placeholder="请输入用户名"
           :prefix-icon="User"
           :disabled="isLoading"
           class="form-input"
@@ -90,13 +111,13 @@ const goToRegister = () => {
       <el-form-item label="密码" prop="password" class="form-item">
         <el-input
           v-model="loginForm.password"
-          type="password"
-          placeholder="请输入密码"
+        type="password"
+        placeholder="请输入密码"
           show-password
           :prefix-icon="Lock"
           :disabled="isLoading"
           class="form-input"
-        />
+      />
       </el-form-item>
 
       <div class="form-footer">
@@ -113,8 +134,8 @@ const goToRegister = () => {
           <el-link type="primary" underline="never" @click="goToRegister">
             还没有账号？立即注册
           </el-link>
-        </div>
-      </div>
+    </div>
+  </div>
     </el-form>
 
     <!-- 错误提示 -->

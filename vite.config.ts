@@ -12,21 +12,21 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
-    plugins: [
-      vue(),
-      vueJsx(),
-      vueDevTools(),
-    ],
-    resolve: {
-      alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url))
-      },
+  plugins: [
+    vue(),
+    vueJsx(),
+    vueDevTools(),
+  ],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url))
     },
+  },
     // 在这里定义一些与环境相关的值
     define: {
       'import.meta.env.VITE_APP_TITLE': JSON.stringify(env.VITE_APP_TITLE || '前端项目'),
       'import.meta.env.VITE_APP_ENV': JSON.stringify(env.VITE_APP_ENV || mode),
-      'import.meta.env.VITE_APP_API_BASE_URL': JSON.stringify(env.VITE_APP_API_BASE_URL || 'https://m1.apifoxmock.com/m1/6367019-6063223-default'),
+      'import.meta.env.VITE_APP_API_BASE_URL': JSON.stringify(env.VITE_APP_API_BASE_URL || 'http://localhost:8080'),
       'import.meta.env.VITE_APP_API_TIMEOUT': env.VITE_APP_API_TIMEOUT || 10000,
       'import.meta.env.VITE_APP_LLM_CHAT_TIMEOUT': env.VITE_APP_LLM_CHAT_TIMEOUT || 60000,
     }

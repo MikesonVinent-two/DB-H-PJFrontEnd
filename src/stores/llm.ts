@@ -1,9 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import {
+import type {
   ChatRequest,
   ChatResponse,
   ModelInfo,
+  GetModelsRequest,
+} from '@/api/llm'
+import {
   createDefaultChatRequest,
   createDefaultModelsRequest,
   sendChatRequest,
@@ -18,13 +21,16 @@ export const useLLMStore = defineStore('llm', () => {
   const isLoadingModels = ref(false)
 
   // 获取可用模型列表
-  const fetchModels = async (apiKey: string) => {
+  const fetchModels = async (apiUrl: string, apiKey: string) => {
     try {
       isLoadingModels.value = true
       error.value = null
 
-      // 创建请求配置
-      const modelsRequest = createDefaultModelsRequest(apiKey)
+      // 直接构造请求配置，使用传入的 apiUrl
+      const modelsRequest: GetModelsRequest = {
+        apiUrl: apiUrl,
+        apiKey: apiKey,
+      }
 
       // 发送请求
       const models = await getAvailableModels(modelsRequest)

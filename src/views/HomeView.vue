@@ -166,15 +166,15 @@ h2 {
     grid-template-columns: 1fr;
     gap: 20px;
     padding: 0 10px;
-  }
+}
 
   .feature-card {
     padding: 30px 20px;
-  }
+}
 
   .get-started-section {
     padding: 30px 20px;
     margin: 40px 10px 0;
-  }
+}
 }
 </style>

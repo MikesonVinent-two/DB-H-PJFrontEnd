@@ -80,9 +80,9 @@ const handleRegister = async () => {
       password: registerForm.value.password,
       email: registerForm.value.email,
       role: registerForm.value.role,
-    }
+  }
 
-    try {
+  try {
       // 调用API直接注册
       await userStore.register(registerData)
       // 注册成功，通知父组件
@@ -127,29 +127,29 @@ const goToLogin = () => {
           placeholder="请输入用户名(4-50个字符)"
           :prefix-icon="User"
           :disabled="isLoading"
-        />
+      />
       </el-form-item>
 
       <el-form-item label="密码" prop="password">
         <el-input
           v-model="registerForm.password"
-          type="password"
+        type="password"
           placeholder="请输入密码(6-100个字符)"
           show-password
           :prefix-icon="Lock"
           :disabled="isLoading"
-        />
+      />
       </el-form-item>
 
       <el-form-item label="确认密码" prop="confirmPassword">
         <el-input
           v-model="registerForm.confirmPassword"
-          type="password"
-          placeholder="请再次输入密码"
+        type="password"
+        placeholder="请再次输入密码"
           show-password
           :prefix-icon="Lock"
           :disabled="isLoading"
-        />
+      />
       </el-form-item>
 
       <el-form-item label="邮箱" prop="email">
@@ -203,8 +203,8 @@ const goToLogin = () => {
           <el-link type="primary" underline="never" @click="goToLogin">
             已有账号？立即登录
           </el-link>
-        </div>
-      </div>
+    </div>
+  </div>
     </el-form>
 
     <!-- 错误提示 -->

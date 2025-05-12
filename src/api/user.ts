@@ -40,8 +40,15 @@ export interface LogoutResponse {
 /**
  * 用户登录
  */
-export const login = (data: LoginData) => {
-  return api.post<unknown, UserInfo>('/api/users/login', data)
+export const login = async (data: LoginData) => {
+  // 登录并直接获取完整的用户信息
+  const loginResponse = await api.post<unknown, UserInfo>('/api/users/login', data)
+  if (loginResponse && loginResponse.id) {
+    // 登录成功后直接获取用户详细信息
+    const userInfo = await api.get<unknown, UserInfo>(`/api/users/profile/${loginResponse.id}`)
+    return userInfo
+  }
+  return loginResponse
 }
 
 /**
@@ -54,28 +61,31 @@ export const register = (data: RegisterData) => {
 /**
  * 获取当前用户信息
  */
-export const getUserInfo = () => {
-  // 从本地存储获取当前用户ID
+export const getUserInfo = async () => {
   const userJson = localStorage.getItem('user')
-  let userId = '1' // 默认用户ID
-
-  if (userJson) {
-    try {
-      const user = JSON.parse(userJson)
-      userId = user.id.toString()
-    } catch (e) {
-      console.error('解析用户信息失败', e)
-    }
+  if (!userJson) {
+    throw new Error('未登录')
   }
 
-  // 使用getUserById实现
-  return getUserById(userId)
+  try {
+    const user = JSON.parse(userJson)
+    // 确保获取完整的用户信息
+    const userInfo = await getUserById(user.id)
+    return userInfo
+  } catch (e) {
+    console.error('获取用户信息失败', e)
+    throw new Error('获取用户信息失败')
+  }
 }
 
 /**
- * 根据用户ID获取用户信息
+ * 根据ID获取用户信息
  */
 export const getUserById = (userId: string | number) => {
+  if (!userId) {
+    throw new Error('用户ID不能为空')
+  }
+  // 使用profile接口获取完整的用户信息
   return api.get<unknown, UserInfo>(`/api/users/profile/${userId}`)
 }
 

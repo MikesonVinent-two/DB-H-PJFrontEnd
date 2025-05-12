@@ -77,21 +77,21 @@ const navigateToRegister = () => {
   .login-content {
     max-width: 85%;
     padding: 35px 45px;
-  }
+}
 }
 
 @media (max-width: 768px) {
   .login-content {
     max-width: 90%;
     padding: 30px 35px;
-  }
+}
 
   .login-header h2 {
     font-size: 28px;
-  }
+}
 
   .subtitle {
-    font-size: 16px;
+  font-size: 16px;
   }
 }
 

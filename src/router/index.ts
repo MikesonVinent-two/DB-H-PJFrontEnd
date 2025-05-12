@@ -5,11 +5,11 @@ import LoginView from '../views/LoginView.vue'
 
 // 路由配置
 const routes: Array<RouteRecordRaw> = [
-  {
-    path: '/',
-    name: 'home',
-    component: HomeView,
-    meta: {
+    {
+      path: '/',
+      name: 'home',
+      component: HomeView,
+      meta: {
       requiresAuth: true,
       title: '首页',
       roles: ['user', 'admin', 'expert']
@@ -63,37 +63,37 @@ const routes: Array<RouteRecordRaw> = [
       requiresAuth: true,
       title: '设置',
       roles: ['user', 'admin', 'expert']
-    }
-  },
-  {
-    path: '/about',
-    name: 'about',
-    component: () => import('../views/AboutView.vue'),
-    meta: {
+      }
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: () => import('../views/AboutView.vue'),
+      meta: {
       requiresAuth: true,
       title: '关于',
       roles: ['user', 'admin', 'expert']
-    }
-  },
-  {
-    path: '/login',
-    name: 'login',
-    component: LoginView,
-    meta: {
+      }
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+      meta: {
       requiresAuth: false,
       title: '登录',
       roles: []
-    }
-  },
-  {
-    path: '/register',
-    name: 'register',
-    component: () => import('../views/RegisterView.vue'),
-    meta: {
+      }
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: () => import('../views/RegisterView.vue'),
+      meta: {
       requiresAuth: false,
       title: '注册',
       roles: []
-    }
+      }
   },
   {
     path: '/:pathMatch(.*)*',

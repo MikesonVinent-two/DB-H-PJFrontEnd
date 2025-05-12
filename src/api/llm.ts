@@ -4,8 +4,8 @@ import { appConfig } from '@/config'
 
 // 系统提示类型
 export interface SystemPrompt {
-  role?: string
-  content?: string
+  role: string
+  content: string
 }
 
 // 模型信息接口
@@ -13,10 +13,10 @@ export interface ModelInfo {
   id: string
   name: string
   provider: string
-  description: null | string
-  maxTokens: null | number
+  description?: string | null
+  maxTokens?: number | null
   available: boolean
-  pricePerToken: null | number
+  pricePerToken?: number | null
 }
 
 // 获取模型请求接口
@@ -73,7 +73,7 @@ export interface ChatResponse {
   tokenCount: number
   responseTime: number
   success: boolean
-  errorMessage: null | string
+  errorMessage?: string | null
   metadata: Metadata
 }
 
@@ -82,50 +82,23 @@ export interface ChatResponse {
  * @param data 聊天请求参数
  * @returns 聊天响应
  */
-export const sendChatRequest = (data: ChatRequest) => {
-  // 使用单独的实例并配置更长的超时时间
-  const llmApi = axios.create({
-    baseURL: appConfig.api.baseUrl,
-    timeout: appConfig.api.llm.chatTimeout, // 使用LLM专用超时设置
+export const sendChatRequest = async (data: ChatRequest): Promise<ChatResponse> => {
+  const url = `${appConfig.api.baseUrl}/api/llm/chat`
+  // 使用fetch替代axios
+  const response = await fetch(url, {
+    method: 'POST',
     headers: {
-      'Content-Type': appConfig.api.contentType,
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
     },
+    body: JSON.stringify(data),
   })
 
-  // 设置与主API相同的拦截器
-  llmApi.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('token')
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-      }
-      return config
-    },
-    (error) => {
-      return Promise.reject(error)
-    }
-  )
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
 
-  llmApi.interceptors.response.use(
-    (response) => {
-      return response.data
-    },
-    (error) => {
-      if (error.response) {
-        console.error('LLM请求错误:', error.response.status, error.response.data)
-        if (error.response.status === 401) {
-          localStorage.removeItem('token')
-        }
-      } else if (error.request) {
-        console.error('LLM网络错误，未收到响应')
-      } else {
-        console.error('LLM请求配置错误:', error.message)
-      }
-      return Promise.reject(error)
-    }
-  )
-
-  return llmApi.post<ChatRequest, ChatResponse>('/api/llm/chat', data)
+  return response.json()
 }
 
 /**
@@ -133,18 +106,31 @@ export const sendChatRequest = (data: ChatRequest) => {
  * @param data 请求参数
  * @returns 模型列表
  */
-export const getAvailableModels = (data: GetModelsRequest) => {
-  return api.post<GetModelsRequest, ModelInfo[]>('/api/llm/models', data)
+export const getAvailableModels = async (data: GetModelsRequest): Promise<ModelInfo[]> => {
+  const url = `${appConfig.api.baseUrl}/api/llm/models`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+
+  return response.json()
 }
 
 // 创建默认的聊天请求配置
 export const createDefaultChatRequest = (
   message: string,
-  customSystemPrompts?: SystemPrompt[],
+  customSystemPrompts?: SystemPrompt[]
 ): ChatRequest => {
   return {
     api: 'https://api.openai.com/v1/chat/completions',
-    apiKey: '', // 需要在使用时设置
+    apiKey: '',
     model: 'gpt-4',
     message,
     temperature: 0.7,
@@ -164,4 +150,12 @@ export const createDefaultModelsRequest = (apiKey: string): GetModelsRequest => 
     apiUrl: 'https://api.openai.com/v1',
     apiKey,
   }
+}
+
+// 默认导出所有内容
+export default {
+  sendChatRequest,
+  getAvailableModels,
+  createDefaultChatRequest,
+  createDefaultModelsRequest,
 }
