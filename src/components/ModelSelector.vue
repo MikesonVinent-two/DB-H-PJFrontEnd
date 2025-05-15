@@ -6,82 +6,82 @@
 
     <!-- API配置触发区域 (保持按钮等可见) -->
     <div class="config-trigger">
-        <el-tooltip
-          content="配置模型API"
-          placement="top"
-          :show-after="500"
-        >
-          <el-button
-            class="settings-button"
-            :icon="Setting"
-            circle
-            @click="toggleConfig"
-            :type="showConfig ? 'primary' : 'default'"
-          />
-        </el-tooltip>
-    </div>
-
-    <!-- API配置表单 Popover -->
-    <el-popover
-      v-model:visible="showConfig"
-      :width="400"
-      trigger="manual"
-      placement="bottom"
-      popper-class="model-config-popover"
-      :show-arrow="true"
-      :offset="12"
-    >
-      <template #reference>
-        <div style="display: none"></div>
-      </template>
-
-      <template #default>
-        <div class="model-config">
-          <div class="config-header">
-            <span class="title">模型配置</span>
-            <el-button
-              type="text"
-              :icon="Close"
-              @click="closeConfig"
-              class="close-button"
-            />
+            <el-tooltip
+              content="配置模型API"
+              placement="top"
+              :show-after="500"
+            >
+              <el-button
+                class="settings-button"
+                :icon="Setting"
+                circle
+                @click="toggleConfig"
+                :type="showConfig ? 'primary' : 'default'"
+              />
+            </el-tooltip>
           </div>
 
-          <el-form
-            ref="configFormRef"
-            :model="apiConfig"
-            :rules="configRules"
-            label-position="top"
-            class="api-config-form"
-            @submit.prevent="handleSave"
-          >
-            <el-form-item
-              label="API 基础 URL"
-              prop="apiUrl"
-              :rules="[
-                { required: true, message: '请输入API基础URL', trigger: 'blur' },
-                { type: 'url', message: '请输入有效的URL', trigger: 'blur' }
-              ]"
+    <!-- API配置表单 Popover -->
+      <el-popover
+        v-model:visible="showConfig"
+        :width="400"
+        trigger="manual"
+        placement="bottom"
+        popper-class="model-config-popover"
+        :show-arrow="true"
+        :offset="12"
+      >
+        <template #reference>
+          <div style="display: none"></div>
+        </template>
+
+        <template #default>
+          <div class="model-config">
+            <div class="config-header">
+              <span class="title">模型配置</span>
+              <el-button
+                type="text"
+                :icon="Close"
+                @click="closeConfig"
+                class="close-button"
+              />
+            </div>
+
+            <el-form
+              ref="configFormRef"
+              :model="apiConfig"
+              :rules="configRules"
+              label-position="top"
+              class="api-config-form"
+              @submit.prevent="handleSave"
             >
-              <el-input
-                v-model="apiConfig.apiUrl"
-                placeholder="请输入API URL"
-                :disabled="isLoadingModels"
+              <el-form-item
+                label="API 基础 URL"
+                prop="apiUrl"
+                :rules="[
+                  { required: true, message: '请输入API基础URL', trigger: 'blur' },
+                  { type: 'url', message: '请输入有效的URL', trigger: 'blur' }
+                ]"
               >
-                <template #suffix>
-                  <el-tooltip content="点击使用默认URL" placement="top">
-                    <el-button
-                      link
-                      type="primary"
-                      @click="useDefaultUrl"
-                      :disabled="isLoadingModels"
-                    >
-                      默认
-                    </el-button>
-                  </el-tooltip>
-                </template>
-              </el-input>
-            </el-form-item>
+                <el-input
+                  v-model="apiConfig.apiUrl"
+                  placeholder="请输入API URL"
+                  :disabled="isLoadingModels"
+                >
+                  <template #suffix>
+                    <el-tooltip content="点击使用默认URL" placement="top">
+                      <el-button
+                        link
+                        type="primary"
+                        @click="useDefaultUrl"
+                        :disabled="isLoadingModels"
+                      >
+                        默认
+                      </el-button>
+                    </el-tooltip>
+                  </template>
+                </el-input>
+              </el-form-item>
 
             <el-form-item
               label="API 密钥"
@@ -149,40 +149,40 @@
             </el-form-item>
 
             <!-- 表单按钮 -->
-            <el-form-item>
-              <div class="form-buttons">
-                <el-button @click="closeConfig">取消</el-button>
-                <el-button
-                  type="primary"
-                  native-type="submit"
-                  :loading="isLoadingModels"
-                  :disabled="!isFormValid"
-                >
-                  保存
-                </el-button>
-              </div>
-            </el-form-item>
-          </el-form>
-        </div>
-      </template>
-    </el-popover>
+              <el-form-item>
+                <div class="form-buttons">
+                  <el-button @click="closeConfig">取消</el-button>
+                  <el-button
+                    type="primary"
+                    native-type="submit"
+                    :loading="isLoadingModels"
+                    :disabled="!isFormValid"
+                  >
+                    保存
+                  </el-button>
+                </div>
+              </el-form-item>
+            </el-form>
+          </div>
+        </template>
+      </el-popover>
 
     <!-- 选中模型的详细信息 (保持在外部) -->
-    <div v-if="selectedModelInfo" class="model-info">
-      <el-descriptions :column="1" border>
-        <el-descriptions-item label="模型名称">
-          {{ selectedModelInfo.name }}
-        </el-descriptions-item>
-        <el-descriptions-item label="提供商">
-          {{ selectedModelInfo.provider }}
-        </el-descriptions-item>
-        <el-descriptions-item label="最大Token">
-          {{ selectedModelInfo.maxTokens || '未指定' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="描述">
-          {{ selectedModelInfo.description || '暂无描述' }}
-        </el-descriptions-item>
-      </el-descriptions>
+      <div v-if="selectedModelInfo" class="model-info">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="模型名称">
+            {{ selectedModelInfo.name }}
+          </el-descriptions-item>
+          <el-descriptions-item label="提供商">
+            {{ selectedModelInfo.provider }}
+          </el-descriptions-item>
+          <el-descriptions-item label="最大Token">
+            {{ selectedModelInfo.maxTokens || '未指定' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="描述">
+            {{ selectedModelInfo.description || '暂无描述' }}
+          </el-descriptions-item>
+        </el-descriptions>
     </div>
 
     <!-- 错误提示 -->
