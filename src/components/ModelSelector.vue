@@ -243,14 +243,27 @@ const useDefaultUrl = () => {
   apiConfig.value.apiUrl = defaultApiConfig.apiUrl
 }
 
+// 保存配置到localStorage
+const saveConfig = () => {
+  // 保存API配置
+  localStorage.setItem('apiConfig', JSON.stringify(apiConfig.value))
+  window.apiConfig = { ...apiConfig.value }
+
+  // 保存选中的模型
+  if (modelSelection.value.selectedModel) {
+    localStorage.setItem('selectedModel', modelSelection.value.selectedModel)
+    window.selectedModel = modelSelection.value.selectedModel
+  }
+}
+
 // 从localStorage中恢复配置
 const restoreConfig = () => {
+  // 恢复API配置
   const savedConfig = localStorage.getItem('apiConfig')
   if (savedConfig) {
     try {
       const config = JSON.parse(savedConfig)
       apiConfig.value = config
-      // 同步到window对象
       window.apiConfig = config
     } catch (e) {
       console.error('解析保存的配置失败:', e)
@@ -258,13 +271,13 @@ const restoreConfig = () => {
   } else {
     apiConfig.value = { ...defaultApiConfig }
   }
-}
 
-// 保存配置到localStorage
-const saveConfig = () => {
-  localStorage.setItem('apiConfig', JSON.stringify(apiConfig.value))
-  // 同步到window对象
-  window.apiConfig = { ...apiConfig.value }
+  // 恢复选中的模型
+  const savedModel = localStorage.getItem('selectedModel')
+  if (savedModel) {
+    modelSelection.value.selectedModel = savedModel
+    window.selectedModel = savedModel
+  }
 }
 
 // 计算属性

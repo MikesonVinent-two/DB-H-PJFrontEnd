@@ -10,7 +10,7 @@ export const appConfig = {
     timeout: 10000, // 普通请求超时时间：10秒
     // LLM API特殊配置
     llm: {
-      chatTimeout: 60000, // LLM聊天请求超时时间：60秒
+      chatTimeout: 600000, // LLM聊天请求超时时间：60秒
     },
   },
   storage: {
