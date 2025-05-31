@@ -1,6 +1,6 @@
 import api from './index'
 import { apiUrls } from '@/config'
-import { RawQuestionPageResponse } from '@/types/rawData'
+import type { RawQuestionPageResponse } from '@/types/rawData'
 
 // 分页排序接口
 export interface Pageable {

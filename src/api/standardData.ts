@@ -5,7 +5,10 @@ import type {
   StandardQuestionBase,
   TagOperationRequest,
   TagOperationResponse,
-  DeleteOperationResponse
+  DeleteOperationResponse,
+  SearchQuestionResponse,
+  OriginalDataResponse,
+  QuestionsWithoutAnswersResponse
 } from '@/types/standardQuestion'
 import { TagOperationType } from '@/types/standardQuestion'
 
@@ -397,4 +400,75 @@ export const deleteStandardAnswer = (id: string | number) => {
   return api.delete<DeleteOperationResponse>(
     `${apiUrls.standardData.deleteAnswer}/${id}`
   )
+}
+
+/**
+ * 搜索标准问题
+ * @param params 搜索参数
+ * @returns 搜索结果
+ */
+export const searchStandardQuestions = (params: {
+  tags?: string
+  keyword?: string
+  userId?: string
+  page?: string
+  size?: string
+}) => {
+  return api.get<SearchQuestionResponse>(
+    apiUrls.standardData.searchQuestions,
+    { params }
+  )
+}
+
+/**
+ * 获取标准问题对应的原始问题和原始回答列表
+ * @param questionId 标准问题ID
+ * @param params 分页参数
+ * @returns 原始数据响应
+ */
+export const getQuestionOriginalData = (
+  questionId: number | string,
+  params?: {
+    page?: string
+    size?: string
+  }
+) => {
+  return api.get<OriginalDataResponse>(
+    `${apiUrls.standardData.getOriginalData}/${questionId}/original-data`,
+    { params }
+  )
+}
+
+/**
+ * 获取所有没有标准回答的标准问题
+ * @param params 分页参数
+ * @returns 没有标准回答的标准问题列表
+ */
+export const getQuestionsWithoutAnswers = (params?: {
+  page?: string
+  size?: string
+}) => {
+  return api.get<QuestionsWithoutAnswersResponse>(
+    apiUrls.standardData.getQuestionsWithoutAnswers,
+    { params }
+  )
+}
+
+// 原始问题相关接口
+export const getRawQuestions = (params: {
+  page?: string
+  size?: string
+  sort?: string
+  status?: string
+}) => {
+  return api.get(apiUrls.rawData.getQuestions, { params })
+}
+
+export const getRawQuestionsByStatus = (params: {
+  page?: string
+  size?: string
+  sort?: string
+  status?: string
+}) => {
+  return api.get(apiUrls.rawData.getQuestionsByStatus, { params })
 }

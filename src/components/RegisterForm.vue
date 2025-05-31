@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { User, Lock, Message, Star, Setting } from '@element-plus/icons-vue'
+import { User, Lock, Message, Star, Setting, Collection, EditPen, Check } from '@element-plus/icons-vue'
 import type { FormInstance, FormItemRule } from 'element-plus'
 import { UserRole } from '@/api/user'
 import type { RegisterData } from '@/api/user'
@@ -19,8 +19,8 @@ const registerForm = ref({
   username: '',
   password: '',
   confirmPassword: '',
-  email: '',
-  role: UserRole.USER,
+  contactInfo: '',
+  role: UserRole.CROWDSOURCE_USER,
 })
 
 // 验证密码是否一致
@@ -52,8 +52,8 @@ const registerRules = {
     { required: true, message: '请再次输入密码', trigger: 'blur' },
     { validator: validateConfirmPassword, trigger: 'blur' },
   ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
+  contactInfo: [
+    { required: true, message: '请输入联系方式', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' },
   ],
   role: [{ required: true, message: '请选择角色', trigger: 'change' }],
@@ -78,11 +78,11 @@ const handleRegister = async () => {
     const registerData: RegisterData = {
       username: registerForm.value.username,
       password: registerForm.value.password,
-      email: registerForm.value.email,
+      contactInfo: registerForm.value.contactInfo,
       role: registerForm.value.role,
-  }
+    }
 
-  try {
+    try {
       // 调用API直接注册
       await userStore.register(registerData)
       // 注册成功，通知父组件
@@ -152,10 +152,10 @@ const goToLogin = () => {
       />
       </el-form-item>
 
-      <el-form-item label="邮箱" prop="email">
+      <el-form-item label="联系方式" prop="contactInfo">
         <el-input
-          v-model="registerForm.email"
-          placeholder="请输入邮箱"
+          v-model="registerForm.contactInfo"
+          placeholder="请输入邮箱或其他联系方式"
           :prefix-icon="Message"
           :disabled="isLoading"
         />
@@ -168,23 +168,41 @@ const goToLogin = () => {
           class="role-select"
           :disabled="isLoading"
         >
-          <el-option label="普通用户" value="USER">
-            <template #default="{ label }">
+          <el-option label="众包用户" value="CROWDSOURCE_USER">
+            <div class="option-content">
               <el-icon><User /></el-icon>
-              <span>{{ label }}</span>
-            </template>
+              <span>众包用户</span>
+            </div>
           </el-option>
           <el-option label="专家" value="EXPERT">
-            <template #default="{ label }">
+            <div class="option-content">
               <el-icon><Star /></el-icon>
-              <span>{{ label }}</span>
-            </template>
+              <span>专家</span>
+            </div>
+          </el-option>
+          <el-option label="策展人" value="CURATOR">
+            <div class="option-content">
+              <el-icon><Collection /></el-icon>
+              <span>策展人</span>
+            </div>
+          </el-option>
+          <el-option label="标注员" value="ANNOTATOR">
+            <div class="option-content">
+              <el-icon><EditPen /></el-icon>
+              <span>标注员</span>
+            </div>
+          </el-option>
+          <el-option label="审核员" value="REFEREE">
+            <div class="option-content">
+              <el-icon><Check /></el-icon>
+              <span>审核员</span>
+            </div>
           </el-option>
           <el-option label="管理员" value="ADMIN">
-            <template #default="{ label }">
+            <div class="option-content">
               <el-icon><Setting /></el-icon>
-              <span>{{ label }}</span>
-            </template>
+              <span>管理员</span>
+            </div>
           </el-option>
         </el-select>
       </el-form-item>
@@ -286,5 +304,11 @@ const goToLogin = () => {
 
 .error-alert {
   margin-top: 16px;
+}
+
+.option-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>

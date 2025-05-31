@@ -112,6 +112,22 @@ export const getExpertAnswersByUser = (
 }
 
 /**
+ * 获取所有未评分的专家回答
+ * @param params 查询参数
+ * @returns 分页的未评分专家回答列表
+ */
+export const getUnratedExpertAnswers = (params?: {
+  page?: string
+  size?: string
+  sort?: string
+}) => {
+  return api.get<ExpertAnswerPageResponse>(
+    apiUrls.expert.unrated,
+    { params }
+  )
+}
+
+/**
  * 给专家回答评分并评论
  * @param answerId 回答ID
  * @param params 评分参数

@@ -51,10 +51,17 @@ export const apiUrls = {
     getQuestionVersionTree: '/api/standard-questions',
     getQuestions: '/api/standard-questions',
     getLatestQuestions: '/api/standard-questions/latest',
+    searchQuestions: '/api/standard-questions/search',
     addTags: '/api/standard-questions/tags/add',
     removeTags: '/api/standard-questions/tags/remove',
     replaceTags: '/api/standard-questions/tags/replace',
     updateTags: '/api/standard-questions/tags',
+    getOriginalData: '/api/standard-questions', // 获取标准问题对应的原始数据
+    getQuestionsWithoutAnswers: '/api/standard-questions/without-standard-answers', // 获取所有没有标准回答的标准问题
+    getAnswerHistory: '/api/standard/standard-answers',
+    getAnswerVersionTree: '/api/standard/standard-answers',
+    compareAnswerVersions: '/api/standard/standard-answers',
+    rollbackAnswer: '/api/standard/standard-answers',
   },
   prompts: {
     tags: '/api/prompts/tags', // 答案标签提示词相关API
@@ -119,6 +126,8 @@ export const apiUrls = {
     base: '/api/crowdsourced-answers',  // 基础路径
     create: '/api/crowdsourced-answers',  // POST 创建
     getList: '/api/crowdsourced-answers',  // GET 获取列表
+    all: '/api/crowdsourced-answers',  // GET 获取所有众包回答
+    pending: '/api/crowdsourced-answers/pending',  // GET 获取所有未审核的众包回答
     update: '/api/crowdsourced-answers',  // PUT /{answerId}
     delete: '/api/crowdsourced-answers',  // DELETE /{answerId}
     review: '/api/crowdsourced-answers',  // PUT /{answerId}/review
@@ -135,6 +144,7 @@ export const apiUrls = {
     byQuestion: '/api/expert-candidate-answers/by-question', // GET /by-question/{questionId}
     byUser: '/api/expert-candidate-answers/by-user', // GET /by-user/{userId}
     quality: '/api/expert-candidate-answers', // PUT /{answerId}/quality
+    unrated: '/api/expert-candidate-answers/unrated', // GET 获取未评分专家回答
   },
   dataset: {
     base: '/api/datasets',  // 基础路径
@@ -163,6 +173,10 @@ export const apiUrls = {
     modelRankings: '/api/llm-models/batch',  // 获取批次内模型排名
     performanceByQuestionType: '/api/llm-models/batch',  // 获取问题类型维度的模型表现
   },
+  tags: {
+    recommend: '/api/tags/recommend',
+    all: '/api/tags'
+  },
   // 其他API路径
 };
 
@@ -170,6 +184,7 @@ export const apiUrls = {
 export const defaultApiConfig = {
   apiUrl: 'https://api.openai.com/v1',
   apiKey: '',
+  apiType: 'openai_compatible',
 }
 
 // 系统角色配置

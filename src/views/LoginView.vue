@@ -5,7 +5,17 @@ import LoginForm from '@/components/LoginForm.vue' // 导入新的表单组件
 const router = useRouter()
 
 const handleLoginSuccess = () => {
-  router.push('/') // 登录成功后跳转到首页
+  console.log('登录成功，正在跳转到首页...')
+  // 使用replace而不是push，防止用户按回退按钮时返回登录页
+  router.replace('/')
+
+  // 如果路由跳转失败，可以考虑直接刷新页面
+  setTimeout(() => {
+    if (window.location.pathname.includes('/login')) {
+      console.log('检测到仍在登录页，强制跳转到首页')
+      window.location.href = '/'
+    }
+  }, 500)
 }
 
 const navigateToRegister = () => {

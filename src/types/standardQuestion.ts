@@ -14,6 +14,13 @@ export interface StandardQuestionBase {
 }
 
 /**
+ * 标准问题创建接口
+ */
+export interface StandardQuestionDto extends StandardQuestionBase {
+  parentStandardQuestionId?: number   // 选填，父问题ID
+}
+
+/**
  * 标准问题列表项接口
  */
 export interface StandardQuestionItem {
@@ -103,4 +110,66 @@ export interface TagOperationResponse {
 export interface DeleteOperationResponse {
   success: boolean
   message: string
+}
+
+/**
+ * 标准问题搜索结果项接口
+ */
+export interface SearchQuestionItem {
+  id: number
+  questionText: string
+  questionType: string
+  difficulty: string
+  creationTime: string
+  tags: string[]
+  hasStandardAnswer: boolean
+  hasCrowdsourcedAnswer: boolean
+  hasExpertAnswer: boolean
+}
+
+/**
+ * 标准问题搜索响应接口
+ */
+export interface SearchQuestionResponse {
+  success: boolean
+  questions: SearchQuestionItem[]
+  total: number
+  page: number
+  size: number
+  totalPages: number
+}
+
+/**
+ * 原始数据响应接口
+ */
+export interface OriginalDataResponse {
+  standardQuestion: StandardQuestionItem
+  originalQuestions: {
+    id: number
+    content: string
+    source: string
+    creationTime: string
+  }[]
+  originalAnswers: {
+    id: number
+    content: string
+    originalQuestionId: number
+    source: string
+    creationTime: string
+  }[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+/**
+ * 无标准回答的问题响应接口
+ */
+export interface QuestionsWithoutAnswersResponse {
+  questions: StandardQuestionItem[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
 }

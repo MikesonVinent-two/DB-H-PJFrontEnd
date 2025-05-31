@@ -21,15 +21,16 @@ export const useLLMStore = defineStore('llm', () => {
   const isLoadingModels = ref(false)
 
   // 获取可用模型列表
-  const fetchModels = async (apiUrl: string, apiKey: string) => {
+  const fetchModels = async (apiUrl: string, apiKey: string, apiType: string = 'openai_compatible') => {
     try {
       isLoadingModels.value = true
       error.value = null
 
-      // 直接构造请求配置，使用传入的 apiUrl
+      // 直接构造请求配置，使用传入的 apiUrl 和 apiType
       const modelsRequest: GetModelsRequest = {
         apiUrl: apiUrl,
         apiKey: apiKey,
+        api: apiType,
       }
 
       // 发送请求

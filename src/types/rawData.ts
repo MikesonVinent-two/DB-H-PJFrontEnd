@@ -14,6 +14,18 @@ export interface RawQuestionItem {
 }
 
 /**
+ * 原始问题搜索项接口
+ */
+export interface RawQuestionSearchItem {
+  id: number
+  questionText: string
+  source: string
+  collectionTime: string
+  tags: string[]
+  status: 'PENDING' | 'STANDARDIZED' | 'REJECTED'
+}
+
+/**
  * 分页信息接口
  */
 export interface PageInfo {
@@ -42,15 +54,9 @@ export interface SortInfo {
  * 原始问题分页响应接口
  */
 export interface RawQuestionPageResponse {
-  content: RawQuestionItem[]
-  pageable: PageInfo
-  totalPages: number
+  content: RawQuestionSearchItem[]
   totalElements: number
-  last: boolean
-  first: boolean
+  totalPages: number
   size: number
   number: number
-  sort: SortInfo
-  numberOfElements: number
-  empty: boolean
 }

@@ -29,57 +29,80 @@
           </el-option>
         </el-select>
       </div>
-      <div class="model-info" v-if="currentModelInfo">
-        <el-tooltip
-          :content="currentModelInfo.description || '暂无描述'"
-          placement="bottom"
-          effect="light"
-          :show-after="500"
-        >
-          <el-tag type="info" size="small">
-            {{ currentModelInfo.provider }}
-          </el-tag>
+      <div class="model-controls">
+        <el-tooltip content="启用后会将之前的对话记录一起发送给模型，保持对话连续性" placement="bottom">
+          <div class="history-toggle" :class="{ 'history-active': enableHistory }">
+            <span class="toggle-label">启用历史：</span>
+            <el-switch v-model="enableHistory" />
+            <div class="history-status" v-if="enableHistory"></div>
+            <span class="history-count" v-if="enableHistory && historyCount > 0">({{ historyCount }}条)</span>
+          </div>
         </el-tooltip>
+        <div class="model-info" v-if="currentModelInfo">
+          <el-tooltip
+            :content="currentModelInfo.description || '暂无描述'"
+            placement="bottom"
+            effect="light"
+            :show-after="500"
+          >
+            <el-tag type="info" size="small">
+              {{ currentModelInfo.provider }}
+            </el-tag>
+          </el-tooltip>
+        </div>
       </div>
     </div>
 
     <!-- 聊天消息列表 -->
-    <div class="messages-container custom-scrollbar" ref="messagesContainer">
+    <div class="messages-container" ref="messagesContainer">
       <div v-for="(message, index) in messages" :key="index" class="message-wrapper">
-        <div :class="['message', message.role === 'user' ? 'user-message' : 'ai-message']">
-          <div class="message-avatar">
-            <el-avatar :size="40" :src="message.role === 'user' ? userAvatar : aiAvatar">
-              {{ message.role === 'user' ? 'U' : 'AI' }}
-            </el-avatar>
+        <!-- AI消息 -->
+        <div v-if="message.role === 'assistant'" class="message ai-message">
+          <div class="avatar-container">
+            <el-avatar :size="40" :src="aiAvatar" class="avatar">AI</el-avatar>
           </div>
-          <div class="message-content" :class="{ 'with-tail': true }">
+          <div class="message-bubble ai-bubble">
             <div class="message-header">
-              <span class="sender-name">{{ message.role === 'user' ? '你' : 'AI助手' }}</span>
+              <span class="sender-name">AI助手</span>
               <span class="message-time">{{ formatTime(message.timestamp) }}</span>
             </div>
-            <div class="message-body">
-              <template v-if="message.role === 'assistant'">
-                <!-- 渲染思考过程 (如果有) -->
-                <div v-if="extractThinking(message.content)" class="thinking-process">
-                  <div class="thinking-header" @click="toggleThinking(index)">
-                    <el-icon><Notebook /></el-icon>
-                    <span>思考过程</span>
-                    <el-icon :class="{ 'rotate-icon': expandedThinking.includes(index) }">
-                      <ArrowDown />
-                    </el-icon>
-                  </div>
-                  <div v-show="expandedThinking.includes(index)" class="thinking-content markdown-body"
-                       v-html="renderThinking(message.content)"></div>
+            <div class="message-content">
+              <!-- 渲染思考过程 (如果有) -->
+              <div v-if="extractThinking(message.content)" class="thinking-process">
+                <div class="thinking-header" @click="toggleThinking(index)">
+                  <el-icon><Notebook /></el-icon>
+                  <span>思考过程</span>
+                  <el-icon :class="{ 'rotate-icon': expandedThinking.includes(index) }">
+                    <ArrowDown />
+                  </el-icon>
                 </div>
+                <div v-show="expandedThinking.includes(index)" class="thinking-content markdown-body"
+                     v-html="renderThinking(message.content)"></div>
+              </div>
 
-                <!-- 渲染正常回复 -->
-                <div v-html="renderContent(message.content)" class="markdown-body response-content"></div>
-              </template>
-              <div v-else>{{ message.content }}</div>
+              <!-- 渲染正常回复 -->
+              <div v-html="renderContent(message.content)" class="markdown-body response-content"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 用户消息 -->
+        <div v-else class="message user-message">
+          <div class="avatar-container user-avatar-container">
+            <el-avatar :size="40" :src="userAvatar" class="avatar">U</el-avatar>
+          </div>
+          <div class="message-bubble user-bubble">
+            <div class="message-header">
+              <span class="sender-name">你</span>
+              <span class="message-time">{{ formatTime(message.timestamp) }}</span>
+            </div>
+            <div class="message-content">
+              {{ message.content }}
             </div>
           </div>
         </div>
       </div>
+
       <!-- 加载状态指示器 -->
       <div v-if="isLoading" class="loading-indicator">
         <div class="typing-indicator">
@@ -150,6 +173,7 @@ const currentModelInfo = computed(() =>
   availableModels.value.find(model => model.id === selectedModel.value)
 )
 const expandedThinking = ref<number[]>([]) // 存储已展开的思考过程消息索引
+const enableHistory = ref(false)
 
 // 监听模型选择变化
 watch(selectedModel, (newModel) => {
@@ -159,12 +183,24 @@ watch(selectedModel, (newModel) => {
   }
 })
 
-// 初始化时加载已选择的模型
-const initSelectedModel = () => {
+// 监听历史记录设置变化
+watch(enableHistory, (newValue) => {
+  localStorage.setItem('enableHistory', newValue.toString())
+})
+
+// 初始化时加载已选择的模型和历史记录设置
+const initSettings = () => {
+  // 加载模型设置
   const savedModel = localStorage.getItem('selectedModel')
   if (savedModel) {
     selectedModel.value = savedModel
     window.selectedModel = savedModel
+  }
+
+  // 加载历史记录设置
+  const savedHistory = localStorage.getItem('enableHistory')
+  if (savedHistory) {
+    enableHistory.value = savedHistory === 'true'
   }
 }
 
@@ -246,6 +282,14 @@ const scrollToBottom = async () => {
   }
 }
 
+// 历史消息计数
+const historyCount = computed(() => {
+  if (!enableHistory.value || messages.value.length <= 1) {
+    return 0
+  }
+  return Math.min(messages.value.length - 1, 10)
+})
+
 // 处理发送消息
 const handleSend = async () => {
   const message = userInput.value.trim()
@@ -274,9 +318,35 @@ const handleSend = async () => {
 
     // 创建请求配置，使用选定的模型
     const chatRequest = createDefaultChatRequest(message)
-    chatRequest.api = apiConfig.apiUrl
+    chatRequest.apiUrl = apiConfig.apiUrl
     chatRequest.apiKey = apiConfig.apiKey
+    chatRequest.api = apiConfig.apiType || 'openai_compatible' // 使用apiType作为api字段
     chatRequest.model = selectedModel.value // 直接使用选定的模型
+
+    // 如果启用了历史记录，添加最近10条消息到请求中
+    if (enableHistory.value && messages.value.length > 1) {
+      // 获取最近的消息，最多10条(不包括刚刚添加的当前消息)
+      const historyMessages = messages.value
+        .slice(0, -1) // 排除刚刚添加的消息
+        .slice(-10) // 最多取10条
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
+
+      // 添加历史消息到请求中
+      chatRequest.chatMessages = historyMessages
+
+      // 确保将当前消息也添加到chatMessages中
+      if (chatRequest.chatMessages) {
+        chatRequest.chatMessages.push({
+          role: 'user',
+          content: message
+        });
+      }
+
+      console.log(`发送了 ${historyMessages.length} 条历史消息:`, JSON.stringify(historyMessages))
+    }
 
     // 发送请求
     const response = await sendChatRequest(chatRequest)
@@ -312,8 +382,8 @@ onMounted(() => {
     timestamp: Date.now()
   })
 
-  // 初始化选中的模型
-  initSelectedModel()
+  // 初始化设置
+  initSettings()
 })
 </script>
 
@@ -338,6 +408,7 @@ onMounted(() => {
   padding: 10px 20px;
   background-color: #f9f9f9;
   border-bottom: 1px solid #eee;
+  z-index: 10;
 }
 
 .current-model {
@@ -377,69 +448,107 @@ onMounted(() => {
   margin-left: 8px;
 }
 
+/* 消息容器 */
 .messages-container {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
   background-color: #f9f9f9;
-  width: 100%;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: #ccc #f1f1f1;
 }
 
+.messages-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+
+/* 消息样式 */
 .message-wrapper {
-  margin-bottom: 20px;
-  display: flex;
-  justify-content: center;
+  margin-bottom: 24px;
   width: 100%;
-  position: relative;
+  display: block;
 }
 
 .message {
   display: flex;
   max-width: 85%;
-  width: 100%;
+  align-items: flex-start;
 }
 
 .user-message {
+  margin-left: auto;
+  margin-right: 0;
+  flex-direction: row;
   justify-content: flex-end;
 }
 
 .ai-message {
-  justify-content: flex-start;
+  margin-right: auto;
+  margin-left: 0;
+  flex-direction: row;
 }
 
-.message-avatar {
-  margin: 0 12px;
+.avatar-container {
+  flex-shrink: 0;
+  margin: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.message-content {
-  background-color: #fff;
+.user-avatar-container {
+  order: 1;
+}
+
+.message-bubble {
   border-radius: 12px;
   padding: 12px 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  max-width: calc(100% - 80px);
-  width: 100%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  max-width: calc(100% - 60px);
 }
 
-.user-message .message-content {
-  background-color: #ecf5ff;
-  border: 1px solid #d9ecff;
+.user-bubble {
+  background-color: #e8f4ff;
+  border: 1px solid #c9e2ff;
+  border-top-right-radius: 2px;
+  margin-left: 0;
+  margin-right: 10px;
+  box-shadow: 0 1px 4px rgba(0, 120, 255, 0.08);
 }
 
-.ai-message .message-content {
+.ai-bubble {
   background-color: #fff;
   border: 1px solid #eee;
+  border-top-left-radius: 2px;
+  margin-left: 10px;
+  margin-right: 0;
 }
 
 .message-header {
   display: flex;
   justify-content: space-between;
   margin-bottom: 6px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .sender-name {
   font-weight: bold;
+  color: #333;
 }
 
 .message-time {
@@ -447,44 +556,58 @@ onMounted(() => {
   font-size: 12px;
 }
 
-.message-body {
+.message-content {
   word-break: break-word;
   line-height: 1.6;
+  font-size: 14px;
 }
 
-.input-container {
-  padding: 15px 20px;
-  border-top: 1px solid #eee;
-  background-color: #fff;
+/* 思考过程样式 */
+.thinking-process {
+  margin-bottom: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
-.input-wrapper {
+.thinking-header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
 }
 
-.custom-input {
-  flex: 1;
+.thinking-header .el-icon {
+  margin-right: 5px;
 }
 
-.send-button {
-  margin-left: 10px;
-  height: 40px;
-  padding: 0 20px;
+.thinking-content {
+  padding: 10px;
+  background-color: #fafafa;
+  border-top: 1px solid #e0e0e0;
+  font-size: 13px;
+  color: #666;
 }
 
-.input-hint {
-  margin-top: 5px;
-  font-size: 12px;
-  color: #999;
-  text-align: right;
+.rotate-icon {
+  transform: rotate(180deg);
+  transition: transform 0.3s;
 }
 
+.response-content {
+  padding: 0;
+}
+
+/* 加载指示器 */
 .loading-indicator {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin: 20px 0;
+  justify-content: flex-start;
+  margin: 12px 0;
+  padding-left: 60px;
   color: #666;
 }
 
@@ -526,75 +649,113 @@ onMounted(() => {
   }
 }
 
+/* 输入区域 */
+.input-container {
+  padding: 15px 20px;
+  border-top: 1px solid #eee;
+  background-color: #fff;
+  z-index: 10;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: flex-end;
+}
+
+.custom-input {
+  flex: 1;
+}
+
+.send-button {
+  margin-left: 10px;
+  height: 40px;
+  padding: 0 20px;
+}
+
+.input-hint {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #999;
+  text-align: right;
+}
+
+/* Markdown内容样式 */
 .markdown-body {
   font-size: 14px;
 }
 
-.thinking-process {
-  margin-bottom: 10px;
-  border: 1px solid #e0e0e0;
+.markdown-body pre {
+  background-color: #f6f8fa;
   border-radius: 6px;
-  overflow: hidden;
+  padding: 12px;
+  overflow-x: auto;
 }
 
-.thinking-header {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  background-color: #f5f5f5;
-  cursor: pointer;
+.markdown-body code {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
   font-size: 13px;
-  color: #666;
-}
-
-.thinking-header .el-icon {
-  margin-right: 5px;
-}
-
-.thinking-content {
-  padding: 10px;
-  background-color: #fafafa;
-  border-top: 1px solid #e0e0e0;
-  font-size: 13px;
-  color: #666;
-}
-
-.rotate-icon {
-  transform: rotate(180deg);
-  transition: transform 0.3s;
-}
-
-.response-content {
-  padding: 0;
-}
-
-/* 自定义滚动条 */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #ccc;
+  background-color: #f0f0f0;
+  padding: 2px 4px;
   border-radius: 3px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
+.markdown-body pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.markdown-body p {
+  margin: 0 0 10px;
+}
+
+.markdown-body ul, .markdown-body ol {
+  padding-left: 20px;
+  margin: 0 0 10px;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3,
+.markdown-body h4, .markdown-body h5, .markdown-body h6 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.model-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.history-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.toggle-label {
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
+}
+
+.history-status {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--el-color-success);
+  display: none;
+}
+
+.history-active .history-status {
+  display: block;
+}
+
+.history-count {
+  font-size: 12px;
+  color: var(--el-color-primary);
+  margin-left: 5px;
 }
 </style>
-
-<script lang="ts">
-declare global {
-  interface Window {
-    apiConfig?: {
-      apiUrl: string
-      apiKey: string
-    }
-    selectedModel?: string
-  }
-}
-</script>

@@ -1,20 +1,60 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import type { RouteRecordRaw, NavigationGuardNext, RouteLocationNormalized } from 'vue-router'
+import type { RouteRecordRaw, RouteLocationNormalized } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 
+// 定义路由元数据类型
+interface RouteMeta {
+  requiresAuth: boolean;
+  title: string;
+  roles: string[];
+  requiresEvaluator?: boolean;
+}
+
+// 扩展 vue-router 模块，使用正确的声明合并方式
+declare module 'vue-router' {
+  // 扩展现有接口而不是重新定义
+  interface RouteMeta {
+    requiresAuth: boolean;
+    title: string;
+    roles: string[];
+    requiresEvaluator?: boolean;
+  }
+}
+
 // 路由配置
 const routes: Array<RouteRecordRaw> = [
-    {
-      path: '/',
-      name: 'home',
-      component: HomeView,
-      meta: {
+  {
+    path: '/',
+    name: 'home',
+    component: HomeView,
+    meta: {
       requiresAuth: true,
       title: '首页',
-      roles: ['user', 'admin', 'expert']
+      roles: ['ADMIN', 'CURATOR', 'EXPERT', 'ANNOTATOR', 'REFEREE', 'CROWDSOURCE_USER']
     }
   },
+  {
+    path: '/login',
+    name: 'login',
+    component: LoginView,
+    meta: {
+      requiresAuth: false,
+      title: '登录',
+      roles: []
+    }
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('../views/RegisterView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: '注册',
+      roles: []
+    }
+  },
+  // 聊天和历史记录页面 - 所有用户可访问
   {
     path: '/chat',
     name: 'chat',
@@ -22,78 +62,336 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       requiresAuth: true,
       title: 'AI对话',
-      roles: ['user', 'admin', 'expert']
+      roles: ['ADMIN', 'CURATOR', 'EXPERT', 'ANNOTATOR', 'REFEREE', 'CROWDSOURCE_USER']
     }
   },
+
+  // 数据管理功能
   {
-    path: '/history',
-    name: 'history',
-    component: () => import('../views/HistoryView.vue'),
+    path: '/data/original-questions',
+    name: 'original-questions',
+    component: () => import('../views/curator/QuestionManagement.vue'),
     meta: {
       requiresAuth: true,
-      title: '历史记录',
-      roles: ['user', 'admin', 'expert']
+      title: '原始问题管理',
+      roles: ['CURATOR', 'ADMIN']
     }
   },
   {
-    path: '/profile',
+    path: '/data/original-answers',
+    name: 'original-answers',
+    component: () => import('../views/curator/AnswerManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '原始回答管理',
+      roles: ['CURATOR', 'ADMIN']
+    }
+  },
+  {
+    path: '/data/datasets',
+    name: 'datasets',
+    component: () => import('../views/admin/DatasetManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '数据集管理',
+      roles: ['ADMIN']
+    }
+  },
+
+  // 标准化工作台
+  {
+    path: '/standardization/question-standardization',
+    name: 'question-standardization',
+    component: () => import('../views/annotator/QuestionStandardization.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '问题标准化',
+      roles: ['ANNOTATOR', 'EXPERT', 'ADMIN']
+    }
+  },
+  {
+    path: '/standardization/question-history',
+    name: 'question-history',
+    component: () => import('../views/annotator/QuestionHistory.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '问题版本历史',
+      roles: ['ANNOTATOR', 'EXPERT', 'ADMIN']
+    }
+  },
+  {
+    path: '/standardization/question-batch',
+    name: 'question-batch',
+    component: () => import('../views/annotator/QuestionBatch.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '问题批量处理',
+      roles: ['ANNOTATOR', 'ADMIN']
+    }
+  },
+  {
+    path: '/standardization/standard-answers',
+    name: 'standard-answers',
+    component: () => import('../views/annotator/StandardAnswers.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '标准回答管理',
+      roles: ['ANNOTATOR', 'EXPERT', 'ADMIN']
+    }
+  },
+  {
+    path: '/standardization/answer-review',
+    name: 'answer-review',
+    component: () => import('../views/annotator/AnswerReview.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '回答评审',
+      roles: ['ANNOTATOR', 'EXPERT', 'ADMIN']
+    }
+  },
+  {
+    path: '/standardization/answer-history',
+    name: 'answer-history',
+    component: () => import('../views/annotator/AnswerHistory.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '回答版本历史',
+      roles: ['ANNOTATOR', 'EXPERT', 'ADMIN']
+    }
+  },
+
+  // Prompt工作台
+  {
+    path: '/prompt/answer-type-prompt',
+    name: 'answer-type-prompt',
+    component: () => import('../views/prompt/AnswerTypePrompt.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '回答阶段-题型提示词',
+      roles: ['ANNOTATOR', 'ADMIN', 'EXPERT']
+    }
+  },
+  {
+    path: '/prompt/answer-tag-prompt',
+    name: 'answer-tag-prompt',
+    component: () => import('../views/prompt/AnswerTagPrompt.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '回答阶段-标签提示词',
+      roles: ['ANNOTATOR', 'ADMIN', 'EXPERT']
+    }
+  },
+  {
+    path: '/prompt/answer-assembly-prompt',
+    name: 'answer-assembly-prompt',
+    component: () => import('../views/prompt/AnswerAssemblyPrompt.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '回答阶段-组装提示词',
+      roles: ['ANNOTATOR', 'ADMIN', 'EXPERT']
+    }
+  },
+  {
+    path: '/prompt/evaluation-subjective-prompt',
+    name: 'evaluation-subjective-prompt',
+    component: () => import('../views/prompt/EvaluationSubjectivePrompt.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '评测阶段-简答题提示词',
+      roles: ['ANNOTATOR', 'ADMIN', 'EXPERT']
+    }
+  },
+  {
+    path: '/prompt/evaluation-tag-prompt',
+    name: 'evaluation-tag-prompt',
+    component: () => import('../views/prompt/EvaluationTagPrompt.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '评测阶段-标签提示词',
+      roles: ['ANNOTATOR', 'ADMIN', 'EXPERT']
+    }
+  },
+  {
+    path: '/prompt/evaluation-assembly-prompt',
+    name: 'evaluation-assembly-prompt',
+    component: () => import('../views/prompt/EvaluationPromptAssembly.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '评测阶段-组装提示词',
+      roles: ['ANNOTATOR', 'ADMIN', 'EXPERT']
+    }
+  },
+
+  // 评测功能
+  {
+    path: '/evaluation/batch-evaluation',
+    name: 'batch-evaluation',
+    component: () => import('../views/evaluator/BatchEvaluation.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '批次评测',
+      roles: ['ADMIN'],
+      requiresEvaluator: true
+    }
+  },
+  {
+    path: '/evaluation/evaluations',
+    name: 'evaluations',
+    component: () => import('../views/admin/EvaluationManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '评测管理',
+      roles: ['ADMIN']
+    }
+  },
+  {
+    path: '/evaluation/scoring',
+    name: 'scoring',
+    component: () => import('../views/admin/ScoringManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '算分管理',
+      roles: ['ADMIN']
+    }
+  },
+  {
+    path: '/evaluation/expert-rating',
+    name: 'expert-rating',
+    component: () => import('../views/referee/ExpertRating.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '专家回答评分',
+      roles: ['REFEREE', 'ADMIN']
+    }
+  },
+
+  // 众包管理
+  {
+    path: '/crowdsource/crowdsource-tasks',
+    name: 'crowdsource-tasks',
+    component: () => import('../views/crowdsource/CrowdsourceTasks.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '众包任务',
+      roles: ['CROWDSOURCE_USER', 'ANNOTATOR', 'ADMIN']
+    }
+  },
+  {
+    path: '/crowdsource/crowdsource-review',
+    name: 'crowdsource-review',
+    component: () => import('../views/referee/CrowdsourceReview.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '众包审核',
+      roles: ['REFEREE', 'ANNOTATOR', 'ADMIN']
+    }
+  },
+  {
+    path: '/crowdsource/crowdsource-stats',
+    name: 'crowdsource-stats',
+    component: () => import('../views/crowdsource/CrowdsourceDashboard.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '众包统计',
+      roles: ['ADMIN', 'ANNOTATOR']
+    }
+  },
+
+  // 众包任务台 - 标注员专用
+  {
+    path: '/crowdsource/crowdsource-workbench',
+    name: 'crowdsource-workbench',
+    component: () => import('../views/crowdsource/CrowdsourceWorkbench.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '众包任务台',
+      roles: ['ANNOTATOR', 'ADMIN', 'CROWDSOURCE_USER']
+    }
+  },
+  {
+    path: '/crowdsource/crowdsource-dashboard',
+    name: 'crowdsource-dashboard',
+    component: () => import('../views/crowdsource/CrowdsourceDashboard.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '众包仪表盘',
+      roles: ['ANNOTATOR', 'ADMIN', 'CROWDSOURCE_USER']
+    }
+  },
+  {
+    path: '/crowdsource/standard-questions',
+    name: 'crowdsource-questions',
+    component: () => import('../views/crowdsource/StandardQuestions.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '标准问题回答',
+      roles: ['ANNOTATOR', 'ADMIN', 'CROWDSOURCE_USER']
+    }
+  },
+
+  // 系统管理
+  {
+    path: '/system/users',
+    name: 'users',
+    component: () => import('../views/admin/UserManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '用户管理',
+      roles: ['ADMIN']
+    }
+  },
+  {
+    path: '/system/evaluators',
+    name: 'evaluators',
+    component: () => import('../views/admin/EvaluatorManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '评测员管理',
+      roles: ['ADMIN']
+    }
+  },
+  {
+    path: '/system/config',
+    name: 'config',
+    component: () => import('../views/annotator/ConfigManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '配置管理',
+      roles: ['ANNOTATOR', 'ADMIN']
+    }
+  },
+  {
+    path: '/system/tags',
+    name: 'tags',
+    component: () => import('../views/annotator/TagManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '标签管理',
+      roles: ['ANNOTATOR', 'ADMIN']
+    }
+  },
+
+
+  // 用户中心
+  {
+    path: '/user/profile',
     name: 'profile',
     component: () => import('../views/ProfileView.vue'),
     meta: {
       requiresAuth: true,
       title: '个人信息',
-      roles: ['user', 'admin', 'expert']
+      roles: ['ADMIN', 'CURATOR', 'EXPERT', 'ANNOTATOR', 'REFEREE', 'CROWDSOURCE_USER']
     }
   },
   {
-    path: '/user/:id',
-    name: 'user-profile',
-    component: () => import('../views/UserProfileView.vue'),
-    meta: {
-      requiresAuth: true,
-      title: '用户详情',
-      roles: ['user', 'admin', 'expert']
-    }
-  },
-  {
-    path: '/settings',
+    path: '/user/settings',
     name: 'settings',
     component: () => import('../views/SettingsView.vue'),
     meta: {
       requiresAuth: true,
       title: '设置',
-      roles: ['user', 'admin', 'expert']
-      }
-    },
-    {
-      path: '/about',
-      name: 'about',
-      component: () => import('../views/AboutView.vue'),
-      meta: {
-      requiresAuth: true,
-      title: '关于',
-      roles: ['user', 'admin', 'expert']
-      }
-    },
-    {
-      path: '/login',
-      name: 'login',
-      component: LoginView,
-      meta: {
-      requiresAuth: false,
-      title: '登录',
-      roles: []
-      }
-    },
-    {
-      path: '/register',
-      name: 'register',
-      component: () => import('../views/RegisterView.vue'),
-      meta: {
-      requiresAuth: false,
-      title: '注册',
-      roles: []
-      }
+      roles: ['ADMIN', 'CURATOR', 'EXPERT', 'ANNOTATOR', 'REFEREE', 'CROWDSOURCE_USER']
+    }
   },
   {
     path: '/:pathMatch(.*)*',
@@ -156,80 +454,151 @@ const logAuthStatus = (isAuthenticated: boolean, requiresAuth: boolean, path: st
 
 // 调试工具：记录页面性能
 const logPagePerformance = (to: RouteLocationNormalized) => {
-  const timing = window.performance.timing
-  const pageLoadTime = timing.loadEventEnd - timing.navigationStart
-  const dnsTime = timing.domainLookupEnd - timing.domainLookupStart
-  const tcpTime = timing.connectEnd - timing.connectStart
-  const renderTime = timing.domComplete - timing.domLoading
+  // 使用现代Performance API
+  if (window.performance && performance.getEntriesByType) {
+    const pageEntries = performance.getEntriesByType('navigation')
+    if (pageEntries.length > 0) {
+      const navigationEntry = pageEntries[0] as PerformanceNavigationTiming
 
-  console.group('📊 页面性能指标')
-  console.log({
-    页面: to.name,
-    总加载时间: `${pageLoadTime}ms`,
-    DNS解析: `${dnsTime}ms`,
-    TCP连接: `${tcpTime}ms`,
-    页面渲染: `${renderTime}ms`
-  })
-  console.groupEnd()
+      console.group('📊 页面性能 - ' + to.path)
+      console.log({
+        总加载时间: `${Math.round(navigationEntry.loadEventEnd - navigationEntry.startTime)}ms`,
+        DNS查询: `${Math.round(navigationEntry.domainLookupEnd - navigationEntry.domainLookupStart)}ms`,
+        TCP连接: `${Math.round(navigationEntry.connectEnd - navigationEntry.connectStart)}ms`,
+        首字节时间: `${Math.round(navigationEntry.responseStart - navigationEntry.requestStart)}ms`
+      })
+      console.groupEnd()
+    }
+  }
 }
 
-// 全局前置守卫
-router.beforeEach(async (to, from, next: NavigationGuardNext) => {
-  console.group(`🎯 路由导航开始 - ${new Date().toLocaleTimeString()}`)
+// 用户数据接口
+interface UserData {
+  id: number;
+  role: string;
+  username: string;
+  isEvaluator: boolean;
+  // 添加其他用户属性
+}
 
-  // 记录路由变化
-  logRouteChange(to, from)
+// 为路由守卫的next函数定义一个类型
+type NavigationGuardNextCallback = (
+  to?:
+    | string
+    | { path: string; query?: Record<string, string>; replace?: boolean; name?: string }
+    | false
+    | void
+) => void;
 
-  // 获取认证状态
-  const user = localStorage.getItem('user')
-  const isAuthenticated = !!user
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-
-  // 记录认证状态
-  logAuthStatus(isAuthenticated, requiresAuth, to.path)
-
-  // 设置页面标题
-  const title = to.meta.title ? `${to.meta.title} - AI问答系统` : 'AI问答系统'
-  document.title = title
-  console.log('📑 页面标题已更新:', title)
-
-  // 路由守卫逻辑
+// 检查用户是否需要重定向到登录页
+const checkAuthRedirect = (
+  requiresAuth: boolean,
+  isAuthenticated: boolean,
+  to: RouteLocationNormalized,
+  next: NavigationGuardNextCallback
+) => {
+  // 如果需要认证但用户未登录，重定向到登录页
   if (requiresAuth && !isAuthenticated) {
-    console.warn('⚠️ 需要登录，重定向到登录页面')
     next({
       path: '/login',
       query: { redirect: to.fullPath }
     })
-  } else if (!requiresAuth && isAuthenticated && (to.path === '/login' || to.path === '/register')) {
-    console.warn('⚠️ 已登录，重定向到首页')
-    next('/')
-  } else {
-    console.log('✅ 验证通过，允许导航')
-    next()
+    return true
   }
 
-  console.groupEnd()
+  // 如果用户已登录但访问登录页，重定向到首页
+  if (isAuthenticated && (to.path === '/login' || to.path === '/register')) {
+    next({ path: '/' })
+    return true
+  }
+
+  return false
+}
+
+// 解析用户数据
+const parseUserData = (userStr: string | null): UserData | null => {
+  let userData: UserData | null = null;
+  try {
+    if (userStr) {
+      userData = JSON.parse(userStr) as UserData;
+    }
+  } catch (e) {
+    console.error('解析用户数据时出错:', e);
+  }
+  return userData;
+}
+
+// 检查用户角色权限
+const checkRolePermission = (
+  userData: UserData | null,
+  to: RouteLocationNormalized,
+  next: NavigationGuardNextCallback
+): boolean => {
+  const userRole = userData?.role;
+  console.log('当前用户角色:', userRole);
+
+  if (!userRole || !Array.isArray(to.meta.roles) || !to.meta.roles.includes(userRole)) {
+    console.warn(`用户角色 ${userRole} 没有权限访问路径 ${to.path}，所需角色:`, to.meta.roles);
+    next({ path: '/403' })
+    return true
+  }
+
+  // 检查评测员权限
+  if (to.meta.requiresEvaluator) {
+    const isEvaluator = userData?.isEvaluator === true;
+    if (!isEvaluator) {
+      console.warn('此路径需要评测员权限');
+      next({ path: '/403' })
+      return true
+    }
+  }
+
+  return false
+}
+
+// 全局前置守卫
+router.beforeEach((to, from, next) => {
+  // 设置页面标题
+  document.title = to.meta.title ? `${String(to.meta.title)} - 标注系统` : '标注系统'
+
+  // 记录路由变化（仅在开发环境）
+  if (import.meta.env.DEV) {
+    logRouteChange(to, from)
+  }
+
+  // 检查用户登录状态
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const userStr = localStorage.getItem('user')
+  const isAuthenticated = !!userStr // 根据user数据判断是否已登录，不再使用token
+
+  // 记录认证状态（仅在开发环境）
+  if (import.meta.env.DEV) {
+    logAuthStatus(isAuthenticated, requiresAuth, to.path)
+  }
+
+  // 检查是否需要重定向（登录/首页）
+  if (checkAuthRedirect(requiresAuth, isAuthenticated, to, next)) {
+    return
+  }
+
+  // 检查用户角色权限
+  if (requiresAuth && isAuthenticated && to.meta.roles && Array.isArray(to.meta.roles) && to.meta.roles.length > 0) {
+    const userData = parseUserData(userStr);
+    if (checkRolePermission(userData, to, next)) {
+      return
+    }
+  }
+
+  next()
 })
 
 // 全局后置钩子
-router.afterEach((to, from) => {
-  const navigationTime = window.performance.now()
-  console.group(`🏁 路由导航完成 - ${new Date().toLocaleTimeString()}`)
-  console.log(`从 ${from.path} 到 ${to.path}`)
-  console.log(`导航耗时: ${navigationTime.toFixed(2)}ms`)
-
-  // 记录页面性能指标
-  logPagePerformance(to)
-
-  console.groupEnd()
-})
-
-// 路由错误处理
-router.onError((error) => {
-  console.group('❌ 路由错误')
-  console.error('错误详情:', error)
-  console.trace('错误堆栈')
-  console.groupEnd()
+router.afterEach((to) => {
+  // 记录页面性能（仅在开发环境）
+  if (import.meta.env.DEV) {
+    // 使用setTimeout确保性能度量在页面加载完成后执行
+    setTimeout(() => logPagePerformance(to), 0)
+  }
 })
 
 export default router

@@ -108,6 +108,9 @@ export const useUserStore = defineStore('user', () => {
       currentUser.value = userInfo
       localStorage.setItem('user', JSON.stringify(userInfo))
 
+      // 不再设置token，仅依赖user数据判断登录状态
+      console.log('✅ 用户登录成功:', userInfo.username)
+
       // 触发登录成功事件
       window.dispatchEvent(new CustomEvent('user-login', {
         detail: userInfo

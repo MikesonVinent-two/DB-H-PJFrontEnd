@@ -58,12 +58,29 @@
                   </div>
                 </el-dropdown-item>
                 <el-dropdown-item divided>
+                  <div class="user-info-details">
+                    <div class="info-item">
+                      <span class="info-label">用户名：</span>
+                      <span class="info-value">{{ currentUser.username }}</span>
+                    </div>
+                    <div class="info-item" v-if="currentUser.name">
+                      <span class="info-label">姓名：</span>
+                      <span class="info-value">{{ currentUser.name }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">联系方式：</span>
+                      <span class="info-value">{{ currentUser.contactInfo }}</span>
+                    </div>
+                    <div class="info-item" v-if="currentUser.isEvaluator">
+                      <span class="info-label">评测员ID：</span>
+                      <span class="info-value">{{ currentUser.evaluatorId || '-' }}</span>
+                    </div>
+                  </div>
+                </el-dropdown-item>
+                <el-dropdown-item divided @click="router.push('/profile')">
                   <el-icon><User /></el-icon>个人信息
                 </el-dropdown-item>
-                <el-dropdown-item>
-                  <el-icon><List /></el-icon>历史记录
-                </el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">
+                <el-dropdown-item @click="handleLogout">
                   <el-icon><SwitchButton /></el-icon>退出登录
                 </el-dropdown-item>
               </el-dropdown-menu>
@@ -166,14 +183,20 @@ const handleSelect = (key: string) => {
 const getRoleName = (role: UserRole | undefined) => {
   if (!role) return '未知角色'
   switch (role) {
-    case UserRole.USER:
-      return '普通用户'
     case UserRole.ADMIN:
       return '管理员'
+    case UserRole.CURATOR:
+      return '策展人'
     case UserRole.EXPERT:
       return '专家'
+    case UserRole.ANNOTATOR:
+      return '标注员'
+    case UserRole.REFEREE:
+      return '审核员'
+    case UserRole.CROWDSOURCE_USER:
+      return '众包用户'
     default:
-      return '未知角色'
+      return role || '未知角色' // 返回原始角色名称，避免显示未知角色
   }
 }
 
@@ -238,11 +261,9 @@ const handleLogout = async () => {
     // 清理所有存储
     window.userInfo = undefined
     localStorage.removeItem('userInfo')
-    localStorage.removeItem('user')  // 同时清除 'user' 存储
-    localStorage.removeItem('token') // 清除 token
+    localStorage.removeItem('user')  // 主要清理这个即可
     sessionStorage.removeItem('userInfo')
     sessionStorage.removeItem('user')
-    sessionStorage.removeItem('token')
 
     // 更新状态
     localIsLoggedIn.value = false
@@ -260,9 +281,6 @@ const handleLogout = async () => {
 
     // 强制重定向到登录页面，确保导航栏刷新
     router.push('/login')
-
-    // 可选：强制刷新页面以确保所有状态重置
-    // window.location.href = '/login'
 
     ElMessage.success('已退出登录')
   } catch (error) {
@@ -411,6 +429,29 @@ const handleModelConfig = () => {
 .user-info-role {
   color: #999;
   font-size: 12px;
+}
+
+.user-info-details {
+  padding: 8px;
+  min-width: 240px;
+}
+
+.info-item {
+  margin: 6px 0;
+  display: flex;
+  font-size: 13px;
+}
+
+.info-label {
+  color: #606266;
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.info-value {
+  color: #303133;
+  font-weight: 500;
+  word-break: break-all;
 }
 
 .model-selector-container {

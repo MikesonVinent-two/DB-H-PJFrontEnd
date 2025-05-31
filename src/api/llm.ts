@@ -36,6 +36,7 @@ export interface ChatRequest {
   temperature?: number
   maxTokens?: number
   systemPrompts: SystemPrompt[]
+  chatMessages?: Message[]
 }
 
 // 使用情况接口
@@ -89,8 +90,10 @@ const logChatRequest = (request: ChatRequest) => {
   console.log('模型:', request.model)
   console.log('消息内容:', request.message)
   console.log('系统提示词:', request.systemPrompts)
+  console.log('历史消息:', request.chatMessages ? JSON.stringify(request.chatMessages) : '无')
   console.log('温度:', request.temperature)
   console.log('最大Token:', request.maxTokens)
+  console.log('完整请求数据:', JSON.stringify(request))
   console.groupEnd()
 }
 
@@ -136,10 +139,19 @@ const logError = (error: Error, context: string) => {
 export const sendChatRequest = async (data: ChatRequest): Promise<ChatResponse> => {
   try {
     const startTime = Date.now()
+    // 使用固定的API接口URL
     const url = `${appConfig.api.baseUrl}/api/llm/chat`
+
+    // 准备请求数据
+    const requestData = {
+      ...data,
+      // 确保历史消息字段存在并正确格式化
+      messages: data.chatMessages || []
+    };
 
     // 打印请求信息
     logChatRequest(data)
+    console.log('发送到后端的实际数据:', JSON.stringify(requestData))
 
     // 发送请求
     const response = await fetch(url, {
@@ -147,7 +159,7 @@ export const sendChatRequest = async (data: ChatRequest): Promise<ChatResponse> 
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(requestData),
     })
 
     if (!response.ok) {
@@ -175,6 +187,7 @@ export const sendChatRequest = async (data: ChatRequest): Promise<ChatResponse> 
  */
 export const getAvailableModels = async (data: GetModelsRequest): Promise<ModelInfo[]> => {
   try {
+    // 使用固定的API接口URL
     const url = `${appConfig.api.baseUrl}/api/llm/models`
 
     console.group('🔍 获取可用模型')
@@ -240,9 +253,9 @@ export const createDefaultChatRequest = (
 }
 
 // 创建默认的模型请求配置
-export const createDefaultModelsRequest = (apiKey: string, api: string = 'openai'): GetModelsRequest => {
+export const createDefaultModelsRequest = (apiKey: string, api: string = 'openai', apiUrl: string = 'https://api.openai.com/v1'): GetModelsRequest => {
   return {
-    apiUrl: 'https://api.openai.com/v1',
+    apiUrl,
     apiKey,
     api
   }

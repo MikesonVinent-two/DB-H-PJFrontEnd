@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useUserStore } from '@/stores/user'
-import type { UserInfo } from '@/api/user'
+import type { UserInfo, LoginResponse } from '@/api/user'
 import { UserRole } from '@/api/user'
 
 const props = defineProps<{
@@ -9,10 +9,14 @@ const props = defineProps<{
 }>()
 
 const userStore = useUserStore()
-const userInfo = ref<UserInfo | null>(null)
+const userInfo = ref<UserInfo | LoginResponse | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
+// 类型守卫函数
+const isUserInfo = (user: UserInfo | LoginResponse | null): user is UserInfo => {
+  return user !== null && 'createdAt' in user
+}
 // 如果提供了userId，就加载该用户的信息，否则使用当前登录用户
 const fetchData = async () => {
   loading.value = true
@@ -41,24 +45,45 @@ const roleName = computed(() => {
   if (!userInfo.value) return '未知角色'
 
   switch (userInfo.value.role) {
-    case 'USER':
-    case UserRole.USER:
-      return '普通用户'
-    case 'ADMIN':
     case UserRole.ADMIN:
       return '管理员'
-    case 'EXPERT':
+    case UserRole.CURATOR:
+      return '策展人'
     case UserRole.EXPERT:
       return '专家'
+    case UserRole.ANNOTATOR:
+      return '标注员'
+    case UserRole.REFEREE:
+      return '审核员'
+    case UserRole.CROWDSOURCE_USER:
+      return '众包用户'
     default:
-      return '未知角色'
+      return userInfo.value.role || '未知角色'
   }
 })
 
 // 格式化创建时间
 const formattedCreatedAt = computed(() => {
-  if (!userInfo.value || !userInfo.value.createdAt) return '未知'
-  return new Date(userInfo.value.createdAt).toLocaleString()
+  if (!userInfo.value) return '未知'
+  // 使用类型守卫判断是否有 createdAt 属性
+  if (isUserInfo(userInfo.value)) {
+    return new Date(userInfo.value.createdAt).toLocaleString()
+  }
+  return '未知'
+})
+
+// 计算用户邮箱
+const userEmail = computed(() => {
+  if (!userInfo.value) return '未设置'
+  // 使用类型守卫判断是否有 email 属性
+  if (isUserInfo(userInfo.value) && userInfo.value.email) {
+    return userInfo.value.email
+  }
+  // 如果是登录响应，使用联系方式代替
+  if (userInfo.value.contactInfo) {
+    return userInfo.value.contactInfo
+  }
+  return '未设置'
 })
 
 onMounted(fetchData)
@@ -78,7 +103,7 @@ onMounted(fetchData)
 
     <div v-else-if="userInfo" class="user-info">
       <div class="user-avatar">
-        <el-avatar :size="80" :src="userInfo.avatar">
+        <el-avatar :size="80">
           {{ userInfo.username?.charAt(0).toUpperCase() }}
         </el-avatar>
       </div>
@@ -91,7 +116,7 @@ onMounted(fetchData)
 
         <div class="info-item">
           <span class="label">邮箱：</span>
-          <span class="value">{{ userInfo.email }}</span>
+          <span class="value">{{ userEmail }}</span>
         </div>
 
         <div class="info-item">

@@ -85,6 +85,28 @@
               </el-input>
             </el-form-item>
 
+            <el-form-item
+              label="API 类型"
+              prop="apiType"
+              :rules="[
+                { required: true, message: '请选择API类型', trigger: 'change' }
+              ]"
+            >
+              <el-select
+                v-model="apiConfig.apiType"
+                placeholder="请选择API类型"
+                :disabled="isLoadingModels"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="option in apiTypeOptions"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </el-select>
+            </el-form-item>
+
           <el-form-item
             label="API 密钥"
             prop="apiKey"
@@ -150,6 +172,25 @@
             </div>
           </el-form-item>
 
+          <!-- 提供给测评按钮 - 只在成功加载模型后显示 -->
+          <el-form-item v-if="availableModels.length > 0 && !isLoadingModels">
+            <div class="evaluation-section" :class="{ 'register-success': registerSuccess }">
+              <el-button
+                type="success"
+                @click="registerForEvaluation"
+                :loading="isRegistering"
+                :disabled="!modelSelection.selectedModel"
+                class="register-button"
+              >
+                <el-icon><DataAnalysis /></el-icon>
+                {{ registerSuccess ? '已提供' : '提供给测评' }}
+              </el-button>
+              <div class="register-hint">
+                {{ registerSuccess ? '感谢您的贡献，您的API已成功提供给测评系统' : '提供您的API给我们进行模型测评，将有助于改进系统评测和比较' }}
+              </div>
+            </div>
+          </el-form-item>
+
           <!-- 表单按钮 -->
             <el-form-item>
               <div class="form-buttons">
@@ -193,14 +234,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useLLMStore } from '@/stores/llm'
-import { Setting, Close } from '@element-plus/icons-vue'
+import { Setting, Close, DataAnalysis } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { defaultApiConfig } from '@/config'
+import { ApiType, registerLlmModels } from '@/api/llmModel'
+import { useUserStore } from '@/stores/user'
 
 const store = useLLMStore()
+const userStore = useUserStore()
+
+// 控制注册模型到评测系统的加载状态
+const isRegistering = ref(false)
+const registerSuccess = ref(false)
 
 // 表单引用
 const configFormRef = ref<FormInstance>()
@@ -212,7 +260,17 @@ const showConfig = ref(false)
 const apiConfig = ref({
   apiUrl: defaultApiConfig.apiUrl,
   apiKey: defaultApiConfig.apiKey,
+  apiType: 'openai_compatible', // 默认为OpenAI兼容API
 })
+
+// API类型选项列表
+const apiTypeOptions = [
+  { label: 'OpenAI兼容API', value: ApiType.OPENAI_COMPATIBLE },
+  { label: 'Anthropic API', value: ApiType.ANTHROPIC },
+  { label: 'Google AI API', value: ApiType.GOOGLE_AI },
+  { label: '百度文心一言API', value: ApiType.BAIDU },
+  { label: 'Azure OpenAI API', value: ApiType.AZURE_OPENAI },
+]
 
 // 配置验证规则
 const configRules = {
@@ -301,6 +359,9 @@ const handleSave = async () => {
   if (!configFormRef.value) return
 
   try {
+    // 重置注册状态
+    resetRegistrationStatus()
+
     // 验证表单
     await configFormRef.value.validate()
 
@@ -308,7 +369,7 @@ const handleSave = async () => {
     saveConfig()
 
     // 加载模型列表
-    await store.fetchModels(apiConfig.value.apiUrl, apiConfig.value.apiKey)
+    await store.fetchModels(apiConfig.value.apiUrl, apiConfig.value.apiKey, apiConfig.value.apiType)
 
     // 成功后关闭面板
     closeConfig()
@@ -319,12 +380,22 @@ const handleSave = async () => {
   }
 }
 
+// 重置注册状态
+const resetRegistrationStatus = () => {
+  registerSuccess.value = false
+  localStorage.removeItem('modelRegisteredForEvaluation')
+  console.log('注册状态已重置')
+}
+
 const loadModels = async () => {
   if (!configFormRef.value) return
 
   try {
+    // 重置注册状态
+    resetRegistrationStatus()
+
     // 1. Validate the form first
-    await configFormRef.value.validateField(['apiUrl', 'apiKey'])
+    await configFormRef.value.validateField(['apiUrl', 'apiKey', 'apiType'])
 
     // 2. If validation passes, try fetching models
     try {
@@ -332,7 +403,7 @@ const loadModels = async () => {
       // Save config before fetching
       saveConfig()
       // Fetch models
-      await store.fetchModels(apiConfig.value.apiUrl, apiConfig.value.apiKey)
+      await store.fetchModels(apiConfig.value.apiUrl, apiConfig.value.apiKey, apiConfig.value.apiType)
 
       // Check for errors reported by the store
       if (store.error) {
@@ -361,11 +432,156 @@ const loadModels = async () => {
   }
 }
 
+const registerForEvaluation = async () => {
+  if (!modelSelection.value.selectedModel || !userStore.currentUser) {
+    ElMessage.warning('请先选择模型并确保已登录')
+    return
+  }
+
+  try {
+    isRegistering.value = true
+
+    // 构造注册请求数据
+    const registrationData = {
+      userId: userStore.currentUser.id,
+      apiUrl: apiConfig.value.apiUrl,
+      apiKey: apiConfig.value.apiKey,
+      apiType: apiConfig.value.apiType
+    }
+
+    // 调用注册API
+    const result = await registerLlmModels(registrationData)
+
+    if (result.success) {
+      ElMessage.success({
+        message: '模型已成功注册到评测系统，感谢您的贡献！',
+        duration: 5000
+      })
+      registerSuccess.value = true
+      localStorage.setItem('modelRegisteredForEvaluation', 'true')
+      isRegistering.value = false
+    } else {
+      // 处理特定错误情况
+      if (result.message === '没有新模型被注册') {
+        ElMessage.info({
+          message: '您的模型API已经在评测系统中，无需重复提供',
+          duration: 5000
+        })
+        registerSuccess.value = true
+        localStorage.setItem('modelRegisteredForEvaluation', 'true')
+        isRegistering.value = false
+        return
+      } else {
+        ElMessage.warning({
+          message: `注册未成功: ${result.message || '未知错误'}`,
+          duration: 5000
+        })
+      }
+    }
+  } catch (error) {
+    console.error('注册模型到评测系统失败:', error)
+
+    // 尝试从错误对象中提取更详细的信息
+    let errorMessage = '注册失败，请稍后重试'
+    let isAlreadyRegistered = false
+
+    if (error && typeof error === 'object') {
+      // 检查是否有response.data.message字段 (axios错误格式)
+      if (error.response && error.response.data) {
+        const responseData = error.response.data
+        console.log('错误响应数据:', responseData)
+
+        if (responseData.message && (responseData.message.includes('没有新模型被注册') || responseData.message.includes('已经注册'))) {
+          isAlreadyRegistered = true
+        } else if (responseData.message) {
+          errorMessage = `注册失败: ${responseData.message}`
+        }
+
+        // 检查状态码
+        if (error.response.status === 400) {
+          // 当收到400错误时，很可能是已注册情况
+          isAlreadyRegistered = true
+        }
+      }
+      // 检查是否有data.message字段
+      else if (error.data && error.data.message) {
+        if (error.data.message.includes('没有新模型被注册') || error.data.message.includes('已经注册')) {
+          isAlreadyRegistered = true
+        } else {
+          errorMessage = `注册失败: ${error.data.message}`
+        }
+      }
+      // 检查错误消息
+      else if (error.message) {
+        if (error.message.includes('400')) {
+          // 当收到400错误但没有明确消息时，假设是已注册情况
+          isAlreadyRegistered = true
+        } else {
+          errorMessage = `注册失败: ${error.message}`
+        }
+      }
+    }
+
+    // 处理已注册情况
+    if (isAlreadyRegistered) {
+      ElMessage.info({
+        message: '您的模型API已经在评测系统中，无需重复提供',
+        duration: 5000
+      })
+      registerSuccess.value = true
+      localStorage.setItem('modelRegisteredForEvaluation', 'true')
+      isRegistering.value = false
+      return
+    }
+
+    // 显示错误消息
+    ElMessage.error({
+      message: errorMessage,
+      duration: 5000
+    })
+  } finally {
+    isRegistering.value = false
+  }
+}
+
+// 监听API配置变化
+watch(
+  () => [apiConfig.value.apiUrl, apiConfig.value.apiKey, apiConfig.value.apiType],
+  (newValues, oldValues) => {
+    // 检查是否有变化
+    if (
+      newValues[0] !== oldValues[0] || // apiUrl变化
+      newValues[1] !== oldValues[1] || // apiKey变化
+      newValues[2] !== oldValues[2]    // apiType变化
+    ) {
+      console.log('API配置已变化，重置注册状态')
+      resetRegistrationStatus()
+    }
+  }
+)
+
+// 监听模型选择变化
+watch(
+  () => modelSelection.value.selectedModel,
+  (newModel, oldModel) => {
+    if (newModel !== oldModel) {
+      console.log('选择的模型已变化，重置注册状态')
+      resetRegistrationStatus()
+    }
+  }
+)
+
 // 生命周期钩子
 onMounted(() => {
   restoreConfig()
   // 添加事件监听
   window.addEventListener('toggle-model-config', toggleConfig)
+
+  // 检查是否已经注册过模型
+  const registeredStatus = localStorage.getItem('modelRegisteredForEvaluation')
+  if (registeredStatus === 'true') {
+    registerSuccess.value = true
+  }
 })
 
 onUnmounted(() => {
@@ -548,16 +764,49 @@ defineExpose({
   color: var(--el-text-color-secondary);
   font-size: 14px;
 }
-</style>
 
-<script lang="ts">
-// 声明全局变量类型
-declare global {
-  interface Window {
-    apiConfig?: {
-      apiUrl: string
-      apiKey: string
-    }
+.register-button {
+  margin-top: 0;
+  margin-left: 0;
+  width: 140px;
+}
+
+.register-hint {
+  margin-top: 0;
+  margin-left: 12px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.4;
+}
+
+.evaluation-section {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 6px;
+  background-color: rgba(0, 200, 0, 0.05);
+  border: 1px dashed var(--el-color-success);
+}
+
+.register-success {
+  background-color: rgba(0, 200, 0, 0.1);
+  border: 1px solid var(--el-color-success);
+  animation: success-pulse 2s ease-in-out;
+}
+
+@keyframes success-pulse {
+  0% {
+    background-color: rgba(0, 200, 0, 0.05);
+    border: 1px dashed var(--el-color-success);
+  }
+  50% {
+    background-color: rgba(0, 200, 0, 0.2);
+    border: 1px solid var(--el-color-success);
+  }
+  100% {
+    background-color: rgba(0, 200, 0, 0.1);
+    border: 1px solid var(--el-color-success);
   }
 }
-</script>
+</style>

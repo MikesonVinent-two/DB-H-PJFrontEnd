@@ -133,3 +133,39 @@ export const getCrowdsourcedAnswersByStatus = (
     { params }
   )
 }
+
+/**
+ * 获取所有众包回答
+ * @param params 查询参数
+ * @returns 分页的众包回答列表
+ */
+export const getAllCrowdsourcedAnswers = (
+  params?: {
+    page?: string
+    size?: string
+    sort?: string
+  }
+) => {
+  return api.get<CrowdsourcedAnswerPageResponse>(
+    apiUrls.crowdsourced.all,
+    { params }
+  )
+}
+
+/**
+ * 获取所有未审核的众包回答
+ * @param params 查询参数
+ * @returns 分页的未审核众包回答列表
+ */
+export const getPendingCrowdsourcedAnswers = (
+  params?: {
+    page?: string
+    size?: string
+    sort?: string
+  }
+) => {
+  return api.get<CrowdsourcedAnswerPageResponse>(
+    apiUrls.crowdsourced.pending,
+    { params }
+  )
+}

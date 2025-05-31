@@ -53,14 +53,20 @@ const handleLogin = async () => {
     if (success && userStore.currentUser) {
       // 显式地将用户信息写入内存和localStorage
       const userInfo = userStore.currentUser
+
+      // 确保用户数据保存在'user'键中，与路由守卫检查一致
       window.userInfo = userInfo  // 写入全局内存
-      localStorage.setItem('userInfo', JSON.stringify(userInfo))  // 写入localStorage
-      sessionStorage.setItem('userInfo', JSON.stringify(userInfo))  // 写入sessionStorage
+      localStorage.setItem('user', JSON.stringify(userInfo))  // 主要存储位置
+
+      // 兼容其他地方的读取
+      localStorage.setItem('userInfo', JSON.stringify(userInfo))
+      sessionStorage.setItem('userInfo', JSON.stringify(userInfo))
 
       // 打印日志确认写入成功
-      console.log('✅ 用户信息已写入内存:', {
+      console.log('✅ 用户信息已写入：', {
         memory: window.userInfo,
-        localStorage: JSON.parse(localStorage.getItem('userInfo') || '{}'),
+        localStorage_user: JSON.parse(localStorage.getItem('user') || '{}'),
+        localStorage_userInfo: JSON.parse(localStorage.getItem('userInfo') || '{}'),
         sessionStorage: JSON.parse(sessionStorage.getItem('userInfo') || '{}')
       })
 
