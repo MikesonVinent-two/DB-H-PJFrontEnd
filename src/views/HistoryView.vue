@@ -22,15 +22,17 @@
 
 <style scoped>
 .history-view {
-  padding: 80px 0 30px;
-  min-height: calc(100vh - var(--navbar-height));
+  padding: 20px;
+  height: 100%;
   background-color: var(--background-color);
+  display: flex;
+  justify-content: center;
 }
 
 .container {
-  max-width: var(--container-width);
-  margin: 0 auto;
-  padding: 0 var(--container-padding);
+  width: 100%;
+  max-width: 1200px;
+  padding: 20px;
 }
 
 .history-header {

@@ -1,92 +1,94 @@
 <template>
-  <el-menu
-    :default-active="activeIndex"
-    class="navbar"
-    mode="horizontal"
-    :ellipsis="false"
-    @select="handleSelect"
-  >
-    <!-- 左侧 Logo 和标题 -->
-    <div class="navbar-left">
-      <div class="logo-container" @click="router.push('/')" role="button">
-      <img src="@/assets/logo.svg" alt="Logo" class="logo" />
-      <span class="title">AI问答系统</span>
+  <div class="navbar-container">
+    <el-menu
+      :default-active="activeIndex"
+      class="navbar"
+      mode="horizontal"
+      :ellipsis="false"
+      @select="handleSelect"
+    >
+      <!-- 左侧 Logo 和标题 -->
+      <div class="navbar-left">
+        <div class="logo-container" @click="router.push('/')" role="button">
+          <img src="@/assets/logo.svg" alt="Logo" class="logo" />
+          <span class="title">AI问答系统</span>
+        </div>
       </div>
-    </div>
 
-    <!-- 右侧功能区 -->
-    <div class="navbar-right">
-      <template v-if="isLoggedIn && currentUser">
-        <!-- 对话按钮 -->
-        <el-menu-item index="chat" class="nav-item">
-          <el-tooltip content="开始对话" placement="bottom" :show-after="500">
-            <div class="nav-button">
-        <el-icon><ChatDotRound /></el-icon>
-              <span class="nav-text">对话</span>
+      <!-- 右侧功能区 -->
+      <div class="navbar-right">
+        <template v-if="isLoggedIn && currentUser">
+          <!-- 对话按钮 -->
+          <el-menu-item index="chat" class="nav-item">
+            <el-tooltip content="开始对话" placement="bottom" :show-after="500">
+              <div class="nav-button">
+                <span class="nav-text">对话</span>
+              </div>
+            </el-tooltip>
+          </el-menu-item>
+
+          <!-- 模型配置按钮 -->
+          <el-menu-item index="model-settings" class="nav-item" @click="handleModelConfig">
+            <el-tooltip content="配置AI模型" placement="bottom" :show-after="500">
+              <div class="nav-button">
+                <span class="nav-text">配置</span>
+              </div>
+            </el-tooltip>
+          </el-menu-item>
+
+          <!-- 用户头像 -->
+          <el-dropdown trigger="click" class="user-dropdown">
+            <div class="user-avatar">
+              <el-avatar :size="32" :src="currentUser.avatar">
+                {{ currentUser.username?.charAt(0).toUpperCase() }}
+              </el-avatar>
             </div>
-          </el-tooltip>
-        </el-menu-item>
 
-        <!-- 模型配置按钮 -->
-        <el-menu-item index="model-settings" class="nav-item" @click="handleModelConfig">
-          <el-tooltip content="配置AI模型" placement="bottom" :show-after="500">
-            <div class="nav-button">
-          <el-icon><Setting /></el-icon>
-              <span class="nav-text">配置</span>
-            </div>
-          </el-tooltip>
-        </el-menu-item>
-
-        <!-- 用户头像 -->
-        <el-dropdown trigger="click" class="user-dropdown">
-          <div class="user-avatar">
-            <el-avatar :size="32" :src="currentUser.avatar">
-              {{ currentUser.username?.charAt(0).toUpperCase() }}
-            </el-avatar>
-          </div>
-
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item>
-                <div class="user-info-header">
-                  <el-avatar :size="48" :src="currentUser.avatar">
-                    {{ currentUser.username?.charAt(0).toUpperCase() }}
-                  </el-avatar>
-                  <div class="user-info-main">
-                    <span class="user-info-name">{{ currentUser.username }}</span>
-                    <span class="user-info-role">{{ getRoleName(currentUser.role) }}</span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item>
+                  <div class="user-info-header">
+                    <el-avatar :size="48" :src="currentUser.avatar">
+                      {{ currentUser.username?.charAt(0).toUpperCase() }}
+                    </el-avatar>
+                    <div class="user-info-main">
+                      <span class="user-info-name">{{ currentUser.username }}</span>
+                      <span class="user-info-role">{{ getRoleName(currentUser.role) }}</span>
+                    </div>
                   </div>
-                </div>
-              </el-dropdown-item>
-              <el-dropdown-item divided>
-                <el-icon><User /></el-icon>个人信息
-              </el-dropdown-item>
-              <el-dropdown-item>
-                <el-icon><List /></el-icon>历史记录
-              </el-dropdown-item>
-              <el-dropdown-item divided @click="handleLogout">
-                <el-icon><SwitchButton /></el-icon>退出登录
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-    </template>
+                </el-dropdown-item>
+                <el-dropdown-item divided>
+                  <el-icon><User /></el-icon>个人信息
+                </el-dropdown-item>
+                <el-dropdown-item>
+                  <el-icon><List /></el-icon>历史记录
+                </el-dropdown-item>
+                <el-dropdown-item divided @click="handleLogout">
+                  <el-icon><SwitchButton /></el-icon>退出登录
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </template>
 
-    <template v-else>
-        <el-menu-item index="login" class="auth-item">
-        <el-icon><User /></el-icon>
-        登录
-      </el-menu-item>
-        <el-menu-item index="register" class="auth-item">
-        <el-icon><Plus /></el-icon>
-        注册
-      </el-menu-item>
-    </template>
+        <template v-else>
+          <el-menu-item index="login" class="auth-item">
+            <el-icon><User /></el-icon>
+            登录
+          </el-menu-item>
+          <el-menu-item index="register" class="auth-item">
+            <el-icon><Plus /></el-icon>
+            注册
+          </el-menu-item>
+        </template>
+      </div>
+    </el-menu>
+
+    <!-- 模型选择器组件 - 放在导航栏容器内，但设置为隐藏 -->
+    <div class="model-selector-container">
+      <ModelSelector ref="modelSelectorRef" />
     </div>
-  </el-menu>
-
-  <!-- 模型选择器组件 -->
-  <ModelSelector ref="modelSelectorRef" />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -278,193 +280,145 @@ const handleModelConfig = () => {
 </script>
 
 <style scoped>
-.navbar {
+.navbar-container {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
-  height: var(--navbar-height, 60px);
-  padding: 0;
-  background: linear-gradient(135deg, #1890ff 0%, #1d39c4 100%);
-  border: none;
-  display: flex;
-  justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  height: var(--navbar-height);
+  z-index: 2000;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.navbar-left,
-.navbar-right {
+.navbar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+  background-color: #fff;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0;
+  margin: 0;
+}
+
+:deep(.el-menu) {
+  border: none !important;
+  width: 100%;
+}
+
+:deep(.el-menu--horizontal) {
+  height: var(--navbar-height);
+  display: flex;
+  align-items: center;
+}
+
+:deep(.el-menu--horizontal > .el-menu-item) {
+  height: var(--navbar-height);
+  line-height: var(--navbar-height);
+  border-bottom: none;
+  padding: 0 12px;
+}
+
+:deep(.el-menu--horizontal > .el-menu-item.is-active) {
+  border-bottom: none;
+}
+
+.navbar-left {
   display: flex;
   align-items: center;
   height: 100%;
 }
 
-.navbar-left {
-  padding-left: 24px;
-}
-
 .navbar-right {
-  padding-right: 24px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  margin-left: auto;
+  padding-right: 16px;
+  height: 100%;
 }
 
 .logo-container {
   display: flex;
   align-items: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  height: var(--navbar-height, 60px);
-  padding: 0 12px;
-  border-radius: 4px;
-}
-
-.logo-container:hover {
-  background: rgba(255, 255, 255, 0.1);
+  padding: 0 20px;
+  height: 100%;
 }
 
 .logo {
   height: 32px;
-  margin-right: 12px;
+  margin-right: 10px;
 }
 
 .title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
-  color: #ffffff;
-  white-space: nowrap;
+  color: var(--primary-color);
 }
 
-/* 导航项样式 */
 .nav-item {
   padding: 0 12px;
-  margin: 0 4px;
-  border-radius: 4px;
-  transition: all 0.3s ease;
 }
 
 .nav-button {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  min-width: 48px;
 }
 
 .nav-text {
-  font-size: 14px;
+  font-size: 12px;
+  margin-top: 2px;
 }
 
-:deep(.el-menu--horizontal) {
-  border: none;
+.auth-item {
+  margin-left: 8px;
 }
 
-:deep(.el-menu-item),
-:deep(.el-dropdown-trigger) {
-  color: rgba(255, 255, 255, 0.85) !important;
-  height: var(--navbar-height, 60px);
-  line-height: var(--navbar-height, 60px);
-  padding: 0 16px;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-:deep(.el-menu-item:hover),
-.user-avatar:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  color: #ffffff !important;
-}
-
-:deep(.el-menu-item.is-active) {
-  background-color: rgba(255, 255, 255, 0.15) !important;
-  color: #ffffff !important;
-  border-bottom: 2px solid #ffffff !important;
-}
-
-/* 用户头像样式 */
 .user-dropdown {
-  height: var(--navbar-height, 60px);
-  display: flex;
-  align-items: center;
+  margin-left: 12px;
+  margin-right: 0;
   cursor: pointer;
 }
 
 .user-avatar {
-  padding: 0 12px;
-  height: 100%;
   display: flex;
   align-items: center;
-  border-radius: 4px;
-  transition: all 0.3s ease;
+  justify-content: center;
 }
 
-/* 用户信息样式 */
 .user-info-header {
-  padding: 12px 16px;
   display: flex;
+  padding: 10px;
   align-items: center;
-  gap: 16px;
+  min-width: 200px;
 }
 
 .user-info-main {
+  margin-left: 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .user-info-name {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--el-text-color-primary);
+  font-weight: bold;
+  font-size: 14px;
 }
 
 .user-info-role {
+  color: #999;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
-  background: var(--el-color-primary-light-9);
-  padding: 2px 8px;
-  border-radius: 12px;
-  display: inline-block;
 }
 
-:deep(.el-dropdown-menu__item) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-}
-
-:deep(.el-icon) {
-  font-size: 16px;
-}
-
-/* 登录注册按钮样式 */
-.auth-item {
-  margin: 0 4px;
-  border-radius: 4px;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .navbar-left {
-    padding-left: 16px;
-  }
-
-  .navbar-right {
-    padding-right: 16px;
-  }
-
-  .title {
-    display: none;
-  }
-
-  .nav-text {
-    display: none;
-  }
-
-  .nav-item {
-    padding: 0 8px;
-  }
+.model-selector-container {
+  position: absolute;
+  visibility: hidden;
+  height: 0;
+  width: 0;
+  overflow: hidden;
 }
 </style>
 

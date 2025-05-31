@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { getUserInfo, getUserById, login, logout as apiLogout, register as apiRegister } from '@/api/user'
-import type { UserInfo, LoginData, LogoutData, RegisterData } from '@/api/user'
+import type { UserInfo, LoginData, LogoutData, RegisterData, LoginResponse } from '@/api/user'
 import { useRouter } from 'vue-router'
 
 // 用户信息缓存
@@ -9,7 +9,7 @@ let userInfoCache: Record<number, UserInfo> = {}
 
 export const useUserStore = defineStore('user', () => {
   const router = useRouter()
-  const currentUser = ref<UserInfo | null>(null)
+  const currentUser = ref<LoginResponse | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -108,9 +108,6 @@ export const useUserStore = defineStore('user', () => {
       currentUser.value = userInfo
       localStorage.setItem('user', JSON.stringify(userInfo))
 
-      // 更新缓存
-      updateUserInfoCache(userInfo)
-
       // 触发登录成功事件
       window.dispatchEvent(new CustomEvent('user-login', {
         detail: userInfo
@@ -186,8 +183,6 @@ export const useUserStore = defineStore('user', () => {
       try {
         const userInfo = JSON.parse(storedUser)
         currentUser.value = userInfo
-        // 更新缓存
-        updateUserInfoCache(userInfo)
       } catch (e) {
         console.error('Failed to parse stored user data:', e)
         localStorage.removeItem('user')

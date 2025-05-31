@@ -31,6 +31,138 @@ export const apiUrls = {
   user: {
     profile: '/api/users/profile',
   },
+  rawData: {
+    createQuestion: '/api/raw-data/questions-dto',
+    createAnswer: '/api/raw-data/answers',
+    createQuestionWithAnswers: '/api/raw-data/questions-with-answers',
+    searchQuestions: '/api/raw-data/questions/search',
+    getQuestionsByStatus: '/api/raw-data/questions/by-status',
+    deleteQuestion: '/api/raw-data/questions',
+    deleteAnswer: '/api/raw-data/answers',
+    getQuestions: '/api/raw-data/questions', // 获取所有原始问题（分页）
+  },
+  standardData: {
+    createQuestion: '/api/standard-questions',
+    updateQuestion: '/api/standard-questions',
+    createAnswer: '/api/standard/standard-answers',
+    updateAnswer: '/api/standard/standard-answers',
+    deleteAnswer: '/api/standard/standard-answers',
+    getQuestionHistory: '/api/standard-questions',
+    getQuestionVersionTree: '/api/standard-questions',
+    getQuestions: '/api/standard-questions',
+    getLatestQuestions: '/api/standard-questions/latest',
+    addTags: '/api/standard-questions/tags/add',
+    removeTags: '/api/standard-questions/tags/remove',
+    replaceTags: '/api/standard-questions/tags/replace',
+    updateTags: '/api/standard-questions/tags',
+  },
+  prompts: {
+    tags: '/api/prompts/tags', // 答案标签提示词相关API
+    updateTag: '/api/prompts/tags', // 更新答案标签提示词API
+    getTagDetail: '/api/prompts/tags', // 获取答案标签提示词详情API
+    getAllTags: '/api/prompts/tags', // 获取所有答案标签提示词API
+    getActiveByTagId: '/api/prompts/tags/active/tag', // 获取特定标签的激活状态答案标签提示词API
+    deleteTag: '/api/prompts/tags', // 删除答案标签提示词API
+    questionTypes: '/api/prompts/question-types', // 答题类型提示词相关API
+    updateQuestionType: '/api/prompts/question-types', // 更新答题类型提示词API
+    getQuestionTypeDetail: '/api/prompts/question-types', // 获取答题类型提示词详情API
+    getAllQuestionTypes: '/api/prompts/question-types', // 获取所有答题类型提示词API
+    getActiveByQuestionType: '/api/prompts/question-types/active/type', // 获取特定题型的激活状态提示词API
+    deleteQuestionType: '/api/prompts/question-types', // 删除答题类型提示词API
+    getSupportedQuestionTypes: '/api/prompts/question-types/supported-types', // 获取支持的题型枚举值API
+    evaluationTags: '/api/prompts/evaluation/tags', // 评测标签提示词相关API
+    getActiveEvaluationTagsByTagId: '/api/prompts/evaluation/tags/active/tag', // 获取指定标签的所有激活状态评测提示词API
+    deleteEvaluationTag: '/api/prompts/evaluation/tags', // 删除评测标签提示词API
+    evaluationSubjective: '/api/prompts/evaluation/subjective', // 评测主观题提示词相关API
+    updateEvaluationSubjective: '/api/prompts/evaluation/subjective', // 更新评测主观题提示词API
+    getEvaluationSubjectiveDetail: '/api/prompts/evaluation/subjective', // 获取评测主观题提示词详情API
+    getAllEvaluationSubjective: '/api/prompts/evaluation/subjective', // 获取所有评测主观题提示词API
+    getActiveEvaluationSubjective: '/prompts/evaluation/subjective/active', // 获取所有激活状态的评测主观题提示词API
+    deleteEvaluationSubjective: '/prompts/evaluation/subjective', // 删除评测主观题提示词API（软删除）
+  },
+  promptAssembly: {
+    answerConfigs: '/api/prompt-assembly/answer-configs', // 回答提示词组装配置相关API
+    getAnswerConfig: '/api/prompt-assembly/answer-configs', // 获取单个回答提示词组装配置API
+    getActiveAnswerConfigs: '/api/prompt-assembly/answer-configs/page', // 获取所有活跃回答提示词组装配置API
+    getUserAnswerConfigs: '/api/prompt-assembly/answer-configs/user', // 获取用户创建的回答提示词组装配置API
+    evaluationConfigs: '/api/prompt-assembly/evaluation-configs', // 评测提示词组装配置相关API
+    getUserEvaluationConfigs: '/api/prompt-assembly/evaluation-configs/user', // 获取用户创建的评测提示词组装配置API
+  },
+  answerGeneration: {
+    batches: '/api/answer-generation/batches', // 回答生成批次相关API
+    startBatch: '/api/answer-generation/batches', // 启动批次API
+    pauseBatch: '/api/answer-generation/batches', // 暂停批次API
+    resumeBatch: '/api/answer-generation/batches', // 恢复批次API
+    getBatchStatus: '/api/answer-generation/batches', // 获取批次状态API
+    testConnectivity: '/api/answer-generation/batches', // 测试模型连通性API
+    testSystemConnectivity: '/api/answer-generation/system/test-connectivity', // 系统级测试模型连通性API
+    testModelConnectivity: '/api/answer-generation/models', // 单个模型测试连通性API
+  },
+  llmModels: {
+    register: '/api/llm-models/register', // 注册模型API
+    getModels: '/api/llm-models', // 获取已注册模型API
+  },
+  evaluators: {
+    create: '/api/evaluators', // 创建评测者API
+    getAll: '/api/evaluators', // 获取所有评测者API
+    getAllPage: '/api/evaluators/page', // 分页获取评测者API
+    getById: '/api/evaluators', // 获取评测者详情API
+    update: '/api/evaluators', // 更新评测者API (POST方法)
+    delete: '/api/evaluators', // 删除评测者API
+    getByType: '/api/evaluators/by-type', // 按类型获取评测者API
+    register: '/api/evaluators/register', // 当前登录用户注册成为评测者API
+    getAllAi: '/api/evaluators/ai', // 获取所有AI评测者API
+    getAllHuman: '/api/evaluators/human', // 获取所有人类评测者API
+    getByUserId: '/api/evaluators/user', // 根据用户ID获取评测者API
+  },
+  crowdsourced: {
+    base: '/api/crowdsourced-answers',  // 基础路径
+    create: '/api/crowdsourced-answers',  // POST 创建
+    getList: '/api/crowdsourced-answers',  // GET 获取列表
+    update: '/api/crowdsourced-answers',  // PUT /{answerId}
+    delete: '/api/crowdsourced-answers',  // DELETE /{answerId}
+    review: '/api/crowdsourced-answers',  // PUT /{answerId}/review
+    byQuestion: '/api/crowdsourced-answers/by-question', // GET /by-question/{questionId}
+    byUser: '/api/crowdsourced-answers/by-user', // GET /by-user/{userId}
+    byStatus: '/api/crowdsourced-answers/by-status', // GET /by-status/{status}
+  },
+  expert: {
+    base: '/api/expert-candidate-answers',  // 基础路径
+    create: '/api/expert-candidate-answers',  // POST 创建
+    getList: '/api/expert-candidate-answers',  // GET 获取列表
+    update: '/api/expert-candidate-answers',  // PUT /{answerId}
+    delete: '/api/expert-candidate-answers',  // DELETE /{answerId}
+    byQuestion: '/api/expert-candidate-answers/by-question', // GET /by-question/{questionId}
+    byUser: '/api/expert-candidate-answers/by-user', // GET /by-user/{userId}
+    quality: '/api/expert-candidate-answers', // PUT /{answerId}/quality
+  },
+  dataset: {
+    base: '/api/datasets',  // 基础路径
+    versions: '/api/datasets/versions',  // 版本相关
+    createVersion: '/api/datasets/versions',  // POST 创建版本
+    getVersions: '/api/datasets/versions',  // GET 获取版本列表
+    getVersion: '/api/datasets/versions',  // GET /{versionId} 获取特定版本
+    updateVersion: '/api/datasets/versions',  // PUT /{versionId} 更新版本
+    deleteVersion: '/api/datasets/versions',  // DELETE /{versionId} 删除版本
+    cloneVersion: '/api/datasets/versions',  // POST /{versionId}/clone 克隆版本
+    getVersionQuestions: '/api/datasets/versions',  // GET /{versionId}/questions/pageable 获取版本问题列表
+  },
+  evaluations: {
+    base: '/api/evaluations',  // 评测基础路径
+    batchObjectiveQuestions: '/api/evaluations/batch',  // 评测一个批次中的所有客观题
+    batchSubjective: '/api/evaluations/batch/subjective',  // 批量评测主观题
+    humanEvaluation: '/api/evaluations/human',  // 评测员评测某个回答
+    batchUnevaluated: '/api/evaluations/batch',  // 返回评测员评测任务
+    runResults: '/api/evaluations/runs',  // 获取评测运行的统计结果
+  },
+  modelScores: {
+    base: '/api/model-batch-scores',  // 模型评分基础路径
+    calculateBatchModelScore: '/api/model-batch-scores/batches',  // 计算模型在批次中的评分
+    calculateAllModelsInBatch: '/api/model-batch-scores/batches',  // 计算批次中所有模型的评分
+    detailedScores: '/api/llm-models/batch',  // 获取模型在批次中针对特定问题的详细评分
+    modelRankings: '/api/llm-models/batch',  // 获取批次内模型排名
+    performanceByQuestionType: '/api/llm-models/batch',  // 获取问题类型维度的模型表现
+  },
   // 其他API路径
 };
 

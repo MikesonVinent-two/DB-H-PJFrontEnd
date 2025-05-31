@@ -1,7 +1,7 @@
 <!-- 模型选择器组件 -->
 <template>
   <div class="model-selector">
-    <!-- 模型选择器占位符 (实际选择器移到 Popover 中) -->
+    <!-- 模型选择器占位符 -->
     <div class="model-select-placeholder"></div>
 
     <!-- API配置触发区域 (保持按钮等可见) -->
@@ -22,150 +22,152 @@
           </div>
 
     <!-- API配置表单 Popover -->
-      <el-popover
-        v-model:visible="showConfig"
-        :width="400"
-        trigger="manual"
-        placement="bottom"
-        popper-class="model-config-popover"
-        :show-arrow="true"
-        :offset="12"
-      >
-        <template #reference>
-          <div style="display: none"></div>
-        </template>
+    <el-popover
+      v-model:visible="showConfig"
+      :width="400"
+      trigger="manual"
+      placement="bottom-end"
+      popper-class="model-config-popover"
+      :show-arrow="true"
+      :offset="12"
+      :teleported="true"
+      append-to-body
+    >
+      <template #reference>
+        <div style="display: none"></div>
+      </template>
 
-        <template #default>
-          <div class="model-config">
-            <div class="config-header">
-              <span class="title">模型配置</span>
-              <el-button
-                type="text"
-                :icon="Close"
-                @click="closeConfig"
-                class="close-button"
-              />
-            </div>
+      <template #default>
+        <div class="model-config">
+          <div class="config-header">
+            <span class="title">模型配置</span>
+            <el-button
+              type="text"
+              :icon="Close"
+              @click="closeConfig"
+              class="close-button"
+            />
+          </div>
 
-            <el-form
-              ref="configFormRef"
-              :model="apiConfig"
-              :rules="configRules"
-              label-position="top"
-              class="api-config-form"
-              @submit.prevent="handleSave"
-            >
-              <el-form-item
-                label="API 基础 URL"
-                prop="apiUrl"
-                :rules="[
-                  { required: true, message: '请输入API基础URL', trigger: 'blur' },
-                  { type: 'url', message: '请输入有效的URL', trigger: 'blur' }
-                ]"
-              >
-                <el-input
-                  v-model="apiConfig.apiUrl"
-                  placeholder="请输入API URL"
-                  :disabled="isLoadingModels"
-                >
-                  <template #suffix>
-                    <el-tooltip content="点击使用默认URL" placement="top">
-                      <el-button
-                        link
-                        type="primary"
-                        @click="useDefaultUrl"
-                        :disabled="isLoadingModels"
-                      >
-                        默认
-                      </el-button>
-                    </el-tooltip>
-                  </template>
-                </el-input>
-              </el-form-item>
-
+          <el-form
+            ref="configFormRef"
+            :model="apiConfig"
+            :rules="configRules"
+            label-position="top"
+            class="api-config-form"
+            @submit.prevent="handleSave"
+          >
             <el-form-item
-              label="API 密钥"
-              prop="apiKey"
+              label="API 基础 URL"
+              prop="apiUrl"
               :rules="[
-                { required: true, message: '请输入API密钥', trigger: 'blur' },
-                { min: 32, message: 'API密钥长度不正确', trigger: 'blur' }
+                { required: true, message: '请输入API基础URL', trigger: 'blur' },
+                { type: 'url', message: '请输入有效的URL', trigger: 'blur' }
               ]"
             >
               <el-input
-                v-model="apiConfig.apiKey"
-                type="password"
-                placeholder="请输入API Key"
-                show-password
+                v-model="apiConfig.apiUrl"
+                placeholder="请输入API URL"
                 :disabled="isLoadingModels"
-              />
+              >
+                <template #suffix>
+                  <el-tooltip content="点击使用默认URL" placement="top">
+                    <el-button
+                      link
+                      type="primary"
+                      @click="useDefaultUrl"
+                      :disabled="isLoadingModels"
+                    >
+                      默认
+                    </el-button>
+                  </el-tooltip>
+                </template>
+              </el-input>
             </el-form-item>
 
-            <!-- 模型选择器 - 把按钮和选择器分开条件渲染 -->
-            <el-form-item label="选择模型">
-              <div class="selector-with-button">
-                <!-- 只有模型选择器受条件控制 -->
-                <el-select
-                  v-if="availableModels.length > 0 || isLoadingModels"
-                  v-model="modelSelection.selectedModel"
-                  placeholder="请选择或加载模型"
-                  class="model-select-input flex-grow"
-                  :loading="isLoadingModels"
-                  loading-text="正在加载模型..."
-                  :disabled="isLoadingModels"
+          <el-form-item
+            label="API 密钥"
+            prop="apiKey"
+            :rules="[
+              { required: true, message: '请输入API密钥', trigger: 'blur' },
+              { min: 32, message: 'API密钥长度不正确', trigger: 'blur' }
+            ]"
+          >
+            <el-input
+              v-model="apiConfig.apiKey"
+              type="password"
+              placeholder="请输入API Key"
+              show-password
+              :disabled="isLoadingModels"
+            />
+          </el-form-item>
+
+          <!-- 模型选择器 - 把按钮和选择器分开条件渲染 -->
+          <el-form-item label="选择模型">
+            <div class="selector-with-button">
+              <!-- 只有模型选择器受条件控制 -->
+              <el-select
+                v-if="availableModels.length > 0 || isLoadingModels"
+                v-model="modelSelection.selectedModel"
+                placeholder="请选择或加载模型"
+                class="model-select-input flex-grow"
+                :loading="isLoadingModels"
+                loading-text="正在加载模型..."
+                :disabled="isLoadingModels"
+              >
+                <el-option
+                  v-for="model in availableModels"
+                  :key="model.id"
+                  :label="model.name"
+                  :value="model.id"
+                  :disabled="!model.available"
                 >
-                  <el-option
-                    v-for="model in availableModels"
-                    :key="model.id"
-                    :label="model.name"
-                    :value="model.id"
-                    :disabled="!model.available"
-                  >
-                    <div class="model-option">
-                      <span>{{ model.name }}</span>
-                      <el-tag size="small" :type="model.available ? 'success' : 'danger'">
-                        {{ model.available ? '可用' : '不可用' }}
-                      </el-tag>
-                    </div>
-                  </el-option>
-                </el-select>
-                <!-- 当没有模型时，显示占位提示 -->
-                <div
-                  v-else
-                  class="select-placeholder flex-grow"
-                >
-                  请点击右侧按钮加载
-                </div>
-                <!-- 加载按钮始终显示 -->
+                  <div class="model-option">
+                    <span>{{ model.name }}</span>
+                    <el-tag size="small" :type="model.available ? 'success' : 'danger'">
+                      {{ model.available ? '可用' : '不可用' }}
+                    </el-tag>
+                  </div>
+                </el-option>
+              </el-select>
+              <!-- 当没有模型时，显示占位提示 -->
+              <div
+                v-else
+                class="select-placeholder flex-grow"
+              >
+                请点击右侧按钮加载
+              </div>
+              <!-- 加载按钮始终显示 -->
+              <el-button
+                type="info"
+                @click="loadModels"
+                :loading="isLoadingModels"
+                :disabled="!isFormValid || isLoadingModels"
+                class="load-button"
+              >
+                加载模型
+              </el-button>
+            </div>
+          </el-form-item>
+
+          <!-- 表单按钮 -->
+            <el-form-item>
+              <div class="form-buttons">
+                <el-button @click="closeConfig">取消</el-button>
                 <el-button
-                  type="info"
-                  @click="loadModels"
+                  type="primary"
+                  native-type="submit"
                   :loading="isLoadingModels"
-                  :disabled="!isFormValid || isLoadingModels"
-                  class="load-button"
+                  :disabled="!isFormValid"
                 >
-                  加载模型
+                  保存
                 </el-button>
               </div>
             </el-form-item>
-
-            <!-- 表单按钮 -->
-              <el-form-item>
-                <div class="form-buttons">
-                  <el-button @click="closeConfig">取消</el-button>
-                  <el-button
-                    type="primary"
-                    native-type="submit"
-                    :loading="isLoadingModels"
-                    :disabled="!isFormValid"
-                  >
-                    保存
-                  </el-button>
-                </div>
-              </el-form-item>
-            </el-form>
-          </div>
-        </template>
-      </el-popover>
+          </el-form>
+        </div>
+      </template>
+    </el-popover>
 
     <!-- 选中模型的详细信息 (保持在外部) -->
       <div v-if="selectedModelInfo" class="model-info">
@@ -382,10 +384,12 @@ defineExpose({
 
 <style scoped>
 .model-selector {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  position: relative; /* 确保 Popover 相对于此定位 */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
 }
 
 .model-select-placeholder {
@@ -393,10 +397,7 @@ defineExpose({
 }
 
 .config-trigger {
-  position: absolute;
-  top: 10px; /* 示例值 */
-  right: 10px; /* 示例值 */
-  z-index: 10; /* 确保在内容之上 */
+  display: none; /* 隐藏独立的触发器，因为我们使用导航栏中的按钮 */
 }
 
 .popover-model-selector {
@@ -489,10 +490,12 @@ defineExpose({
   transition: all 0.3s ease-in-out;
 }
 
+/* 确保弹出框正确显示 */
 :deep(.model-config-popover) {
   padding: 0;
   border-radius: 8px;
   box-shadow: var(--el-box-shadow-light);
+  z-index: 3000;
 }
 
 :deep(.el-form-item__label) {

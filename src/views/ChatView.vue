@@ -1,6 +1,8 @@
 <template>
   <div class="chat-view">
-    <chat-interface />
+    <div class="chat-container">
+      <chat-interface />
+    </div>
   </div>
 </template>
 
@@ -10,7 +12,26 @@ import ChatInterface from '@/components/ChatInterface.vue'
 
 <style scoped>
 .chat-view {
-  width: 100%;
+  padding: 20px;
+  background-color: var(--background-color);
   height: 100%;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.chat-container {
+  width: 100%;
+  max-width: 1200px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .chat-container {
+    margin-left: 0;
+  }
 }
 </style>

@@ -1,10 +1,31 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import TheNavbar from '@/components/TheNavbar.vue'
+import TheSidebar from '@/components/TheSidebar.vue'
 import { useUserStore } from '@/stores/user'
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 
 const userStore = useUserStore()
+const route = useRoute()
+const sidebarCollapsed = ref(false)
+
+// 判断用户是否已登录
+const isLoggedIn = computed(() => !!userStore.currentUser)
+
+
+// 计算侧边栏宽度
+const sidebarWidth = computed(() => {
+  if (!isLoggedIn.value) return '0px'
+  return sidebarCollapsed.value ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)'
+})
+
+// 监听侧边栏折叠状态变化
+const handleSidebarCollapse = (collapsed: boolean) => {
+  sidebarCollapsed.value = collapsed
+  // 保存侧边栏状态以便其他组件使用
+  localStorage.setItem('sidebarState', JSON.stringify({ collapsed }))
+}
 
 // 监听storage事件，当localStorage发生变化时（比如在其他标签页登出）更新状态
 const handleStorageChange = (event: StorageEvent) => {
@@ -41,9 +62,12 @@ onUnmounted(() => {
 <template>
   <div class="app">
     <TheNavbar />
-    <main class="main-content">
-      <RouterView />
-    </main>
+    <div class="app-content">
+      <TheSidebar v-if="isLoggedIn" @collapse-change="handleSidebarCollapse" />
+      <main class="main-content" :style="{ marginLeft: sidebarWidth }">
+        <RouterView />
+      </main>
+    </div>
   </div>
 </template>
 
@@ -60,13 +84,22 @@ onUnmounted(() => {
   --container-width: 1600px;
   --container-padding: 40px;
   --navbar-height: 60px;
-  --navbar-with-margin: 80px;
+  --sidebar-width: 200px;
+  --sidebar-collapsed-width: 64px;
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -77,109 +110,46 @@ body {
   min-width: 320px;
 }
 
-.container {
-  width: 100%;
-  max-width: var(--container-width);
-  margin: 0 auto;
-  padding: 0 var(--container-padding);
-}
-
 a {
   text-decoration: none;
   color: var(--primary-color);
 }
 
-/* 应用布局 */
 #app {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
   width: 100%;
-}
-
-.app-main {
-  flex: 1;
-  padding: 20px 0;
-}
-
-/* 头部导航 */
-.app-header {
-  background-color: var(--white);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.app-header .container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 70px;
-}
-
-.logo a {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--primary-color);
-}
-
-.main-nav {
-  display: flex;
-  gap: 20px;
-}
-
-.main-nav a {
-  color: var(--text-color);
-  font-weight: 500;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: all 0.3s;
-}
-
-.main-nav a:hover {
-  background-color: rgba(76, 132, 255, 0.1);
-}
-
-.main-nav a.router-link-active {
-  color: var(--primary-color);
-  background-color: rgba(76, 132, 255, 0.1);
-}
-
-.logout-link {
-  cursor: pointer;
-}
-
-/* 页脚 */
-.app-footer {
-  background-color: var(--white);
-  padding: 20px 0;
-  border-top: 1px solid var(--border-color);
-  text-align: center;
-  color: var(--light-text);
-  font-size: 0.9rem;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
-    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  background-color: #f0f2f5;
+  position: relative;
+  overflow-x: hidden;
 }
 
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  position: relative;
+}
+
+.app-content {
+  display: flex;
+  flex: 1;
+  position: relative;
+  margin-top: var(--navbar-height);
+  width: 100%;
+  min-height: calc(100vh - var(--navbar-height));
+  overflow-x: hidden;
 }
 
 .main-content {
-  flex: 1;
-  padding-top: var(--navbar-with-margin);
-  width: 100%;
-  box-sizing: border-box;
-  overflow-x: hidden;
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  transition: margin-left 0.3s;
+  background-color: var(--background-color);
+  z-index: 1;
 }
 
 /* 响应式布局调整 */
@@ -204,10 +174,9 @@ body {
   }
 }
 
-@media (max-width: 1100px) {
-  :root {
-    --container-width: 90%;
-    --container-padding: 15px;
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0 !important;
   }
 }
 </style>

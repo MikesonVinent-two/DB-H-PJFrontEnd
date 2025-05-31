@@ -23,12 +23,14 @@ export interface ModelInfo {
 export interface GetModelsRequest {
   apiUrl: string
   apiKey: string
+  api?: string
 }
 
 // 请求参数接口
 export interface ChatRequest {
-  api: string
+  apiUrl: string
   apiKey: string
+  api: string
   model: string
   message: string
   temperature?: number
@@ -81,7 +83,8 @@ export interface ChatResponse {
 const logChatRequest = (request: ChatRequest) => {
   console.group('🚀 发送聊天请求')
   console.log('时间:', new Date().toLocaleString())
-  console.log('API URL:', request.api)
+  console.log('API URL:', request.apiUrl)
+  console.log('API 类型:', request.api)
   console.log('API Key:', request.apiKey)
   console.log('模型:', request.model)
   console.log('消息内容:', request.message)
@@ -176,8 +179,9 @@ export const getAvailableModels = async (data: GetModelsRequest): Promise<ModelI
 
     console.group('🔍 获取可用模型')
     console.log('时间:', new Date().toLocaleString())
-    console.log('API URL:', url)
-    console.log('请求参数:', data)
+    console.log('API URL:', data.apiUrl)
+    console.log('API 类型:', data.api || 'openai')
+    console.log('API Key:', data.apiKey)
     console.groupEnd()
 
     const response = await fetch(url, {
@@ -210,15 +214,22 @@ export const getAvailableModels = async (data: GetModelsRequest): Promise<ModelI
 // 创建默认的聊天请求配置
 export const createDefaultChatRequest = (
   message: string,
+  apiUrl: string = 'https://api.openai.com/v1/chat/completions',
+  apiKey: string = '',
+  api: string = 'openai',
+  model: string = 'gpt-4',
+  temperature: number = 0.7,
+  maxTokens: number = 2000,
   customSystemPrompts?: SystemPrompt[]
 ): ChatRequest => {
   return {
-    api: 'https://api.openai.com/v1/chat/completions',
-    apiKey: '',
-    model: 'gpt-4',
+    apiUrl,
+    apiKey,
+    api,
+    model,
     message,
-    temperature: 0.7,
-    maxTokens: 2000,
+    temperature,
+    maxTokens,
     systemPrompts: customSystemPrompts || [
       {
         role: 'system',
@@ -229,11 +240,29 @@ export const createDefaultChatRequest = (
 }
 
 // 创建默认的模型请求配置
-export const createDefaultModelsRequest = (apiKey: string): GetModelsRequest => {
+export const createDefaultModelsRequest = (apiKey: string, api: string = 'openai'): GetModelsRequest => {
   return {
     apiUrl: 'https://api.openai.com/v1',
     apiKey,
+    api
   }
+}
+
+// 示例：使用自定义API创建聊天请求
+export const createCustomChatRequest = (
+  message: string,
+  customSystemPrompts?: SystemPrompt[]
+): ChatRequest => {
+  return createDefaultChatRequest(
+    message,
+    'https://chatgtp.vin',
+    'sk-P2pSLjuCWtHZEU78nfPGCkbZtgesZppuVonLeM9Lms7WImyO',
+    'openai_compatible',
+    'deepseek-r1',
+    0.7,
+    2000,
+    customSystemPrompts
+  )
 }
 
 // 默认导出所有内容
@@ -242,4 +271,5 @@ export default {
   getAvailableModels,
   createDefaultChatRequest,
   createDefaultModelsRequest,
+  createCustomChatRequest
 }

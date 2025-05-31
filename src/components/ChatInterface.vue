@@ -321,21 +321,23 @@ onMounted(() => {
 .chat-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--navbar-height, 60px));
-  background-color: #f5f7fa;
-  padding: 20px;
-  margin-top: var(--navbar-height, 60px);
+  height: calc(100vh - var(--navbar-height) - 40px);
+  width: 100%;
+  margin: 0 auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  position: relative;
 }
 
 .model-selector-bar {
-  background: white;
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #eee;
 }
 
 .current-model {
@@ -379,161 +381,102 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  margin-bottom: 20px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #d4d4d4 transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #d4d4d4;
-  border-radius: 3px;
+  background-color: #f9f9f9;
+  width: 100%;
+  position: relative;
 }
 
 .message-wrapper {
-  margin-bottom: 24px;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: messageAppear 0.3s ease forwards;
-}
-
-@keyframes messageAppear {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  position: relative;
 }
 
 .message {
   display: flex;
-  gap: 12px;
   max-width: 85%;
+  width: 100%;
 }
 
 .user-message {
-  margin-left: auto;
-  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+.ai-message {
+  justify-content: flex-start;
+}
+
+.message-avatar {
+  margin: 0 12px;
 }
 
 .message-content {
-  position: relative;
-  background: white;
-  padding: 12px 16px;
+  background-color: #fff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  min-width: 200px;
-  transition: all 0.3s ease;
-}
-
-.message-content.with-tail::before {
-  content: '';
-  position: absolute;
-  top: 20px;
-  width: 0;
-  height: 0;
-  border: 8px solid transparent;
-}
-
-.ai-message .message-content.with-tail::before {
-  left: -15px;
-  border-right-color: white;
-}
-
-.user-message .message-content.with-tail::before {
-  right: -15px;
-  border-left-color: var(--el-color-primary);
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  max-width: calc(100% - 80px);
+  width: 100%;
 }
 
 .user-message .message-content {
-  background: var(--el-color-primary);
-  color: white;
+  background-color: #ecf5ff;
+  border: 1px solid #d9ecff;
+}
+
+.ai-message .message-content {
+  background-color: #fff;
+  border: 1px solid #eee;
 }
 
 .message-header {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  justify-content: space-between;
   margin-bottom: 6px;
+  font-size: 14px;
 }
 
 .sender-name {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: bold;
 }
 
 .message-time {
+  color: #999;
   font-size: 12px;
-  color: #909399;
-}
-
-.user-message .message-time {
-  color: rgba(255, 255, 255, 0.9);
 }
 
 .message-body {
-  font-size: 14px;
+  word-break: break-word;
   line-height: 1.6;
 }
 
 .input-container {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  padding: 15px 20px;
+  border-top: 1px solid #eee;
+  background-color: #fff;
 }
 
 .input-wrapper {
   display: flex;
-  gap: 12px;
+  align-items: flex-end;
 }
 
 .custom-input {
   flex: 1;
 }
 
-.custom-input :deep(.el-textarea__inner) {
-  border-radius: 8px;
-  padding: 12px;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  resize: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.custom-input :deep(.el-textarea__inner:focus) {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-}
-
 .send-button {
-  align-self: flex-end;
+  margin-left: 10px;
   height: 40px;
-  padding: 0 24px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.send-button:not(:disabled):hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(var(--el-color-primary-rgb), 0.3);
+  padding: 0 20px;
 }
 
 .input-hint {
-  margin-top: 8px;
+  margin-top: 5px;
   font-size: 12px;
-  color: #909399;
+  color: #999;
   text-align: right;
 }
 
@@ -541,23 +484,26 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 16px;
-  color: #909399;
+  margin: 20px 0;
+  color: #666;
 }
 
 .typing-indicator {
   display: flex;
-  gap: 4px;
+  margin-right: 8px;
 }
 
 .typing-indicator span {
-  width: 8px;
   height: 8px;
+  width: 8px;
   border-radius: 50%;
-  background-color: var(--el-color-primary);
-  display: inline-block;
-  animation: typing 1.4s infinite ease-in-out;
+  background-color: #666;
+  margin: 0 2px;
+  animation: typing 1s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: 0s;
 }
 
 .typing-indicator span:nth-child(2) {
@@ -569,178 +515,75 @@ onMounted(() => {
 }
 
 @keyframes typing {
-  0%, 100% {
+  0% {
     transform: translateY(0);
-    opacity: 0.4;
   }
   50% {
-    transform: translateY(-4px);
-    opacity: 1;
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0);
   }
 }
 
-/* Markdown 样式优化 */
 .markdown-body {
   font-size: 14px;
-  line-height: 1.6;
 }
 
-.markdown-body :deep(pre) {
-  background-color: #f6f8fa;
-  border-radius: 8px;
-  padding: 16px;
-  overflow-x: auto;
-  margin: 12px 0;
-}
-
-.markdown-body :deep(code) {
-  background-color: rgba(175, 184, 193, 0.2);
-  border-radius: 4px;
-  padding: 0.2em 0.4em;
-  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-}
-
-.markdown-body :deep(pre code) {
-  background-color: transparent;
-  padding: 0;
-}
-
-.user-message .markdown-body {
-  color: white;
-}
-
-.user-message .markdown-body :deep(pre),
-.user-message .markdown-body :deep(code) {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.markdown-body :deep(a) {
-  color: #0969da;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-
-.markdown-body :deep(a:hover) {
-  text-decoration: underline;
-  opacity: 0.8;
-}
-
-.user-message .markdown-body :deep(a) {
-  color: white;
-  text-decoration: underline;
-}
-
-.markdown-body :deep(table) {
-  border-collapse: collapse;
-  margin: 16px 0;
-  width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.markdown-body :deep(th),
-.markdown-body :deep(td) {
-  border: 1px solid #d0d7de;
-  padding: 8px 16px;
-}
-
-.markdown-body :deep(th) {
-  background-color: #f6f8fa;
-  font-weight: 600;
-}
-
-.user-message .markdown-body :deep(th),
-.user-message .markdown-body :deep(td) {
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.user-message .markdown-body :deep(th) {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* 列表样式优化 */
-.markdown-body :deep(ul),
-.markdown-body :deep(ol) {
-  padding-left: 20px;
-  margin: 12px 0;
-}
-
-.markdown-body :deep(li) {
-  margin: 6px 0;
-}
-
-/* 引用块样式优化 */
-.markdown-body :deep(blockquote) {
-  border-left: 4px solid var(--el-color-primary);
-  margin: 16px 0;
-  padding: 12px 16px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-}
-
-.user-message .markdown-body :deep(blockquote) {
-  border-left-color: rgba(255, 255, 255, 0.6);
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* 思考过程样式 */
 .thinking-process {
-  margin-bottom: 16px;
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
   overflow: hidden;
 }
 
 .thinking-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background-color: #f2f6fc;
-  font-size: 14px;
-  font-weight: 500;
-  color: #606266;
+  padding: 8px 12px;
+  background-color: #f5f5f5;
   cursor: pointer;
-  transition: background-color 0.3s;
+  font-size: 13px;
+  color: #666;
 }
 
-.thinking-header:hover {
-  background-color: #eef5fe;
+.thinking-header .el-icon {
+  margin-right: 5px;
 }
 
 .thinking-content {
-  padding: 16px;
-  background-color: #f8fafc;
-  border-top: 1px solid #e4e7ed;
+  padding: 10px;
+  background-color: #fafafa;
+  border-top: 1px solid #e0e0e0;
   font-size: 13px;
-  color: #606266;
+  color: #666;
 }
 
 .rotate-icon {
-  transition: transform 0.3s;
   transform: rotate(180deg);
+  transition: transform 0.3s;
 }
 
-/* 用户消息中的思考过程样式调整 */
-.user-message .thinking-process {
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.user-message .thinking-header {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.user-message .thinking-content {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-top-color: rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* 回答内容与思考过程的间距 */
 .response-content {
-  margin-top: 4px;
+  padding: 0;
+}
+
+/* 自定义滚动条 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
 }
 </style>
 
