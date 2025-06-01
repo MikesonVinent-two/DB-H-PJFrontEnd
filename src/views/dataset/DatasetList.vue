@@ -1,13 +1,13 @@
 <template>
-  <div class="dataset-management">
+  <div class="dataset-list-container">
     <!-- 标题卡片 -->
     <el-card class="management-card">
       <template #header>
         <div class="card-header">
-          <h2>数据集管理</h2>
+          <h2>数据集列表</h2>
           <div class="header-actions">
-            <el-button type="primary" @click="openCreateDialog" :icon="Plus">
-              创建数据集版本
+            <el-button type="primary" @click="goToCreateDataset" :icon="Plus">
+              创建数据集
             </el-button>
             <el-tooltip content="刷新列表" placement="top">
               <el-button :icon="Refresh" circle @click="fetchDatasetVersions" :loading="isLoading" />
@@ -24,7 +24,7 @@
       <!-- 空数据状态 -->
       <div v-else-if="!datasetVersions.length" class="empty-container">
         <el-empty description="暂无数据集版本" />
-        <el-button type="primary" @click="openCreateDialog">创建数据集版本</el-button>
+        <el-button type="primary" @click="goToCreateDataset">创建数据集</el-button>
       </div>
 
       <!-- 数据集版本列表 -->
@@ -41,27 +41,6 @@
             </template>
           </el-table-column>
           <el-table-column prop="createdByUserName" label="创建者" width="120" />
-          <el-table-column label="状态" width="120">
-            <template #default="scope">
-              <div class="status-icons">
-                <el-tooltip content="已有标准答案" placement="top">
-                  <el-icon v-if="scope.row.hasStandardAnswer" class="status-icon success">
-                    <Check />
-                  </el-icon>
-                </el-tooltip>
-                <el-tooltip content="已有专家回答" placement="top">
-                  <el-icon v-if="scope.row.hasExpertAnswer" class="status-icon info">
-                    <User />
-                  </el-icon>
-                </el-tooltip>
-                <el-tooltip content="已有众包回答" placement="top">
-                  <el-icon v-if="scope.row.hasCrowdsourcedAnswer" class="status-icon warning">
-                    <UserFilled />
-                  </el-icon>
-                </el-tooltip>
-              </div>
-            </template>
-          </el-table-column>
           <el-table-column label="操作" width="300" fixed="right">
             <template #default="scope">
               <div class="action-buttons">
@@ -81,7 +60,15 @@
                   @click="openEditDialog(scope.row)"
                   :loading="isEditing === scope.row.id"
                 >
-                  编辑
+                  编辑信息
+                </el-button>
+                <el-button
+                  size="small"
+                  type="warning"
+                  plain
+                  @click="goToEditDataset(scope.row.id)"
+                >
+                  编辑问题
                 </el-button>
                 <el-button
                   size="small"
@@ -114,10 +101,10 @@
       </div>
     </el-card>
 
-    <!-- 创建/编辑数据集版本对话框 -->
+    <!-- 编辑数据集版本对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="isEditMode ? '编辑数据集版本' : '创建数据集版本'"
+      title="编辑数据集版本"
       width="600px"
       destroy-on-close
     >
@@ -129,7 +116,7 @@
         label-position="left"
       >
         <el-form-item label="版本号" prop="versionNumber">
-          <el-input v-model="form.versionNumber" placeholder="请输入版本号，如 1.0.0" />
+          <el-input v-model="form.versionNumber" placeholder="请输入版本号，如 1.0.0" disabled />
         </el-form-item>
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入数据集名称" />
@@ -147,7 +134,7 @@
         <div class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
           <el-button type="primary" @click="submitForm" :loading="isSubmitting">
-            {{ isEditMode ? '保存' : '创建' }}
+            保存
           </el-button>
         </div>
       </template>
@@ -208,11 +195,11 @@
       </div>
       <div v-else-if="!datasetQuestions.length" class="empty-container">
         <el-empty description="此数据集暂无问题" />
-        <el-button type="primary" @click="showAddQuestionsDialog">添加问题</el-button>
+        <el-button type="primary" @click="goToEditDataset(currentDatasetVersion?.id || 0)">添加问题</el-button>
       </div>
       <div v-else>
         <div class="dialog-actions">
-          <el-button type="primary" @click="showAddQuestionsDialog">添加问题</el-button>
+          <el-button type="primary" @click="goToEditDataset(currentDatasetVersion?.id || 0)">添加问题</el-button>
         </div>
         <el-table :data="datasetQuestions" border stripe style="width: 100%; margin-top: 15px;">
           <el-table-column prop="standardQuestionId" label="问题ID" width="80" />
@@ -246,124 +233,16 @@
         </div>
       </div>
     </el-dialog>
-
-    <!-- 添加问题对话框 -->
-    <el-dialog
-      v-model="addQuestionsDialogVisible"
-      title="添加有标准答案的标准问题"
-      width="900px"
-      destroy-on-close
-      append-to-body
-      @closed="handleAddQuestionsDialogClosed"
-    >
-      <div class="search-container">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索问题..."
-          clearable
-          @clear="searchQuestions"
-          style="width: 300px;"
-        >
-          <template #append>
-            <el-button :icon="Search" @click="searchQuestions" />
-          </template>
-        </el-input>
-        <el-input
-          v-model="searchTags"
-          placeholder="标签(多个用逗号分隔)"
-          clearable
-          @clear="searchQuestions"
-          style="width: 250px; margin-left: 10px;"
-        />
-        <el-button type="primary" @click="searchQuestions" :loading="isSearching">搜索</el-button>
-      </div>
-
-      <div v-if="isSearching" class="loading-container">
-        <el-skeleton :rows="5" animated />
-      </div>
-      <div v-else-if="!searchResults.length" class="empty-container">
-        <el-empty description="暂无符合条件的问题" />
-      </div>
-      <div v-else>
-        <el-table
-          :data="searchResults"
-          border
-          stripe
-          style="width: 100%; margin-top: 15px;"
-          @selection-change="handleSelectionChange"
-        >
-          <el-table-column type="selection" width="55" />
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="questionText" label="问题文本" min-width="280" show-overflow-tooltip />
-          <el-table-column prop="questionType" label="类型" width="120">
-            <template #default="scope">
-              <el-tag :type="getQuestionTypeTagType(scope.row.questionType)">
-                {{ getQuestionTypeDisplay(scope.row.questionType) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="difficulty" label="难度" width="80">
-            <template #default="scope">
-              <el-tag :type="getDifficultyTagType(scope.row.difficulty)">
-                {{ getDifficultyDisplay(scope.row.difficulty) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="tags" label="标签" min-width="180">
-            <template #default="scope">
-              <div class="tag-list">
-                <el-tag
-                  v-for="tag in scope.row.tags"
-                  :key="tag"
-                  size="small"
-                  style="margin: 2px"
-                >
-                  {{ tag }}
-                </el-tag>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <!-- 分页器 -->
-        <div class="pagination-container">
-          <el-pagination
-            v-model:current-page="searchPage"
-            v-model:page-size="searchPageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            layout="total, sizes, prev, pager, next"
-            :total="searchTotal"
-            @size-change="handleSearchSizeChange"
-            @current-change="handleSearchPageChange"
-          />
-        </div>
-
-        <div class="dialog-footer">
-          <span class="selection-info">已选择 {{ selectedQuestions.length }} 个问题</span>
-          <div>
-            <el-button @click="addQuestionsDialogVisible = false">取消</el-button>
-            <el-button
-              type="primary"
-              @click="addQuestionsToDataset"
-              :disabled="!selectedQuestions.length"
-              :loading="isAddingQuestions"
-            >
-              添加到数据集
-            </el-button>
-          </div>
-        </div>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
-import { Plus, Refresh, Search, Check, User, UserFilled } from '@element-plus/icons-vue'
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { Plus, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import {
   getAllDatasetVersions,
-  createDatasetVersion,
   updateDatasetVersion,
   deleteDatasetVersion,
   cloneDatasetVersion,
@@ -371,9 +250,10 @@ import {
   type DatasetVersionResponse,
   type DatasetQuestionItem
 } from '@/api/dataset'
-import { searchStandardQuestions } from '@/api/standardData'
-import type { SearchQuestionItem, SearchQuestionResponse } from '@/types/standardQuestion'
 import { useUserStore } from '@/stores/user'
+
+// 路由
+const router = useRouter()
 
 // 用户信息
 const userStore = useUserStore()
@@ -392,7 +272,6 @@ const isCloneSubmitting = ref(false)
 
 // 对话框控制
 const dialogVisible = ref(false)
-const isEditMode = ref(false)
 const currentEditId = ref<number | null>(null)
 const formRef = ref<FormInstance | null>(null)
 
@@ -401,20 +280,24 @@ const cloneDialogVisible = ref(false)
 const cloneSourceVersion = ref<DatasetVersionResponse | null>(null)
 const cloneFormRef = ref<FormInstance | null>(null)
 
+// 问题对话框控制
+const questionsDialogVisible = ref(false)
+const isLoadingQuestions = ref(false)
+const datasetQuestions = ref<DatasetQuestionItem[]>([])
+const currentDatasetVersion = ref<DatasetVersionResponse | null>(null)
+const questionsPage = ref(1)
+const questionsPageSize = ref(10)
+const questionsTotalElements = ref(0)
+
 // 表单数据
 const form = reactive({
   versionNumber: '',
   name: '',
-  description: '',
-  standardQuestionIds: [] as number[]
+  description: ''
 })
 
 // 表单验证规则
 const rules = {
-  versionNumber: [
-    { required: true, message: '请输入版本号', trigger: 'blur' },
-    { pattern: /^\d+\.\d+(\.\d+)?$/, message: '版本号格式应为 x.y.z', trigger: 'blur' }
-  ],
   name: [
     { required: true, message: '请输入数据集名称', trigger: 'blur' },
     { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
@@ -447,27 +330,6 @@ const cloneRules = {
   ]
 }
 
-// 问题对话框控制
-const questionsDialogVisible = ref(false)
-const isLoadingQuestions = ref(false)
-const datasetQuestions = ref<DatasetQuestionItem[]>([])
-const currentDatasetVersion = ref<DatasetVersionResponse | null>(null)
-const questionsPage = ref(1)
-const questionsPageSize = ref(10)
-const questionsTotalElements = ref(0)
-
-// 添加问题对话框控制
-const addQuestionsDialogVisible = ref(false)
-const isSearching = ref(false)
-const searchKeyword = ref('')
-const searchTags = ref('')
-const searchResults = ref<SearchQuestionItem[]>([])
-const selectedQuestions = ref<SearchQuestionItem[]>([])
-const isAddingQuestions = ref(false)
-const searchPage = ref(1)
-const searchPageSize = ref(10)
-const searchTotal = ref(0)
-
 // 获取所有数据集版本
 const fetchDatasetVersions = async () => {
   try {
@@ -482,25 +344,22 @@ const fetchDatasetVersions = async () => {
   }
 }
 
-// 打开创建对话框
-const openCreateDialog = () => {
-  isEditMode.value = false
-  currentEditId.value = null
-  form.versionNumber = ''
-  form.name = ''
-  form.description = ''
-  form.standardQuestionIds = []
-  dialogVisible.value = true
+// 前往创建数据集页面
+const goToCreateDataset = () => {
+  router.push('/dataset/create')
+}
+
+// 前往编辑数据集页面
+const goToEditDataset = (datasetId: number) => {
+  router.push(`/dataset/edit/${datasetId}`)
 }
 
 // 打开编辑对话框
 const openEditDialog = (row: DatasetVersionResponse) => {
-  isEditMode.value = true
   currentEditId.value = row.id
   form.versionNumber = row.versionNumber
   form.name = row.name
   form.description = row.description
-  form.standardQuestionIds = []
   dialogVisible.value = true
 }
 
@@ -519,35 +378,20 @@ const submitForm = async () => {
       return
     }
 
-    if (isEditMode.value) {
-      // 编辑模式
-      if (!currentEditId.value) {
-        ElMessage.error('未找到要编辑的数据集版本ID')
-        return
-      }
-
-      await updateDatasetVersion(currentEditId.value, {
-        name: form.name,
-        description: form.description,
-        standardQuestionsToAdd: [],
-        standardQuestionsToRemove: [],
-        userId: currentUser.id
-      })
-
-      ElMessage.success('更新数据集版本成功')
-    } else {
-      // 创建模式
-      await createDatasetVersion({
-        versionNumber: form.versionNumber,
-        name: form.name,
-        description: form.description,
-        standardQuestionIds: form.standardQuestionIds,
-        userId: currentUser.id
-      })
-
-      ElMessage.success('创建数据集版本成功')
+    if (!currentEditId.value) {
+      ElMessage.error('未找到要编辑的数据集版本ID')
+      return
     }
 
+    await updateDatasetVersion(currentEditId.value, {
+      name: form.name,
+      description: form.description,
+      standardQuestionsToAdd: [],
+      standardQuestionsToRemove: [],
+      userId: currentUser.id
+    })
+
+    ElMessage.success('更新数据集版本成功')
     dialogVisible.value = false
     fetchDatasetVersions()
   } catch (error) {
@@ -690,122 +534,6 @@ const handleQuestionsPageChange = (val: number) => {
   }
 }
 
-// 显示添加问题对话框
-const showAddQuestionsDialog = () => {
-  addQuestionsDialogVisible.value = true
-  // 重置搜索状态
-  resetSearchState()
-  // 初始加载一些问题
-  searchQuestions()
-}
-
-// 重置搜索状态
-const resetSearchState = () => {
-  searchKeyword.value = ''
-  searchTags.value = ''
-  searchResults.value = []
-  selectedQuestions.value = []
-  searchPage.value = 1
-  searchPageSize.value = 10
-  searchTotal.value = 0
-  isSearching.value = false
-}
-
-// 处理添加问题对话框关闭
-const handleAddQuestionsDialogClosed = () => {
-  resetSearchState()
-}
-
-// 搜索标准问题
-const searchQuestions = async () => {
-  if (!currentDatasetVersion.value) return
-
-  try {
-    isSearching.value = true
-    const response = await searchStandardQuestions({
-      keyword: searchKeyword.value,
-      tags: searchTags.value,
-      page: (searchPage.value - 1).toString(), // 后端分页从0开始
-      size: searchPageSize.value.toString(),
-      onlyLatest: 'true'
-    })
-
-    if (response.success) {
-      // 只保留有标准答案的问题
-      const filteredQuestions = response.questions.filter(q => q.hasStandardAnswer)
-
-      // 如果过滤后没有结果但有搜索结果，显示提示信息
-      if (filteredQuestions.length === 0 && response.questions.length > 0) {
-        ElMessage.warning('搜索结果中没有包含标准答案的问题')
-      }
-
-      searchResults.value = filteredQuestions
-      searchTotal.value = filteredQuestions.length // 使用过滤后的总数
-    } else {
-      ElMessage.error('搜索问题失败')
-    }
-  } catch (error) {
-    console.error('搜索问题失败:', error)
-    ElMessage.error('搜索问题失败')
-  } finally {
-    isSearching.value = false
-  }
-}
-
-// 处理搜索分页大小变化
-const handleSearchSizeChange = (val: number) => {
-  searchPageSize.value = val
-  searchQuestions()
-}
-
-// 处理搜索页码变化
-const handleSearchPageChange = (val: number) => {
-  searchPage.value = val
-  searchQuestions()
-}
-
-// 处理表格选择变化
-const handleSelectionChange = (selection: SearchQuestionItem[]) => {
-  selectedQuestions.value = selection
-}
-
-// 添加问题到数据集
-const addQuestionsToDataset = async () => {
-  if (!currentDatasetVersion.value || !selectedQuestions.value.length) return
-
-  try {
-    isAddingQuestions.value = true
-    const currentUser = userStore.currentUser
-
-    if (!currentUser || !currentUser.id) {
-      ElMessage.error('未获取到当前用户信息')
-      return
-    }
-
-    await updateDatasetVersion(currentDatasetVersion.value.id, {
-      name: currentDatasetVersion.value.name,
-      description: currentDatasetVersion.value.description,
-      standardQuestionsToAdd: selectedQuestions.value.map(q => q.id),
-      standardQuestionsToRemove: [],
-      userId: currentUser.id
-    })
-
-    ElMessage.success(`成功添加 ${selectedQuestions.value.length} 个问题到数据集`)
-    addQuestionsDialogVisible.value = false
-
-    // 刷新数据集问题列表和数据集版本列表
-    if (currentDatasetVersion.value) {
-      fetchDatasetQuestions(currentDatasetVersion.value.id)
-    }
-    fetchDatasetVersions()
-  } catch (error) {
-    console.error('添加问题到数据集失败:', error)
-    ElMessage.error('添加问题到数据集失败')
-  } finally {
-    isAddingQuestions.value = false
-  }
-}
-
 // 从数据集中移除问题
 const removeQuestionFromDataset = async (question: DatasetQuestionItem) => {
   if (!currentDatasetVersion.value) return
@@ -839,46 +567,14 @@ const removeQuestionFromDataset = async (question: DatasetQuestionItem) => {
   }
 }
 
-// 获取问题类型显示文本
-const getQuestionTypeDisplay = (type: string): string => {
-  const map: Record<string, string> = {
-    'SINGLE_CHOICE': '单选题',
-    'MULTIPLE_CHOICE': '多选题',
-    'SIMPLE_FACT': '简单事实题',
-    'SUBJECTIVE': '主观题'
-  }
-  return map[type] || type
-}
-
-// 获取问题类型标签样式
-const getQuestionTypeTagType = (type: string): string => {
-  const map: Record<string, string> = {
-    'SINGLE_CHOICE': 'success',
-    'MULTIPLE_CHOICE': 'warning',
-    'SIMPLE_FACT': 'info',
-    'SUBJECTIVE': 'primary'
-  }
-  return map[type] || ''
-}
-
-// 获取难度显示文本
-const getDifficultyDisplay = (difficulty: string): string => {
-  const map: Record<string, string> = {
-    'EASY': '简单',
-    'MEDIUM': '中等',
-    'HARD': '困难'
-  }
-  return map[difficulty] || difficulty
-}
-
-// 获取难度标签样式
-const getDifficultyTagType = (difficulty: string): string => {
-  const map: Record<string, string> = {
-    'EASY': 'success',
-    'MEDIUM': 'warning',
-    'HARD': 'danger'
-  }
-  return map[difficulty] || ''
+// 处理问题对话框关闭
+const handleQuestionsDialogClosed = () => {
+  // 清理状态
+  datasetQuestions.value = []
+  currentDatasetVersion.value = null
+  questionsPage.value = 1
+  questionsPageSize.value = 10
+  questionsTotalElements.value = 0
 }
 
 // 格式化日期
@@ -895,16 +591,6 @@ const formatDate = (dateString: string) => {
   })
 }
 
-// 处理问题对话框关闭
-const handleQuestionsDialogClosed = () => {
-  // 清理状态
-  datasetQuestions.value = []
-  currentDatasetVersion.value = null
-  questionsPage.value = 1
-  questionsPageSize.value = 10
-  questionsTotalElements.value = 0
-}
-
 // 生命周期钩子
 onMounted(() => {
   fetchDatasetVersions()
@@ -912,7 +598,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.dataset-management {
+.dataset-list-container {
   padding: 20px;
 }
 
@@ -984,39 +670,5 @@ onMounted(() => {
 .tag-list {
   display: flex;
   flex-wrap: wrap;
-}
-
-.status-icons {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-.status-icon {
-  font-size: 18px;
-}
-
-.status-icon.success {
-  color: #67c23a;
-}
-
-.status-icon.info {
-  color: #409eff;
-}
-
-.status-icon.warning {
-  color: #e6a23c;
-}
-
-.selection-info {
-  color: #606266;
-  margin-right: auto;
-}
-
-.dialog-footer {
-  margin-top: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 </style>

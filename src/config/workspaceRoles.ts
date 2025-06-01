@@ -21,7 +21,8 @@ export const WORKSPACE_TYPES = {
   GENERATION: 'generation', // 生成工作台
   SYSTEM: 'system',          // 系统管理工作台
   CROWDSOURCE: 'crowdsource', // 众包工作台
-  EXPERT: 'expert'          // 专家工作台
+  EXPERT: 'expert',          // 专家工作台
+  DATASET: 'dataset'         // 数据集工作台
 }
 
 /**
@@ -51,15 +52,6 @@ export const WORKSPACES = [
     description: '管理系统中的原始问题数据',
     icon: 'Document'
   },
-  // {
-  //   id: 'datasets',
-  //   name: '数据集管理',
-  //   type: WORKSPACE_TYPES.DATA,
-  //   path: '/data/datasets',
-  //   roles: [ROLES.ADMIN],
-  //   description: '管理系统中的数据集',
-  //   icon: 'Collection'
-  // },
 
   // 标准化工作台
   {
@@ -292,6 +284,35 @@ export const WORKSPACES = [
     roles: [ROLES.ADMIN],
     description: '管理AI模型',
     icon: 'CPU'
+  },
+  {
+    id: 'evaluator-management',
+    name: '评测员管理',
+    type: WORKSPACE_TYPES.SYSTEM,
+    path: '/system/evaluators',
+    roles: [ROLES.ADMIN],
+    description: '管理人类和AI评测员',
+    icon: 'UserFilled'
+  },
+
+  // 数据集工作台
+  {
+    id: 'dataset-management',
+    name: '数据集列表',
+    type: WORKSPACE_TYPES.DATASET,
+    path: '/dataset/list',
+    roles: [ROLES.ADMIN, ROLES.CURATOR],
+    description: '管理数据集版本',
+    icon: 'Collection'
+  },
+  {
+    id: 'create-dataset',
+    name: '创建数据集',
+    type: WORKSPACE_TYPES.DATASET,
+    path: '/dataset/create',
+    roles: [ROLES.ADMIN, ROLES.CURATOR],
+    description: '创建新的数据集',
+    icon: 'FolderAdd'
   }
 ]
 

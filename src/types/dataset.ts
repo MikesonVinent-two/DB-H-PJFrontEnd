@@ -21,6 +21,9 @@ export interface DatasetVersionResponse {
   createdByUserId: number
   createdByUserName: string
   questionCount: number
+  hasStandardAnswer?: boolean
+  hasExpertAnswer?: boolean
+  hasCrowdsourcedAnswer?: boolean
 }
 
 /**
@@ -135,4 +138,45 @@ export interface DatasetQuestionPageResponse {
   sort: SortInfo
   numberOfElements: number
   empty: boolean
+}
+
+/**
+ * 基于数据集查询标准问题的参数接口
+ */
+export interface GetStandardQuestionsByDatasetParams {
+  inOrOut?: string          // 'in' 或 'out'，表示在数据集内或数据集外的问题
+  onlyLatest?: string | boolean  // 是否只返回叶子节点的标准问题
+  onlyLatestVersion?: string | boolean  // 是否只返回最新版本的标准问题
+  tags?: string             // 标签，多个用逗号分隔
+  keyword?: string          // 搜索关键词
+  pageNumber?: string | number  // 页码，从0开始
+  pageSize?: string | number    // 每页大小
+  onlyWithStandardAnswers?: string | boolean  // 是否只返回有标准答案的问题
+}
+
+/**
+ * 基于数据集查询标准问题的响应接口
+ */
+export interface StandardQuestionsByDatasetResponse {
+  success: boolean
+  questions: {
+    id: number
+    questionText: string
+    questionType: string
+    difficulty: string
+    creationTime: string
+    createdByUserId: number
+    tags: string[]
+    parentQuestionId?: number
+    hasStandardAnswer: boolean  // 是否有标准答案
+  }[]
+  total: number
+  page: number
+  size: number
+  totalPages: number
+  datasetId: number
+  isInDataset: boolean
+  onlyLatest: boolean
+  onlyLatestVersion: boolean
+  onlyWithStandardAnswers: boolean  // 是否只返回有标准答案的问题
 }

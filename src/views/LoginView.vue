@@ -28,7 +28,7 @@ const navigateToRegister = () => {
     <div class="login-content">
       <div class="login-header">
         <img src="@/assets/logo.svg" alt="Logo" class="logo" />
-        <h2>欢迎使用 AI 问答系统</h2>
+        <h2>欢迎使用LLM评测系统</h2>
         <p class="subtitle">登录您的账号以开始对话</p>
       </div>
       <LoginForm @login-success="handleLoginSuccess" @navigate-to-register="navigateToRegister" />

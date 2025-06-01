@@ -9,7 +9,9 @@ import type {
   DeleteOperationResponse,
   DatasetVersionResponse,
   DatasetVersionPageResponse,
-  DatasetQuestionPageResponse
+  DatasetQuestionPageResponse,
+  GetStandardQuestionsByDatasetParams,
+  StandardQuestionsByDatasetResponse
 } from '@/types/dataset'
 
 /**
@@ -103,4 +105,107 @@ export const getDatasetVersionQuestions = (
     `${apiUrls.dataset.getVersionQuestions}/${versionId}/questions/pageable`,
     { params }
   )
+}
+
+/**
+ * 获取基于数据集的标准问题
+ * @param datasetId 数据集ID
+ * @param params 查询参数
+ * @returns 标准问题列表
+ */
+export const getStandardQuestionsByDataset = (
+  datasetId: number | string,
+  params?: GetStandardQuestionsByDatasetParams
+) => {
+  return api.get<StandardQuestionsByDatasetResponse>(
+    `${apiUrls.dataset.getStandardQuestionsByDataset}/${datasetId}`,
+    { params }
+  )
+}
+
+/**
+ * 获取数据集内的标准问题
+ * @param datasetId 数据集ID
+ * @param params 查询参数
+ * @returns 数据集内的标准问题列表
+ */
+export const getQuestionsInDataset = (
+  datasetId: number | string,
+  params?: Omit<GetStandardQuestionsByDatasetParams, 'inOrOut'>
+) => {
+  return getStandardQuestionsByDataset(datasetId, {
+    ...params,
+    inOrOut: 'in'
+  })
+}
+
+/**
+ * 获取数据集外的标准问题
+ * @param datasetId 数据集ID
+ * @param params 查询参数
+ * @returns 数据集外的标准问题列表
+ */
+export const getQuestionsOutsideDataset = (
+  datasetId: number | string,
+  params?: Omit<GetStandardQuestionsByDatasetParams, 'inOrOut'>
+) => {
+  // 查询数据集外问题时，默认只获取最新的问题（叶子节点）
+  const onlyLatest = params?.onlyLatest !== undefined ? params.onlyLatest : true
+
+  return getStandardQuestionsByDataset(datasetId, {
+    ...params,
+    inOrOut: 'out',
+    onlyLatest: onlyLatest.toString()
+  })
+}
+
+/**
+ * 获取有标准答案的标准问题（数据集内或数据集外）
+ * @param datasetId 数据集ID
+ * @param inOrOut 'in' 表示数据集内，'out' 表示数据集外
+ * @param params 其他查询参数
+ * @returns 有标准答案的标准问题列表
+ */
+export const getQuestionsWithStandardAnswers = (
+  datasetId: number | string,
+  inOrOut: 'in' | 'out',
+  params?: Omit<GetStandardQuestionsByDatasetParams, 'inOrOut' | 'onlyWithStandardAnswers'>
+) => {
+  return getStandardQuestionsByDataset(datasetId, {
+    ...params,
+    inOrOut,
+    onlyWithStandardAnswers: 'true'
+  })
+}
+
+/**
+ * 获取数据集内有标准答案的问题
+ * @param datasetId 数据集ID
+ * @param params 查询参数
+ * @returns 数据集内有标准答案的问题列表
+ */
+export const getQuestionsInDatasetWithStandardAnswers = (
+  datasetId: number | string,
+  params?: Omit<GetStandardQuestionsByDatasetParams, 'inOrOut' | 'onlyWithStandardAnswers'>
+) => {
+  return getQuestionsWithStandardAnswers(datasetId, 'in', params)
+}
+
+/**
+ * 获取数据集外有标准答案的问题
+ * @param datasetId 数据集ID
+ * @param params 查询参数
+ * @returns 数据集外有标准答案的问题列表
+ */
+export const getQuestionsOutsideDatasetWithStandardAnswers = (
+  datasetId: number | string,
+  params?: Omit<GetStandardQuestionsByDatasetParams, 'inOrOut' | 'onlyWithStandardAnswers'>
+) => {
+  // 查询数据集外问题时，默认只获取最新的问题（叶子节点）
+  const onlyLatest = params?.onlyLatest !== undefined ? params.onlyLatest : true
+
+  return getQuestionsWithStandardAnswers(datasetId, 'out', {
+    ...params,
+    onlyLatest: onlyLatest.toString()
+  })
 }

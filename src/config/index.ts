@@ -163,6 +163,7 @@ export const apiUrls = {
     deleteVersion: '/api/datasets/versions',  // DELETE /{versionId} 删除版本
     cloneVersion: '/api/datasets/versions',  // POST /{versionId}/clone 克隆版本
     getVersionQuestions: '/api/datasets/versions',  // GET /{versionId}/questions/pageable 获取版本问题列表
+    getStandardQuestionsByDataset: '/api/standard-questions/by-dataset',  // GET /{datasetId} 获取数据集相关的标准问题
   },
   evaluations: {
     base: '/api/evaluations',  // 评测基础路径

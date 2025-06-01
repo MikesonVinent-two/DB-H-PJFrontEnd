@@ -167,9 +167,21 @@ export interface OriginalDataResponse {
  * 无标准回答的问题响应接口
  */
 export interface QuestionsWithoutAnswersResponse {
-  questions: StandardQuestionItem[]
-  page: number
-  size: number
-  totalElements: number
-  totalPages: number
+  success: boolean               // 请求是否成功
+  questions: {
+    id: number                   // 问题ID
+    questionText: string         // 问题文本
+    questionType: string         // 问题类型
+    difficulty: string           // 难度级别
+    creationTime: string         // 创建时间
+    createdByUserId: number      // 创建用户ID
+    tags: string[]               // 标签列表
+    parentQuestionId?: number    // 父问题ID
+  }[]
+  total: number                  // 总记录数
+  page: number                   // 当前页码
+  size: number                   // 页大小
+  totalPages: number             // 总页数
+  onlyLatest: boolean            // 是否只返回叶子节点
+  onlyLatestVersion: boolean     // 是否只返回最新版本
 }

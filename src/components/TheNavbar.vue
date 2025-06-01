@@ -11,7 +11,7 @@
       <div class="navbar-left">
         <div class="logo-container" @click="router.push('/')" role="button">
           <img src="@/assets/logo.svg" alt="Logo" class="logo" />
-          <span class="title">AI问答系统</span>
+          <span class="title">LLM评测系统</span>
         </div>
       </div>
 

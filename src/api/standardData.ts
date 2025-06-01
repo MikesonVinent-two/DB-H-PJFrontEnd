@@ -468,7 +468,7 @@ export const getQuestionOriginalData = (
 }
 
 /**
- * 获取所有没有标准回答的标准问题
+ * 获取所有没有标准答案的标准问题
  * @param params 分页参数
  * @returns 没有标准回答的标准问题列表
  */
@@ -476,6 +476,23 @@ export const getQuestionsWithoutAnswers = (params?: {
   page?: string
   size?: string
   onlyLatest?: boolean | string // 是否只返回叶子节点的标准问题
+}) => {
+  return api.get<QuestionsWithoutAnswersResponse>(
+    apiUrls.standardData.getQuestionsWithoutAnswers,
+    { params }
+  )
+}
+
+/**
+ * 获取所有没有标准答案的标准问题
+ * @param params 查询参数
+ * @returns 没有标准回答的标准问题列表
+ */
+export const getQuestionsWithoutStandardAnswers = (params?: {
+  pageNumber?: string | number  // 页码，从0开始
+  pageSize?: string | number    // 每页大小
+  onlyLatest?: boolean | string  // 是否只返回叶子节点的标准问题
+  onlyLatestVersion?: boolean | string // 是否只返回最新版本的标准问题
 }) => {
   return api.get<QuestionsWithoutAnswersResponse>(
     apiUrls.standardData.getQuestionsWithoutAnswers,

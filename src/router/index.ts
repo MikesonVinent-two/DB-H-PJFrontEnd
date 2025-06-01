@@ -314,11 +314,21 @@ const routes: Array<RouteRecordRaw> = [
   // 系统管理
   {
     path: '/system/users',
-    name: 'users',
+    name: 'user-management',
     component: () => import('../views/admin/UserManagement.vue'),
     meta: {
       requiresAuth: true,
       title: '用户管理',
+      roles: ['ADMIN']
+    }
+  },
+  {
+    path: '/system/models',
+    name: 'model-management',
+    component: () => import('../views/admin/ModelManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '模型管理',
       roles: ['ADMIN']
     }
   },
@@ -415,6 +425,38 @@ const routes: Array<RouteRecordRaw> = [
       requiresAuth: true,
       title: '历史回答记录',
       roles: ['EXPERT', 'ADMIN']
+    }
+  },
+
+  // 数据集工作台路由
+  {
+    path: '/dataset/list',
+    name: 'dataset-management',
+    component: () => import('../views/dataset/DatasetList.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '数据集列表',
+      roles: ['ADMIN', 'CURATOR']
+    }
+  },
+  {
+    path: '/dataset/create',
+    name: 'create-dataset',
+    component: () => import('../views/dataset/CreateDataset.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '创建数据集',
+      roles: ['ADMIN', 'CURATOR']
+    }
+  },
+  {
+    path: '/dataset/edit/:id',
+    name: 'edit-dataset',
+    component: () => import('../views/dataset/EditDataset.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '编辑数据集',
+      roles: ['ADMIN', 'CURATOR']
     }
   },
 ]

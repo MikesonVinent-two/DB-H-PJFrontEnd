@@ -177,7 +177,8 @@ const workspaceTypeNames = {
   [WORKSPACE_TYPES.GENERATION]: '生成工作台',
   [WORKSPACE_TYPES.SYSTEM]: '系统管理',
   [WORKSPACE_TYPES.CROWDSOURCE]: '众包工作台',
-  [WORKSPACE_TYPES.EXPERT]: '专家工作台'
+  [WORKSPACE_TYPES.EXPERT]: '专家工作台',
+  [WORKSPACE_TYPES.DATASET]: '数据集工作台'
 }
 
 // 工作台类型图标映射
@@ -189,7 +190,8 @@ const workspaceTypeIcons = {
   [WORKSPACE_TYPES.GENERATION]: MagicStick,
   [WORKSPACE_TYPES.SYSTEM]: Setting,
   [WORKSPACE_TYPES.CROWDSOURCE]: Briefcase,
-  [WORKSPACE_TYPES.EXPERT]: UserFilled
+  [WORKSPACE_TYPES.EXPERT]: UserFilled,
+  [WORKSPACE_TYPES.DATASET]: Files
 }
 
 // 定义事件
