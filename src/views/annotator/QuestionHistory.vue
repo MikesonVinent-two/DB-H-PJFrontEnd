@@ -26,6 +26,14 @@
               <el-option label="主观题" value="SUBJECTIVE" />
             </el-select>
 
+            <el-switch
+              v-model="onlyLatest"
+              active-text="仅显示最新版本"
+              inactive-text="显示所有版本"
+              style="margin-right: 10px;"
+              @change="handleOnlyLatestChange"
+            />
+
             <el-select v-model="sortOrder" placeholder="排序方式" style="width: 150px;">
               <el-option label="创建时间 (新→旧)" value="creationTime,desc" />
               <el-option label="创建时间 (旧→新)" value="creationTime,asc" />
@@ -50,7 +58,7 @@
             </el-table-column>
             <el-table-column label="版本" width="70">
               <template #default="{ row }">
-                <el-tag>v{{ row.version || '1.0' }}</el-tag>
+                <el-tag>版本 {{ row.changeLogId || '未知' }}</el-tag>
               </template>
             </el-table-column>
           </el-table>
@@ -80,7 +88,7 @@
               <div class="panel-header">
                 <h3>标准问题详情</h3>
                 <div>
-                  <el-tag type="success" style="margin-right: 10px;">v{{ selectedQuestion.version || '1.0' }}</el-tag>
+                  <el-tag type="success" style="margin-right: 10px;">版本 {{ selectedQuestion.changeLogId || '未知' }}</el-tag>
                   <el-button type="primary" size="small" @click="showQuestionEditor">编辑问题</el-button>
                 </div>
               </div>
@@ -110,7 +118,7 @@
           <el-card class="history-card">
             <template #header>
               <div class="panel-header">
-                <h3>版本历史</h3>
+                <h3>版本历史 <span class="version-count" v-if="versionHistory.length > 0">(共{{ versionHistory.length }}条)</span></h3>
                 <el-radio-group v-model="historyViewMode" size="small">
                   <el-radio-button label="list">列表视图</el-radio-button>
                   <el-radio-button label="tree">树形视图</el-radio-button>
@@ -121,16 +129,21 @@
             <div v-loading="loading.history">
               <!-- 列表视图 -->
               <div v-if="historyViewMode === 'list'" class="list-view">
-                <el-timeline>
+                <div v-if="versionHistory.length === 0" class="empty-history">
+                  <el-empty description="暂无版本历史数据" />
+                </div>
+                <el-timeline v-else>
                   <el-timeline-item
-                    v-for="version in versionHistory"
+                    v-for="version in paginatedVersionHistory"
                     :key="version.id"
                     :timestamp="formatDate(version.creationTime)"
                     :type="version.id === selectedQuestion.id ? 'primary' : ''"
                   >
                     <div class="version-item">
                       <div class="version-header">
-                        <h4>版本 {{ version.version || '1.0' }}</h4>
+                        <h4>
+                          <el-tag type="success" size="medium" class="version-tag">版本 {{ version.changeLogId || '未知' }}</el-tag>
+                        </h4>
                         <div>
                           <el-button
                             type="text"
@@ -150,15 +163,33 @@
                       </div>
 
                       <p class="version-message">{{ version.commitMessage || '无提交说明' }}</p>
-                      <p class="version-meta">修改者: {{ version.createdByUser?.name || '未知' }}</p>
+                      <p class="version-meta">
+                        修改者: {{ version.createdByUser?.name || '未知' }}
+                        <span v-if="version.changeLogId" class="change-log-id">变更ID: {{ version.changeLogId }}</span>
+                      </p>
                     </div>
                   </el-timeline-item>
                 </el-timeline>
+
+                <!-- 版本历史分页 -->
+                <div class="pagination" v-if="versionHistory.length > historyPageSize">
+                  <el-pagination
+                    layout="prev, pager, next"
+                    :total="versionHistory.length"
+                    :page-size="historyPageSize"
+                    :current-page="historyCurrentPage"
+                    @current-change="historyCurrentPage = $event"
+                  />
+                </div>
               </div>
 
               <!-- 树形视图 -->
               <div v-else class="tree-view">
+                <div v-if="versionTree.length === 0" class="empty-tree">
+                  <el-empty description="暂无版本树数据" />
+                </div>
                 <el-tree
+                  v-else
                   :data="versionTree"
                   node-key="id"
                   default-expand-all
@@ -169,7 +200,7 @@
                   <template #default="{ node, data }">
                     <div class="tree-node">
                       <span class="tree-label">
-                        版本 {{ data.version || '1.0' }} - {{ formatDate(data.creationTime) }}
+                        版本 {{ data.changeLogId || '未知' }} - {{ formatDate(data.creationTime) }}
                       </span>
                       <span class="tree-message">{{ data.commitMessage || '无提交说明' }}</span>
                       <div class="tree-actions">
@@ -278,87 +309,79 @@
       title="版本对比"
       v-model="compareDialogVisible"
       width="80%"
+      destroy-on-close
     >
       <div class="compare-view" v-if="compareVersion">
         <el-tabs type="border-card">
           <el-tab-pane label="问题对比">
-            <div class="compare-item">
-              <div class="compare-header">
-                <h5>问题文本</h5>
+            <div class="compare-grid">
+              <div class="compare-row compare-header-row">
+                <div class="compare-cell">属性</div>
+                <div class="compare-cell">当前版本</div>
+                <div class="compare-cell">历史版本</div>
               </div>
-              <div class="compare-content">
-                <div class="compare-old">
-                  <div class="compare-title">当前版本</div>
-                  <div class="compare-text">{{ selectedQuestion.questionText }}</div>
-                </div>
-                <div class="compare-new">
-                  <div class="compare-title">历史版本 {{ compareVersion.version || '1.0' }}</div>
-                  <div class="compare-text">{{ compareVersion.questionText }}</div>
-                </div>
-              </div>
-            </div>
 
-            <div class="compare-item">
-              <div class="compare-header">
-                <h5>题型</h5>
+              <!-- 问题文本对比 -->
+              <div class="compare-row">
+                <div class="compare-cell compare-label">问题文本</div>
+                <div class="compare-cell">{{ selectedQuestion.questionText }}</div>
+                <div class="compare-cell">{{ compareVersion.questionText }}</div>
               </div>
-              <div class="compare-content">
-                <div class="compare-old">
-                  <div class="compare-title">当前版本</div>
-                  <div class="compare-text">{{ getQuestionTypeText(selectedQuestion.questionType) }}</div>
-                </div>
-                <div class="compare-new">
-                  <div class="compare-title">历史版本 {{ compareVersion.version || '1.0' }}</div>
-                  <div class="compare-text">{{ getQuestionTypeText(compareVersion.questionType) }}</div>
-                </div>
-              </div>
-            </div>
 
-            <div class="compare-item">
-              <div class="compare-header">
-                <h5>难度</h5>
+              <!-- 题型对比 -->
+              <div class="compare-row">
+                <div class="compare-cell compare-label">题型</div>
+                <div class="compare-cell">{{ getQuestionTypeText(selectedQuestion.questionType) }}</div>
+                <div class="compare-cell">{{ getQuestionTypeText(compareVersion.questionType) }}</div>
               </div>
-              <div class="compare-content">
-                <div class="compare-old">
-                  <div class="compare-title">当前版本</div>
-                  <div class="compare-text">{{ getDifficultyText(selectedQuestion.difficulty) }}</div>
-                </div>
-                <div class="compare-new">
-                  <div class="compare-title">历史版本 {{ compareVersion.version || '1.0' }}</div>
-                  <div class="compare-text">{{ getDifficultyText(compareVersion.difficulty) }}</div>
-                </div>
-              </div>
-            </div>
 
-            <div class="compare-item">
-              <div class="compare-header">
-                <h5>标签</h5>
+              <!-- 难度对比 -->
+              <div class="compare-row">
+                <div class="compare-cell compare-label">难度</div>
+                <div class="compare-cell">{{ getDifficultyText(selectedQuestion.difficulty) }}</div>
+                <div class="compare-cell">{{ getDifficultyText(compareVersion.difficulty) }}</div>
               </div>
-              <div class="compare-content">
-                <div class="compare-old">
-                  <div class="compare-title">当前版本</div>
-                  <div class="compare-text">
-                    <el-tag
-                      v-for="tag in selectedQuestion.tags"
-                      :key="tag"
-                      style="margin-right: 5px; margin-bottom: 5px;"
-                      size="small"
-                    >
-                      {{ tag }}
-                    </el-tag>
-                  </div>
+
+              <!-- 标签对比 -->
+              <div class="compare-row">
+                <div class="compare-cell compare-label">标签</div>
+                <div class="compare-cell">
+                  <el-tag
+                    v-for="tag in selectedQuestion.tags"
+                    :key="tag"
+                    style="margin-right: 5px; margin-bottom: 5px;"
+                    size="small"
+                  >
+                    {{ tag }}
+                  </el-tag>
+                  <span v-if="!selectedQuestion.tags || selectedQuestion.tags.length === 0">无标签</span>
                 </div>
-                <div class="compare-new">
-                  <div class="compare-title">历史版本 {{ compareVersion.version || '1.0' }}</div>
-                  <div class="compare-text">
-                    <el-tag
-                      v-for="tag in compareVersion.tags"
-                      :key="tag"
-                      style="margin-right: 5px; margin-bottom: 5px;"
-                      size="small"
-                    >
-                      {{ tag }}
-                    </el-tag>
+                <div class="compare-cell">
+                  <el-tag
+                    v-for="tag in compareVersion.tags"
+                    :key="tag"
+                    style="margin-right: 5px; margin-bottom: 5px;"
+                    size="small"
+                  >
+                    {{ tag }}
+                  </el-tag>
+                  <span v-if="!compareVersion.tags || compareVersion.tags.length === 0">无标签</span>
+                </div>
+              </div>
+
+              <!-- 变更记录 -->
+              <div class="compare-row" v-if="compareVersion.changes && compareVersion.changes.length > 0">
+                <div class="compare-cell compare-label">变更记录</div>
+                <div class="compare-cell changes-cell" style="grid-column: span 2;">
+                  <div class="changes-list">
+                    <div v-for="(change, index) in compareVersion.changes" :key="index" class="change-item">
+                      <div>
+                        <strong>{{ change.field || change.attributeName }}：</strong>
+                        <span>{{ change.oldValue }}</span>
+                        <el-icon><ArrowRight /></el-icon>
+                        <span>{{ change.newValue }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -366,21 +389,46 @@
           </el-tab-pane>
 
           <el-tab-pane label="元数据">
-            <div class="compare-meta">
-              <div class="meta-column">
-                <h5>当前版本</h5>
-                <p><strong>版本号：</strong> {{ selectedQuestion.version || '1.0' }}</p>
-                <p><strong>创建时间：</strong> {{ formatDate(selectedQuestion.creationTime) }}</p>
-                <p><strong>创建者：</strong> {{ selectedQuestion.createdByUser?.name || '未知' }}</p>
-                <p><strong>提交说明：</strong> {{ selectedQuestion.commitMessage || '无' }}</p>
+            <div class="meta-grid">
+              <div class="meta-row meta-header-row">
+                <div class="meta-cell">属性</div>
+                <div class="meta-cell">当前版本</div>
+                <div class="meta-cell">历史版本</div>
               </div>
 
-              <div class="meta-column">
-                <h5>历史版本</h5>
-                <p><strong>版本号：</strong> {{ compareVersion.version || '1.0' }}</p>
-                <p><strong>创建时间：</strong> {{ formatDate(compareVersion.creationTime) }}</p>
-                <p><strong>创建者：</strong> {{ compareVersion.createdByUser?.name || '未知' }}</p>
-                <p><strong>提交说明：</strong> {{ compareVersion.commitMessage || '无' }}</p>
+              <!-- 版本号 -->
+              <div class="meta-row">
+                <div class="meta-cell meta-label">版本号</div>
+                <div class="meta-cell">{{ selectedQuestion.changeLogId || '未知' }}</div>
+                <div class="meta-cell">{{ compareVersion.changeLogId || '未知' }}</div>
+              </div>
+
+              <!-- 创建时间 -->
+              <div class="meta-row">
+                <div class="meta-cell meta-label">创建时间</div>
+                <div class="meta-cell">{{ formatDate(selectedQuestion.creationTime) }}</div>
+                <div class="meta-cell">{{ formatDate(compareVersion.creationTime) }}</div>
+              </div>
+
+              <!-- 创建者 -->
+              <div class="meta-row">
+                <div class="meta-cell meta-label">创建者</div>
+                <div class="meta-cell">{{ selectedQuestion.createdByUser?.name || '未知' }}</div>
+                <div class="meta-cell">{{ compareVersion.createdByUser?.name || '未知' }}</div>
+              </div>
+
+              <!-- 提交说明 -->
+              <div class="meta-row">
+                <div class="meta-cell meta-label">提交说明</div>
+                <div class="meta-cell">{{ selectedQuestion.commitMessage || '无' }}</div>
+                <div class="meta-cell">{{ compareVersion.commitMessage || '无' }}</div>
+              </div>
+
+              <!-- 变更ID -->
+              <div class="meta-row">
+                <div class="meta-cell meta-label">变更ID</div>
+                <div class="meta-cell">{{ selectedQuestion.changeLogId || '无' }}</div>
+                <div class="meta-cell">{{ compareVersion.changeLogId || '无' }}</div>
               </div>
             </div>
           </el-tab-pane>
@@ -393,15 +441,56 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowRight } from '@element-plus/icons-vue'
 import type { FormInstance } from 'element-plus'
 
 // 导入相关API
 import {
-  getStandardQuestions,
+  searchStandardQuestions,
   getQuestionHistory,
   getQuestionVersionTree,
-  updateStandardQuestion
+  updateStandardQuestion,
+  rollbackQuestionVersion,
+  type QuestionType,
+  type DifficultyLevel,
+  type QuestionHistoryVersion,
+  type QuestionVersionNode
 } from '@/api/standardData'
+
+// 标准问题接口
+interface StandardQuestion {
+  id: number
+  questionText: string
+  questionType: QuestionType
+  difficulty: DifficultyLevel
+  creationTime: string
+  createdByUser?: {
+    id: number
+    name: string
+    username: string
+    role: string
+    contactInfo: string
+  }
+  tags: string[]
+  commitMessage?: string
+  version?: string
+  changeLogId?: number
+}
+
+// 版本变更接口
+interface VersionChange {
+  field?: string
+  attributeName?: string
+  oldValue: string
+  newValue: string
+}
+
+// 版本历史接口
+interface QuestionVersion extends StandardQuestion {
+  changes?: VersionChange[]
+  parentQuestionId?: number
+  changeLogId?: number
+}
 
 // 状态定义
 const loading = reactive({
@@ -412,28 +501,39 @@ const loading = reactive({
 const searchQuery = ref('')
 const filterQuestionType = ref('')
 const sortOrder = ref('creationTime,desc')
-const questions = ref<any[]>([])
-const selectedQuestion = ref<any>(null)
-const versionHistory = ref<any[]>([])
-const versionTree = ref<any[]>([])
+const questions = ref<StandardQuestion[]>([])
+const selectedQuestion = ref<StandardQuestion | null>(null)
+const versionHistory = ref<QuestionVersion[]>([])
+const versionTree = ref<QuestionVersionNode[]>([])
 const totalQuestions = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(10)
+const historyCurrentPage = ref(1) // 版本历史分页当前页
+const historyPageSize = ref(10) // 版本历史分页每页条数
 const historyViewMode = ref('list')
 const editorDialogVisible = ref(false)
 const compareDialogVisible = ref(false)
-const compareVersion = ref<any>(null)
+const compareVersion = ref<QuestionVersion | null>(null)
 const editorFormRef = ref<FormInstance>()
 const tagInputVisible = ref(false)
 const tagInputValue = ref('')
-const tagInputRef = ref<any>(null)
+const tagInputRef = ref<HTMLInputElement | null>(null)
+const onlyLatest = ref(true)
 
 // 编辑表单数据
-const editorForm = reactive({
+const editorForm = reactive<{
+  id: number;
+  questionText: string;
+  questionType: QuestionType;
+  difficulty: DifficultyLevel;
+  tags: string[];
+  commitMessage: string;
+  userId: number;
+}>({
   id: 0,
   questionText: '',
-  questionType: '',
-  difficulty: '',
+  questionType: 'SINGLE_CHOICE' as QuestionType,
+  difficulty: 'MEDIUM' as DifficultyLevel,
   tags: [] as string[],
   commitMessage: '',
   userId: 1 // 应该从用户状态获取
@@ -454,6 +554,13 @@ const filteredQuestions = computed(() => {
   })
 })
 
+// 计算当前页的版本历史
+const paginatedVersionHistory = computed(() => {
+  const start = (historyCurrentPage.value - 1) * historyPageSize.value
+  const end = start + historyPageSize.value
+  return versionHistory.value.slice(start, end)
+})
+
 // 生命周期钩子
 onMounted(() => {
   fetchStandardQuestions()
@@ -466,15 +573,16 @@ const fetchStandardQuestions = async () => {
     const params = {
       page: (currentPage.value - 1).toString(),
       size: pageSize.value.toString(),
-      sort: sortOrder.value
+      sort: sortOrder.value,
+      onlyLatest: onlyLatest.value
     }
 
-    const response = await getStandardQuestions(params)
+    const response = await searchStandardQuestions(params)
 
-    // 添加适当的空值检查
-    if (response && response.data && response.data.content) {
-      questions.value = response.data.content || []
-      totalQuestions.value = response.data.totalElements || 0
+    // 正确处理响应数据
+    if (response && response.questions) {
+      questions.value = response.questions || []
+      totalQuestions.value = response.total || 0
     } else {
       console.warn('标准问题数据格式不符合预期:', response)
       questions.value = []
@@ -529,7 +637,7 @@ const getDifficultyText = (difficulty: string) => {
 }
 
 // 处理标准问题点击
-const handleQuestionClick = async (row: any) => {
+const handleQuestionClick = async (row: StandardQuestion) => {
   selectedQuestion.value = row
   await fetchQuestionHistory(row.id)
 }
@@ -537,15 +645,56 @@ const handleQuestionClick = async (row: any) => {
 // 获取问题历史
 const fetchQuestionHistory = async (questionId: number) => {
   loading.history = true
+  historyCurrentPage.value = 1 // 重置历史分页为第一页
+  versionHistory.value = [] // 先清空历史记录，避免显示旧数据
 
   try {
     // 获取版本历史
     const historyResponse = await getQuestionHistory(questionId)
-    versionHistory.value = Array.isArray(historyResponse?.data) ? historyResponse.data : []
+    console.log('版本历史响应数据:', historyResponse)
+
+    if (Array.isArray(historyResponse)) {
+      versionHistory.value = historyResponse
+    } else if (historyResponse.data && Array.isArray(historyResponse.data)) {
+      versionHistory.value = historyResponse.data
+    } else {
+      versionHistory.value = []
+      console.warn('获取版本历史数据格式异常:', historyResponse)
+    }
+
+    // 显示返回的版本历史记录数量
+    console.log(`获取到 ${versionHistory.value.length} 条版本历史记录`)
+
+    // 如果版本历史不为空，按创建时间排序（从新到旧）
+    if (versionHistory.value.length > 0) {
+      versionHistory.value.sort((a, b) => {
+        return new Date(b.creationTime).getTime() - new Date(a.creationTime).getTime()
+      })
+    }
 
     // 获取版本树
     const treeResponse = await getQuestionVersionTree(questionId)
-    versionTree.value = treeResponse?.data ? [treeResponse.data] : []
+    console.log('版本树响应数据:', treeResponse)
+
+    // 正确处理版本树数据
+    if (treeResponse) {
+      if (Array.isArray(treeResponse)) {
+        // 如果响应直接是数组
+        versionTree.value = treeResponse
+      } else if (Array.isArray(treeResponse.data)) {
+        // 如果响应包含data数组属性
+        versionTree.value = treeResponse.data
+      } else if (treeResponse.data) {
+        // 如果响应包含单个data对象
+        versionTree.value = [treeResponse.data]
+      } else {
+        versionTree.value = []
+        console.warn('获取版本树数据格式异常:', treeResponse)
+      }
+    } else {
+      versionTree.value = []
+      console.warn('获取版本树响应为空')
+    }
   } catch (error) {
     console.error('获取问题历史失败:', error)
     versionHistory.value = []
@@ -606,7 +755,17 @@ const submitQuestionEdit = async () => {
     if (valid) {
       loading.updating = true
       try {
-        await updateStandardQuestion(editorForm.id, editorForm)
+        // 构造更新请求数据
+        const updateData = {
+          questionText: editorForm.questionText,
+          questionType: editorForm.questionType,
+          difficulty: editorForm.difficulty,
+          tags: editorForm.tags,
+          commitMessage: editorForm.commitMessage,
+          userId: editorForm.userId
+        }
+
+        await updateStandardQuestion(editorForm.id, updateData)
         ElMessage.success('标准问题更新成功')
 
         // 刷新数据
@@ -631,34 +790,60 @@ const submitQuestionEdit = async () => {
 }
 
 // 查看版本详情
-const viewVersionDetail = (version: any) => {
+const viewVersionDetail = (version: QuestionVersion) => {
   compareVersion.value = version
   compareDialogVisible.value = true
 }
 
 // 恢复版本
-const restoreVersion = (version: any) => {
+const restoreVersion = (version: QuestionVersion) => {
   ElMessageBox.confirm(
-    `确定要将问题恢复到版本 ${version.version || '1.0'} 吗？`,
+    `确定要将问题恢复到版本 ${version.changeLogId || '未知'} 吗？`,
     '恢复版本',
     {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    // 打开编辑对话框并填充历史版本的数据
-    editorForm.id = selectedQuestion.value.id
-    editorForm.questionText = version.questionText
-    editorForm.questionType = version.questionType
-    editorForm.difficulty = version.difficulty
-    editorForm.tags = [...version.tags]
-    editorForm.commitMessage = `恢复到版本 ${version.version || '1.0'}`
+  ).then(async () => {
+    loading.updating = true
+    try {
+      // 使用版本回退API，传递changeLogId作为版本ID
+      const commitMessage = `回退到版本 ${version.changeLogId || '未知'}`
+      const versionId = version.changeLogId || version.id
+      const response = await rollbackQuestionVersion(versionId, {
+        userId: editorForm.userId,
+        commitMessage
+      })
 
-    editorDialogVisible.value = true
+      ElMessage.success('版本回退成功')
+
+      // 刷新数据
+      await fetchStandardQuestions()
+
+      // 更新选中的问题
+      if (response && selectedQuestion.value) {
+        const updatedQuestionId = selectedQuestion.value.id
+        const updatedQuestion = questions.value.find(q => q.id === updatedQuestionId)
+        if (updatedQuestion) {
+          selectedQuestion.value = updatedQuestion
+          await fetchQuestionHistory(updatedQuestionId)
+        }
+      }
+    } catch (error) {
+      console.error('版本回退失败:', error)
+      ElMessage.error('版本回退失败')
+    } finally {
+      loading.updating = false
+    }
   }).catch(() => {
     // 取消操作
   })
+}
+
+// 处理仅显示最新版本的切换
+const handleOnlyLatestChange = () => {
+  fetchStandardQuestions()
 }
 </script>
 
@@ -725,6 +910,34 @@ const restoreVersion = (version: any) => {
 .version-meta {
   color: #909399;
   font-size: 0.9em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.change-log-id {
+  background-color: #f0f9eb;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #67c23a;
+  font-weight: 500;
+}
+
+.version-count {
+  font-size: 0.9em;
+  color: #909399;
+  font-weight: normal;
+  margin-left: 5px;
+}
+
+.empty-history {
+  padding: 30px 0;
+  text-align: center;
+}
+
+.version-tag {
+  font-weight: normal;
+  margin-right: 10px;
 }
 
 .tree-node {
@@ -806,5 +1019,80 @@ const restoreVersion = (version: any) => {
 
 .meta-column:first-child {
   border-right: 1px solid #dcdfe6;
+}
+
+.empty-tree {
+  padding: 20px;
+  text-align: center;
+}
+
+.compare-grid {
+  width: 100%;
+  border-collapse: collapse;
+  display: table;
+  margin-bottom: 20px;
+}
+
+.compare-row {
+  display: table-row;
+}
+
+.compare-header-row {
+  background-color: #f5f7fa;
+  font-weight: bold;
+}
+
+.compare-cell {
+  display: table-cell;
+  padding: 12px;
+  border: 1px solid #ebeef5;
+  vertical-align: top;
+}
+
+.compare-label {
+  background-color: #f5f7fa;
+  font-weight: bold;
+  width: 120px;
+}
+
+.meta-grid {
+  width: 100%;
+  border-collapse: collapse;
+  display: table;
+}
+
+.meta-row {
+  display: table-row;
+}
+
+.meta-header-row {
+  background-color: #f5f7fa;
+  font-weight: bold;
+}
+
+.meta-cell {
+  display: table-cell;
+  padding: 12px;
+  border: 1px solid #ebeef5;
+}
+
+.meta-label {
+  background-color: #f5f7fa;
+  font-weight: bold;
+  width: 120px;
+}
+
+.changes-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.change-item {
+  padding: 5px 0;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.change-item:last-child {
+  border-bottom: none;
 }
 </style>

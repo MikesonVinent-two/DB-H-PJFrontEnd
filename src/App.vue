@@ -3,20 +3,30 @@ import { RouterView } from 'vue-router'
 import TheNavbar from '@/components/TheNavbar.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
 import { useUserStore } from '@/stores/user'
-import { onMounted, onUnmounted, ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { onMounted, onUnmounted, ref, computed, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const userStore = useUserStore()
 const route = useRoute()
+const router = useRouter()
 const sidebarCollapsed = ref(false)
 
 // 判断用户是否已登录
-const isLoggedIn = computed(() => !!userStore.currentUser)
+const isLoggedIn = computed(() => {
+  // 首先检查localStorage中的user是否存在并有效
+  const storedUser = localStorage.getItem('user')
+  const hasValidLocalStorage = storedUser && storedUser !== '{}'
+  // 同时检查用户存储中的状态
+  return hasValidLocalStorage && !!userStore.currentUser
+})
 
 
 // 计算侧边栏宽度
 const sidebarWidth = computed(() => {
-  if (!isLoggedIn.value) return '0px'
+  const storedUser = localStorage.getItem('user')
+  const hasValidUser = storedUser && storedUser !== '{}'
+
+  if (!hasValidUser) return '0px'
   return sidebarCollapsed.value ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)'
 })
 
@@ -30,16 +40,43 @@ const handleSidebarCollapse = (collapsed: boolean) => {
 // 监听storage事件，当localStorage发生变化时（比如在其他标签页登出）更新状态
 const handleStorageChange = (event: StorageEvent) => {
   if (event.key === 'user') {
-    if (!event.newValue) {
+    if (!event.newValue || event.newValue === '{}') {
       // 用户被清除，立即清除本地状态
       userStore.currentUser = null
       console.log('用户登出: 检测到本地存储变化，已清除用户状态')
+
+      // 强制重新渲染导航栏和侧边栏
+      nextTick(() => {
+        // 如果当前不在登录页，则重定向到登录页
+        if (route.name !== 'login') {
+          router.push('/login')
+        }
+      })
     } else if (event.newValue !== event.oldValue) {
       // 用户信息变化，重新加载
       userStore.fetchUserInfo()
       console.log('用户信息变化: 检测到本地存储变化，已更新用户状态')
+
+      // 手动触发一次更新
+      nextTick(() => {
+        // 触发一个自定义事件，通知需要更新的组件
+        window.dispatchEvent(new CustomEvent('auth-state-change'))
+      })
     }
   }
+}
+
+// 监听用户登录事件
+const handleUserLogin = () => {
+  console.log('App组件: 检测到用户登录事件，刷新状态')
+
+  // 强制刷新用户信息，确保状态正确
+  userStore.fetchUserInfo()
+
+  // 登录成功后，确保刷新界面
+  nextTick(() => {
+    console.log('App组件: 登录状态已更新，isLoggedIn =', isLoggedIn.value)
+  })
 }
 
 // 在组件挂载时获取用户信息并添加事件监听器
@@ -47,15 +84,26 @@ onMounted(async () => {
   console.log('应用挂载: 开始获取用户信息')
   // 检查本地存储中是否有用户信息
   await userStore.fetchUserInfo()
-  console.log('应用挂载: 用户信息获取完成', !!userStore.currentUser)
+  console.log('应用挂载: 用户信息获取完成', !!userStore.currentUser, 'isLoggedIn =', isLoggedIn.value)
 
   // 添加事件监听器
   window.addEventListener('storage', handleStorageChange)
+
+  // 添加登录事件监听（修复类型问题）
+  window.addEventListener('user-login', handleUserLogin as EventListener)
+
+  // 在挂载时立即检查登录状态并触发更新
+  if (localStorage.getItem('user')) {
+    console.log('应用挂载: 检测到已有登录信息，触发状态更新')
+    // 手动触发一次登录事件，确保所有组件都能正确响应
+    window.dispatchEvent(new CustomEvent('user-login'))
+  }
 })
 
 // 在组件卸载时移除事件监听器
 onUnmounted(() => {
   window.removeEventListener('storage', handleStorageChange)
+  window.removeEventListener('user-login', handleUserLogin as EventListener)
 })
 </script>
 
@@ -63,7 +111,7 @@ onUnmounted(() => {
   <div class="app">
     <TheNavbar />
     <div class="app-content">
-      <TheSidebar v-if="isLoggedIn" @collapse-change="handleSidebarCollapse" />
+      <TheSidebar @collapse-change="handleSidebarCollapse" />
       <main class="main-content" :style="{ marginLeft: sidebarWidth }">
         <RouterView />
       </main>

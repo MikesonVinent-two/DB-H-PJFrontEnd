@@ -245,3 +245,23 @@ export const getRawQuestions = (params?: {
     { params }
   )
 }
+
+/**
+ * 获取原始问题的所有回答（分页）
+ * @param questionId 问题ID
+ * @param params 分页参数
+ * @returns 分页的原始回答列表
+ */
+export const getQuestionAnswers = (
+  questionId: number | string,
+  params?: {
+    page?: string | number
+    size?: string | number
+    sort?: string
+  }
+) => {
+  return api.get<unknown, PageResponse<RawAnswerResponse>>(
+    `${apiUrls.rawData.getQuestions}/${questionId}/answers`,
+    { params }
+  )
+}

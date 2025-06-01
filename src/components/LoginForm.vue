@@ -70,8 +70,31 @@ const handleLogin = async () => {
         sessionStorage: JSON.parse(sessionStorage.getItem('userInfo') || '{}')
       })
 
-      // 登录成功，通知父组件
-      emit('login-success')
+      // 同步到所有组件：以下四个事件触发确保不同组件能及时更新状态
+
+      // 1. 触发登录事件，确保其他组件能够响应
+      window.dispatchEvent(new CustomEvent('user-login', {
+        detail: userInfo
+      }))
+
+      // 2. 手动触发存储事件，确保监听storage的组件能够监听到
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'user',
+        oldValue: null,
+        newValue: JSON.stringify(userInfo)
+      }))
+
+      // 3. 触发身份验证状态变化事件
+      window.dispatchEvent(new CustomEvent('auth-state-change'))
+
+      // 4. 设置一个短时间延迟，确保所有组件有足够时间更新状态
+      setTimeout(() => {
+        // 登录成功，通知父组件
+        emit('login-success')
+
+        // 再次触发状态更新事件，确保所有组件都能响应
+        window.dispatchEvent(new CustomEvent('auth-state-change'))
+      }, 100)
     }
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : '登录失败，请重试'

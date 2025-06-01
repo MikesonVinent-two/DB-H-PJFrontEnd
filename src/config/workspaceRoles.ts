@@ -19,7 +19,9 @@ export const WORKSPACE_TYPES = {
   PROMPT: 'prompt',         // 提示词工作台
   EVALUATION: 'evaluation', // 评测工作台
   GENERATION: 'generation', // 生成工作台
-  SYSTEM: 'system'          // 系统管理工作台
+  SYSTEM: 'system',          // 系统管理工作台
+  CROWDSOURCE: 'crowdsource', // 众包工作台
+  EXPERT: 'expert'          // 专家工作台
 }
 
 /**
@@ -49,24 +51,15 @@ export const WORKSPACES = [
     description: '管理系统中的原始问题数据',
     icon: 'Document'
   },
-  {
-    id: 'original-answers',
-    name: '原始回答管理',
-    type: WORKSPACE_TYPES.DATA,
-    path: '/data/original-answers',
-    roles: [ROLES.CURATOR, ROLES.ADMIN],
-    description: '管理系统中的原始回答数据',
-    icon: 'ChatDotRound'
-  },
-  {
-    id: 'datasets',
-    name: '数据集管理',
-    type: WORKSPACE_TYPES.DATA,
-    path: '/data/datasets',
-    roles: [ROLES.ADMIN],
-    description: '管理系统中的数据集',
-    icon: 'Collection'
-  },
+  // {
+  //   id: 'datasets',
+  //   name: '数据集管理',
+  //   type: WORKSPACE_TYPES.DATA,
+  //   path: '/data/datasets',
+  //   roles: [ROLES.ADMIN],
+  //   description: '管理系统中的数据集',
+  //   icon: 'Collection'
+  // },
 
   // 标准化工作台
   {
@@ -74,7 +67,7 @@ export const WORKSPACES = [
     name: '问题标准化',
     type: WORKSPACE_TYPES.STANDARDIZATION,
     path: '/standardization/question-standardization',
-    roles: [ROLES.ANNOTATOR, ROLES.EXPERT, ROLES.ADMIN],
+    roles: [ROLES.ANNOTATOR, ROLES.ADMIN],
     description: '将原始问题标准化',
     icon: 'Edit'
   },
@@ -83,45 +76,18 @@ export const WORKSPACES = [
     name: '问题版本历史',
     type: WORKSPACE_TYPES.STANDARDIZATION,
     path: '/standardization/question-history',
-    roles: [ROLES.ANNOTATOR, ROLES.EXPERT, ROLES.ADMIN],
+    roles: [ROLES.ANNOTATOR, ROLES.ADMIN],
     description: '查看和管理问题的版本历史',
     icon: 'Timer'
-  },
-  {
-    id: 'question-batch',
-    name: '问题批量处理',
-    type: WORKSPACE_TYPES.STANDARDIZATION,
-    path: '/standardization/question-batch',
-    roles: [ROLES.ANNOTATOR, ROLES.ADMIN],
-    description: '批量处理问题',
-    icon: 'Files'
   },
   {
     id: 'standard-answers',
     name: '标准回答管理',
     type: WORKSPACE_TYPES.STANDARDIZATION,
     path: '/standardization/standard-answers',
-    roles: [ROLES.ANNOTATOR, ROLES.EXPERT, ROLES.ADMIN],
+    roles: [ROLES.ANNOTATOR, ROLES.ADMIN],
     description: '管理标准回答',
     icon: 'ChatLineRound'
-  },
-  {
-    id: 'answer-review',
-    name: '回答评审',
-    type: WORKSPACE_TYPES.STANDARDIZATION,
-    path: '/standardization/answer-review',
-    roles: [ROLES.ANNOTATOR, ROLES.EXPERT, ROLES.ADMIN],
-    description: '评审回答',
-    icon: 'Check'
-  },
-  {
-    id: 'answer-history',
-    name: '回答版本历史',
-    type: WORKSPACE_TYPES.STANDARDIZATION,
-    path: '/standardization/answer-history',
-    roles: [ROLES.ANNOTATOR, ROLES.EXPERT, ROLES.ADMIN],
-    description: '查看和管理回答的版本历史',
-    icon: 'Timer'
   },
 
   // 提示词工作台
@@ -130,7 +96,7 @@ export const WORKSPACES = [
     name: '回答阶段-题型提示词',
     type: WORKSPACE_TYPES.PROMPT,
     path: '/prompt/answer-type-prompt',
-    roles: [ROLES.ANNOTATOR, ROLES.ADMIN, ROLES.EXPERT],
+    roles: [ROLES.ANNOTATOR, ROLES.ADMIN],
     description: '管理回答阶段的题型提示词',
     icon: 'Document'
   },
@@ -139,7 +105,7 @@ export const WORKSPACES = [
     name: '回答阶段-标签提示词',
     type: WORKSPACE_TYPES.PROMPT,
     path: '/prompt/answer-tag-prompt',
-    roles: [ROLES.ANNOTATOR, ROLES.ADMIN, ROLES.EXPERT],
+    roles: [ROLES.ANNOTATOR, ROLES.ADMIN],
     description: '管理回答阶段的标签提示词',
     icon: 'PriceTag'
   },
@@ -148,7 +114,7 @@ export const WORKSPACES = [
     name: '回答阶段-组装提示词',
     type: WORKSPACE_TYPES.PROMPT,
     path: '/prompt/answer-assembly-prompt',
-    roles: [ROLES.ANNOTATOR, ROLES.ADMIN, ROLES.EXPERT],
+    roles: [ROLES.ANNOTATOR, ROLES.ADMIN],
     description: '管理回答阶段的组装提示词',
     icon: 'Connection'
   },
@@ -157,7 +123,7 @@ export const WORKSPACES = [
     name: '评测阶段-简答题提示词',
     type: WORKSPACE_TYPES.PROMPT,
     path: '/prompt/evaluation-subjective-prompt',
-    roles: [ROLES.ANNOTATOR, ROLES.ADMIN, ROLES.EXPERT],
+    roles: [ROLES.ANNOTATOR, ROLES.ADMIN],
     description: '管理评测阶段的简答题提示词',
     icon: 'EditPen'
   },
@@ -166,7 +132,7 @@ export const WORKSPACES = [
     name: '评测阶段-标签提示词',
     type: WORKSPACE_TYPES.PROMPT,
     path: '/prompt/evaluation-tag-prompt',
-    roles: [ROLES.ANNOTATOR, ROLES.ADMIN, ROLES.EXPERT],
+    roles: [ROLES.ANNOTATOR, ROLES.ADMIN],
     description: '管理评测阶段的标签提示词',
     icon: 'PriceTag'
   },
@@ -175,7 +141,7 @@ export const WORKSPACES = [
     name: '评测阶段-组装提示词',
     type: WORKSPACE_TYPES.PROMPT,
     path: '/prompt/evaluation-assembly-prompt',
-    roles: [ROLES.ANNOTATOR, ROLES.ADMIN, ROLES.EXPERT],
+    roles: [ROLES.ANNOTATOR, ROLES.ADMIN],
     description: '管理评测阶段的组装提示词',
     icon: 'Connection'
   },
@@ -210,24 +176,93 @@ export const WORKSPACES = [
     icon: 'StarFilled'
   },
 
-  // 生成工作台
+  // 评审员工作台
   {
-    id: 'answer-generation',
-    name: '回答生成',
-    type: WORKSPACE_TYPES.GENERATION,
-    path: '/generation/answer-generation',
-    roles: [ROLES.ADMIN, ROLES.ANNOTATOR],
-    description: '生成回答',
-    icon: 'Magic'
+    id: 'expert-answer-review',
+    name: '专家回答评分',
+    type: WORKSPACE_TYPES.EVALUATION,
+    path: '/referee/expert-answer-review',
+    roles: [ROLES.REFEREE, ROLES.ADMIN],
+    description: '评审专家回答并评分',
+    icon: 'StarFilled'
   },
   {
-    id: 'generation-batches',
-    name: '生成批次管理',
-    type: WORKSPACE_TYPES.GENERATION,
-    path: '/generation/batches',
-    roles: [ROLES.ADMIN],
-    description: '管理生成批次',
-    icon: 'List'
+    id: 'crowdsourced-answer-review',
+    name: '众包回答审核',
+    type: WORKSPACE_TYPES.EVALUATION,
+    path: '/referee/crowdsourced-answer-review',
+    roles: [ROLES.REFEREE, ROLES.ADMIN],
+    description: '审核众包回答并提供反馈',
+    icon: 'Check'
+  },
+
+  // // 生成工作台
+  // {
+  //   id: 'answer-generation',
+  //   name: '回答生成',
+  //   type: WORKSPACE_TYPES.GENERATION,
+  //   path: '/generation/answer-generation',
+  //   roles: [ROLES.ADMIN, ROLES.ANNOTATOR],
+  //   description: '生成回答',
+  //   icon: 'Magic'
+  // },
+  // {
+  //   id: 'generation-batches',
+  //   name: '生成批次管理',
+  //   type: WORKSPACE_TYPES.GENERATION,
+  //   path: '/generation/batches',
+  //   roles: [ROLES.ADMIN],
+  //   description: '管理生成批次',
+  //   icon: 'List'
+  // },
+
+  // 众包工作台
+  {
+    id: 'crowdsource-dashboard',
+    name: '众包仪表盘',
+    type: WORKSPACE_TYPES.CROWDSOURCE,
+    path: '/crowdsource/crowdsource-dashboard',
+    roles: [ROLES.ANNOTATOR, ROLES.ADMIN, ROLES.CROWDSOURCE_USER, ROLES.REFEREE],
+    description: '众包数据统计和分析',
+    icon: 'PieChart'
+  },
+  {
+    id: 'crowdsource-questions',
+    name: '标准问题回答',
+    type: WORKSPACE_TYPES.CROWDSOURCE,
+    path: '/crowdsource/standard-questions',
+    roles: [ROLES.ANNOTATOR, ROLES.ADMIN, ROLES.CROWDSOURCE_USER, ROLES.REFEREE],
+    description: '回答标准化问题',
+    icon: 'QuestionFilled'
+  },
+
+  // 专家工作台
+  {
+    id: 'expert-dashboard',
+    name: '专家仪表盘',
+    type: WORKSPACE_TYPES.EXPERT,
+    path: '/expert/expert-dashboard',
+    roles: [ROLES.EXPERT, ROLES.ADMIN, ROLES.REFEREE],
+    description: '专家回答统计和分析',
+    icon: 'PieChart'
+  },
+  {
+    id: 'expert-questions',
+    name: '专家问题回答',
+    type: WORKSPACE_TYPES.EXPERT,
+    path: '/expert/expert-questions',
+    roles: [ROLES.EXPERT, ROLES.ADMIN],
+    description: '回答专业问题',
+    icon: 'QuestionFilled'
+  },
+  {
+    id: 'expert-history',
+    name: '历史回答记录',
+    type: WORKSPACE_TYPES.EXPERT,
+    path: '/expert/expert-history',
+    roles: [ROLES.EXPERT, ROLES.ADMIN],
+    description: '查看历史回答记录',
+    icon: 'Timer'
   },
 
   // 系统管理工作台
@@ -240,15 +275,15 @@ export const WORKSPACES = [
     description: '管理系统用户',
     icon: 'User'
   },
-  {
-    id: 'role-management',
-    name: '角色管理',
-    type: WORKSPACE_TYPES.SYSTEM,
-    path: '/system/roles',
-    roles: [ROLES.ADMIN],
-    description: '管理系统角色',
-    icon: 'UserFilled'
-  },
+  // {
+  //   id: 'role-management',
+  //   name: '角色管理',
+  //   type: WORKSPACE_TYPES.SYSTEM,
+  //   path: '/system/roles',
+  //   roles: [ROLES.ADMIN],
+  //   description: '管理系统角色',
+  //   icon: 'UserFilled'
+  // },
   {
     id: 'model-management',
     name: '模型管理',

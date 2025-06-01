@@ -218,7 +218,8 @@ async function loadQuestionTexts() {
           keyword: '',
           page: '0',
           size: '1',
-          userId: userId.value.toString() // 添加用户ID参数
+          userId: userId.value.toString(), // 添加用户ID参数
+          onlyLatest: true // 只返回叶子节点的标准问题
         })
 
         const question = response.data.questions.find((q) => q.id === questionId)

@@ -264,7 +264,8 @@ async function searchQuestions() {
       tags: searchParams.tags.length > 0 ? searchParams.tags.join(',') : undefined,
       page: (currentPage.value - 1).toString(), // 后端分页从0开始
       size: pageSize.value.toString(),
-      userId: userId.value.toString() // 添加当前用户ID作为参数
+      userId: userId.value.toString(), // 添加当前用户ID作为参数
+      onlyLatest: true // 只返回叶子节点的标准问题
     }
 
     const response = await searchStandardQuestions(params)

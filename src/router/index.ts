@@ -78,12 +78,12 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/data/original-answers',
-    name: 'original-answers',
-    component: () => import('../views/curator/AnswerManagement.vue'),
+    path: '/data/batch-import',
+    name: 'batch-import',
+    component: () => import('../views/curator/BatchImport.vue'),
     meta: {
       requiresAuth: true,
-      title: '原始回答管理',
+      title: '批量数据导入',
       roles: ['CURATOR', 'ADMIN']
     }
   },
@@ -120,42 +120,12 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/standardization/question-batch',
-    name: 'question-batch',
-    component: () => import('../views/annotator/QuestionBatch.vue'),
-    meta: {
-      requiresAuth: true,
-      title: '问题批量处理',
-      roles: ['ANNOTATOR', 'ADMIN']
-    }
-  },
-  {
     path: '/standardization/standard-answers',
     name: 'standard-answers',
     component: () => import('../views/annotator/StandardAnswers.vue'),
     meta: {
       requiresAuth: true,
       title: '标准回答管理',
-      roles: ['ANNOTATOR', 'EXPERT', 'ADMIN']
-    }
-  },
-  {
-    path: '/standardization/answer-review',
-    name: 'answer-review',
-    component: () => import('../views/annotator/AnswerReview.vue'),
-    meta: {
-      requiresAuth: true,
-      title: '回答评审',
-      roles: ['ANNOTATOR', 'EXPERT', 'ADMIN']
-    }
-  },
-  {
-    path: '/standardization/answer-history',
-    name: 'answer-history',
-    component: () => import('../views/annotator/AnswerHistory.vue'),
-    meta: {
-      requiresAuth: true,
-      title: '回答版本历史',
       roles: ['ANNOTATOR', 'EXPERT', 'ADMIN']
     }
   },
@@ -237,7 +207,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/evaluation/evaluations',
     name: 'evaluations',
-    component: () => import('../views/admin/EvaluationManagement.vue'),
+    component: () => import('../views/evaluator/Evaluations.vue'),
     meta: {
       requiresAuth: true,
       title: '评测管理',
@@ -247,20 +217,32 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/evaluation/scoring',
     name: 'scoring',
-    component: () => import('../views/admin/ScoringManagement.vue'),
+    component: () => import('../views/evaluator/Scoring.vue'),
     meta: {
       requiresAuth: true,
-      title: '算分管理',
+      title: '评分管理',
       roles: ['ADMIN']
     }
   },
+
+  // 评审员工作台
   {
-    path: '/evaluation/expert-rating',
-    name: 'expert-rating',
-    component: () => import('../views/referee/ExpertRating.vue'),
+    path: '/referee/expert-answer-review',
+    name: 'expert-answer-review',
+    component: () => import('../views/referee/ExpertAnswerReview.vue'),
     meta: {
       requiresAuth: true,
       title: '专家回答评分',
+      roles: ['REFEREE', 'ADMIN']
+    }
+  },
+  {
+    path: '/referee/crowdsourced-answer-review',
+    name: 'crowdsourced-answer-review',
+    component: () => import('../views/referee/CrowdsourcedAnswerReview.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '众包回答审核',
       roles: ['REFEREE', 'ADMIN']
     }
   },
@@ -297,7 +279,7 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
 
-  // 众包任务台 - 标注员专用
+  // 众包任务台
   {
     path: '/crowdsource/crowdsource-workbench',
     name: 'crowdsource-workbench',
@@ -305,7 +287,7 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       requiresAuth: true,
       title: '众包任务台',
-      roles: ['ANNOTATOR', 'ADMIN', 'CROWDSOURCE_USER']
+      roles: ['ANNOTATOR', 'ADMIN', 'CROWDSOURCE_USER', 'REFEREE']
     }
   },
   {
@@ -315,7 +297,7 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       requiresAuth: true,
       title: '众包仪表盘',
-      roles: ['ANNOTATOR', 'ADMIN', 'CROWDSOURCE_USER']
+      roles: ['ANNOTATOR', 'ADMIN', 'CROWDSOURCE_USER', 'REFEREE']
     }
   },
   {
@@ -325,7 +307,7 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       requiresAuth: true,
       title: '标准问题回答',
-      roles: ['ANNOTATOR', 'ADMIN', 'CROWDSOURCE_USER']
+      roles: ['ANNOTATOR', 'ADMIN', 'CROWDSOURCE_USER', 'REFEREE']
     }
   },
 
@@ -402,7 +384,39 @@ const routes: Array<RouteRecordRaw> = [
       title: '404',
       roles: []
     }
-  }
+  },
+
+  // 专家工作台路由
+  {
+    path: '/expert/expert-dashboard',
+    name: 'expert-dashboard',
+    component: () => import('../views/expert/ExpertDashboard.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '专家仪表盘',
+      roles: ['EXPERT', 'ADMIN', 'REFEREE']
+    }
+  },
+  {
+    path: '/expert/expert-questions',
+    name: 'expert-questions',
+    component: () => import('../views/expert/ExpertQuestions.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '专家问题回答',
+      roles: ['EXPERT', 'ADMIN']
+    }
+  },
+  {
+    path: '/expert/expert-history',
+    name: 'expert-history',
+    component: () => import('../views/expert/ExpertHistory.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '历史回答记录',
+      roles: ['EXPERT', 'ADMIN']
+    }
+  },
 ]
 
 // 创建路由实例

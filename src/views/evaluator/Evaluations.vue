@@ -1,20 +1,20 @@
 <template>
-  <div class="batch-evaluation">
-    <h1>批次评测</h1>
+  <div class="evaluations">
+    <h1>评测管理</h1>
     <el-card>
       <div class="placeholder-content">
-        <el-empty description="批次评测功能正在开发中..." />
+        <el-empty description="评测管理功能正在开发中..." />
       </div>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-// 批次评测组件
+// 评测管理组件
 </script>
 
 <style scoped>
-.batch-evaluation {
+.evaluations {
   padding: 20px;
 }
 

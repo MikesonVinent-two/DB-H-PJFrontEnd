@@ -50,6 +50,12 @@ export interface GetModelsResponse {
   success: boolean
 }
 
+// 删除模型响应数据结构
+export interface DeleteModelResponse {
+  success: boolean
+  message: string
+}
+
 // 模型连通性测试结果接口
 export interface ModelConnectivityTestResult {
   connected: boolean
@@ -100,6 +106,15 @@ export const registerLlmModels = (data: RegisterModelRequest) => {
  */
 export const getRegisteredLlmModels = () => {
   return api.get<unknown, GetModelsResponse>(apiUrls.llmModels.getModels)
+}
+
+/**
+ * 删除LLM模型
+ * @param modelId 模型ID
+ * @returns 删除结果
+ */
+export const deleteLlmModel = (modelId: number | string) => {
+  return api.delete<unknown, DeleteModelResponse>(`${apiUrls.llmModels.base}/${modelId}`)
 }
 
 /**

@@ -18,13 +18,20 @@
           </template>
 
           <div class="filter-bar">
-            <el-select v-model="filterQuestionType" placeholder="题型筛选" style="width: 150px;">
+            <el-select v-model="filterQuestionType" placeholder="题型筛选" style="width: 150px; margin-right: 10px;">
               <el-option label="全部" value="" />
               <el-option label="单选题" :value="QuestionType.SINGLE_CHOICE" />
               <el-option label="多选题" :value="QuestionType.MULTIPLE_CHOICE" />
               <el-option label="简单事实题" :value="QuestionType.SIMPLE_FACT" />
               <el-option label="主观题" :value="QuestionType.SUBJECTIVE" />
             </el-select>
+
+            <el-switch
+              v-model="onlyLatest"
+              active-text="仅显示最新版本"
+              inactive-text="显示所有版本"
+              @change="handleOnlyLatestChange"
+            />
           </div>
 
           <el-table
@@ -295,6 +302,7 @@ const loading = reactive({
 })
 const searchQuery = ref('')
 const filterQuestionType = ref('')
+const onlyLatest = ref(true) // 默认只显示最新版本
 const questions = ref<any[]>([])
 const selectedQuestion = ref<any>(null)
 const rawAnswers = ref<any[]>([])
@@ -344,12 +352,13 @@ const fetchQuestionsWithoutAnswers = async () => {
   try {
     const params = {
       page: (currentPage.value - 1).toString(),
-      size: pageSize.value.toString()
+      size: pageSize.value.toString(),
+      onlyLatest: onlyLatest.value
     }
 
     const response = await getQuestionsWithoutAnswers(params)
-    questions.value = response.data.questions || []
-    totalQuestions.value = response.data.total || 0
+    questions.value = response.questions || []
+    totalQuestions.value = response.total || 0
   } catch (error) {
     console.error('获取未回答标准问题失败:', error)
     ElMessage.error('获取未回答标准问题失败')
@@ -467,7 +476,7 @@ const fetchOriginalData = async (questionId: number) => {
 
   try {
     const response = await getQuestionOriginalData(questionId)
-    rawAnswers.value = response.data.rawAnswers || []
+    rawAnswers.value = response.rawAnswers || []
   } catch (error) {
     console.error('获取原始数据失败:', error)
     ElMessage.error('获取原始数据失败')
@@ -483,7 +492,7 @@ const fetchCrowdsourcedAnswers = async (questionId: number) => {
 
   try {
     const response = await getCrowdsourcedAnswersByQuestion(questionId)
-    crowdsourcedAnswers.value = response.data.content || []
+    crowdsourcedAnswers.value = response.content || []
   } catch (error) {
     console.error('获取众包回答失败:', error)
     ElMessage.error('获取众包回答失败')
@@ -499,7 +508,7 @@ const fetchExpertAnswers = async (questionId: number) => {
 
   try {
     const response = await getExpertAnswersByQuestion(questionId)
-    expertAnswers.value = response.data.content || []
+    expertAnswers.value = response.content || []
   } catch (error) {
     console.error('获取专家回答失败:', error)
     ElMessage.error('获取专家回答失败')
@@ -616,6 +625,11 @@ const submitStandardAnswer = async () => {
   } finally {
     loading.submitting = false
   }
+}
+
+// 处理仅显示最新版本的切换
+const handleOnlyLatestChange = () => {
+  fetchQuestionsWithoutAnswers()
 }
 </script>
 

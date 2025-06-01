@@ -8,6 +8,7 @@ export interface RecommendTagsRequest {
   text: string
   questionType?: string
   existingTags?: string[]
+  onlyLatest?: boolean
 }
 
 /**

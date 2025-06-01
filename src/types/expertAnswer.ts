@@ -21,6 +21,7 @@ export interface ExpertAnswerResponse {
   submissionTime: string
   qualityScore: number
   feedback: string
+  standardQuestionCategory?: string
 }
 
 /**

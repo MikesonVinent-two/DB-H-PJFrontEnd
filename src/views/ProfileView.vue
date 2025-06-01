@@ -28,7 +28,10 @@
             <template #header>
               <div class="card-header">
                 <h3>基本信息</h3>
-                <el-button type="primary" @click="handleEdit">编辑资料</el-button>
+                <div class="action-buttons">
+                  <el-button type="primary" @click="handleEdit">编辑资料</el-button>
+                  <el-button type="warning" @click="handleDeactivate">注销账户</el-button>
+                </div>
               </div>
             </template>
 
@@ -109,16 +112,55 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 注销账户确认对话框 -->
+    <el-dialog
+      v-model="deactivateDialogVisible"
+      title="注销账户确认"
+      width="500px"
+    >
+      <div class="deactivate-content">
+        <el-alert
+          title="注销账户将导致以下结果："
+          type="warning"
+          :closable="false"
+          show-icon
+        />
+        <ul class="deactivate-list">
+          <li>您将无法再使用此账户登录系统</li>
+          <li>您的个人数据将被保留，但账户状态将变为"已注销"</li>
+          <li>如需恢复账户，请联系系统管理员</li>
+        </ul>
+        <el-divider />
+        <p class="confirm-text">请输入您的密码以确认注销操作：</p>
+        <el-input
+          v-model="deactivateForm.password"
+          type="password"
+          placeholder="请输入密码"
+          show-password
+        />
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="deactivateDialogVisible = false">取消</el-button>
+          <el-button type="danger" @click="confirmDeactivate" :loading="deactivating">
+            确认注销
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { getUserById, updateUserInfo } from '@/api/user'
+import { getUserById, updateUserInfo, deactivateUser } from '@/api/user'
 import type { UserInfo, UserRole } from '@/api/user'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const userStore = useUserStore()
 const userProfile = ref<UserInfo | null>(null)
 const loading = ref(false)
@@ -130,6 +172,13 @@ const submitting = ref(false)
 const form = reactive({
   name: '',
   contactInfo: ''
+})
+
+// 注销账户相关状态
+const deactivateDialogVisible = ref(false)
+const deactivating = ref(false)
+const deactivateForm = reactive({
+  password: ''
 })
 
 // 表单规则
@@ -173,6 +222,52 @@ const handleEdit = () => {
   form.contactInfo = userProfile.value.contactInfo || ''
 
   dialogVisible.value = true
+}
+
+// 处理注销账户按钮点击
+const handleDeactivate = () => {
+  deactivateForm.password = ''
+  deactivateDialogVisible.value = true
+}
+
+// 确认注销账户
+const confirmDeactivate = async () => {
+  if (!userProfile.value || !deactivateForm.password) {
+    ElMessage.warning('请输入密码以确认注销操作')
+    return
+  }
+
+  try {
+    deactivating.value = true
+
+    // 二次确认
+    await ElMessageBox.confirm(
+      '此操作将永久注销您的账户，是否继续？',
+      '警告',
+      {
+        confirmButtonText: '确认注销',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    // 调用注销API
+    await deactivateUser(userProfile.value.id)
+
+    ElMessage.success('账户已成功注销')
+    deactivateDialogVisible.value = false
+
+    // 退出登录并跳转到登录页
+    userStore.logout()
+    router.push('/login')
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error(err instanceof Error ? err.message : '注销账户失败')
+      console.error('注销账户失败:', err)
+    }
+  } finally {
+    deactivating.value = false
+  }
 }
 
 // 提交表单
@@ -297,6 +392,11 @@ h1 {
   align-items: center;
 }
 
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
 .loading-container,
 .error-container,
 .empty-container {
@@ -308,5 +408,20 @@ h1 {
 
 .mt-20 {
   margin-top: 20px;
+}
+
+.deactivate-content {
+  padding: 10px 0;
+}
+
+.deactivate-list {
+  margin: 15px 0;
+  padding-left: 20px;
+  line-height: 1.8;
+}
+
+.confirm-text {
+  margin: 15px 0;
+  font-weight: bold;
 }
 </style>

@@ -25,6 +25,14 @@
               <el-option label="已拒绝" value="REJECTED" />
             </el-select>
 
+            <el-switch
+              v-model="onlyLatest"
+              active-text="仅显示最新版本"
+              inactive-text="显示所有版本"
+              style="margin-right: 10px;"
+              @change="fetchRawQuestions"
+            />
+
             <el-select v-model="sortOrder" placeholder="排序方式" style="width: 150px;">
               <el-option label="收集时间 (新→旧)" value="collectionTime,desc" />
               <el-option label="收集时间 (旧→新)" value="collectionTime,asc" />
@@ -72,12 +80,12 @@
       <el-col :span="16">
         <!-- 右侧标准问题编辑区域 -->
         <el-card class="right-panel">
-      <template #header>
+          <template #header>
             <div class="panel-header">
               <h3>标准问题创建</h3>
               <el-button type="primary" @click="createStandardQuestion" :disabled="!selectedRawQuestion">创建标准问题</el-button>
-        </div>
-      </template>
+            </div>
+          </template>
 
           <div v-if="!selectedRawQuestion" class="empty-state">
             <el-empty description="请从左侧选择一个原始问题" />
@@ -90,6 +98,17 @@
                 <p><strong>问题文本：</strong> {{ selectedRawQuestion.questionText }}</p>
                 <p><strong>来源：</strong> {{ selectedRawQuestion.source }}</p>
                 <p><strong>收集时间：</strong> {{ formatDate(selectedRawQuestion.collectionTime) }}</p>
+                <p v-if="selectedRawQuestion.tags && selectedRawQuestion.tags.length > 0">
+                  <strong>标签：</strong>
+                  <el-tag
+                    v-for="tag in selectedRawQuestion.tags"
+                    :key="tag"
+                    size="small"
+                    style="margin-right: 5px;"
+                  >
+                    {{ tag }}
+                  </el-tag>
+                </p>
               </div>
             </div>
 
@@ -173,8 +192,8 @@
                 />
               </el-form-item>
             </el-form>
-      </div>
-    </el-card>
+          </div>
+        </el-card>
       </el-col>
     </el-row>
   </div>
@@ -185,8 +204,7 @@ import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import {
-  getRawQuestions,
-  getRawQuestionsByStatus,
+  searchStandardQuestions,
   createStandardQuestion as apiCreateStandardQuestion
 } from '@/api/standardData'
 import { recommendTags } from '@/api/tags'
@@ -194,6 +212,44 @@ import type { RecommendTagsRequest, } from '@/api/tags'
 import type { QuestionType, DifficultyLevel } from '@/api/standardData'
 import type { RawQuestionSearchItem, RawQuestionPageResponse } from '@/types/rawData'
 import type { StandardQuestionDto } from '@/types/standardQuestion'
+
+// 定义后端API返回的原始问题结构
+interface RawQuestionApiItem {
+  id: number
+  title: string
+  content: string
+  sourceSite: string
+  sourceUrl: string
+  crawlTime: string
+  tags: string[]
+  standardized: boolean
+  standardQuestionId?: number | null
+  otherMetadata?: string
+}
+
+// 定义后端API分页响应结构
+interface RawQuestionApiResponse {
+  content: RawQuestionApiItem[]
+  totalElements: number
+  totalPages: number
+  size: number
+  number: number
+  first: boolean
+  last: boolean
+  empty: boolean
+  pageable: {
+    pageNumber: number
+    pageSize: number
+    sort: {
+      sorted: boolean
+      unsorted: boolean
+      empty: boolean
+    }
+    offset: number
+    paged: boolean
+    unpaged: boolean
+  }
+}
 
 // 组件状态
 const loading = reactive({
@@ -214,6 +270,7 @@ const tagInputVisible = ref(false)
 const tagInputValue = ref('')
 const tagInputRef = ref<HTMLInputElement>()
 const recommendedTags = ref<string[]>([])
+const onlyLatest = ref(true)
 
 // 表单数据
 const standardQuestionForm = reactive<StandardQuestionDto>({
@@ -250,16 +307,27 @@ const fetchRawQuestions = async () => {
       page: (currentPage.value - 1).toString(),
       size: pageSize.value.toString(),
       sort: sortOrder.value,
-      status: filterStatus.value || undefined
+      status: filterStatus.value || undefined,
+      onlyLatest: onlyLatest.value
     }
 
-    const response = filterStatus.value
-      ? await getRawQuestionsByStatus(params)
-      : await getRawQuestions(params)
+    const response = await searchStandardQuestions(params)
 
-    const data = response.data as RawQuestionPageResponse
-    rawQuestions.value = data.content
-    totalRawQuestions.value = data.totalElements
+    // 映射后端返回的数据结构到组件期望的结构
+    if (response && response.questions) {
+      rawQuestions.value = response.questions.map((item) => ({
+        id: item.id,
+        questionText: item.questionText,
+        source: item.source || '未知',
+        collectionTime: item.creationTime,
+        tags: item.tags || [],
+        status: filterStatus.value || 'PENDING'
+      }));
+      totalRawQuestions.value = response.total || 0;
+    } else {
+      rawQuestions.value = [];
+      totalRawQuestions.value = 0;
+    }
   } catch (error) {
     console.error('获取原始问题失败:', error)
     ElMessage.error('获取原始问题失败')
@@ -319,7 +387,8 @@ const fetchRecommendedTags = async (questionText: string) => {
     const request: RecommendTagsRequest = {
       text: questionText,
       questionType: standardQuestionForm.questionType,
-      existingTags: standardQuestionForm.tags
+      existingTags: standardQuestionForm.tags,
+      onlyLatest: onlyLatest.value
     }
     const response = await recommendTags(request)
     recommendedTags.value = response.tags

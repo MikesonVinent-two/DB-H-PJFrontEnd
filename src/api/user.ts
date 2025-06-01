@@ -55,6 +55,51 @@ export interface LogoutResponse {
 }
 
 /**
+ * 用户更新数据接口
+ */
+export interface UpdateUserData {
+  username: string
+  password: string
+  name: string
+  contactInfo: string
+  role: UserRole
+}
+
+/**
+ * 用户搜索参数接口
+ */
+export interface UserSearchParams {
+  page?: number | string
+  size?: number | string
+  sort?: string
+  keyword?: string
+}
+
+/**
+ * 分页信息接口
+ */
+export interface PageInfo {
+  currentPage: number
+  totalPages: number
+  totalElements: number
+  size: number
+  numberOfElements: number
+  first: boolean
+  last: boolean
+  empty: boolean
+}
+
+/**
+ * 用户搜索响应接口
+ */
+export interface UserSearchResponse {
+  success: boolean
+  users: UserInfo[]
+  pageInfo: PageInfo
+  keyword: string
+}
+
+/**
  * 用户登录
  * @param data 登录数据
  * @returns 登录响应，包含用户基本信息和评测员相关信息
@@ -103,6 +148,52 @@ export const getUserById = (userId: string | number) => {
   }
   // 使用profile接口获取用户信息
   return api.get<unknown, UserInfo>(`${apiUrls.user.profile}/${userId}`)
+}
+
+/**
+ * 搜索用户
+ * @param params 搜索参数，包括页码、每页大小、排序方式和关键词
+ * @returns 用户搜索结果，包含用户列表和分页信息
+ */
+export const searchUsers = (params: UserSearchParams) => {
+  return api.get<unknown, UserSearchResponse>(apiUrls.user.search, { params })
+}
+
+/**
+ * 删除用户
+ * @param userId 要删除的用户ID
+ * @returns 空对象
+ */
+export const deleteUser = (userId: string | number) => {
+  if (!userId) {
+    throw new Error('用户ID不能为空')
+  }
+  return api.delete<unknown, Record<string, never>>(`${apiUrls.user.delete}/${userId}`)
+}
+
+/**
+ * 修改用户
+ * @param userId 要修改的用户ID
+ * @param data 用户更新数据
+ * @returns 空对象
+ */
+export const updateUser = (userId: string | number, data: UpdateUserData) => {
+  if (!userId) {
+    throw new Error('用户ID不能为空')
+  }
+  return api.put<unknown, Record<string, never>>(`${apiUrls.user.update}/${userId}`, data)
+}
+
+/**
+ * 注销账户
+ * @param userId 要注销的用户ID
+ * @returns 空对象
+ */
+export const deactivateUser = (userId: string | number) => {
+  if (!userId) {
+    throw new Error('用户ID不能为空')
+  }
+  return api.post<unknown, Record<string, never>>(`${apiUrls.user.deactivate}/${userId}`)
 }
 
 /**

@@ -108,6 +108,7 @@ export interface QuestionHistoryVersion {
   tags: string[]                 // 标签列表
   commitMessage: string          // 提交说明
   changes: ChangeRecord[]        // 变更记录
+  changeLogId: number           // 变更日志ID
 }
 
 /**
@@ -218,6 +219,32 @@ export const updateStandardQuestion = (
 export const getQuestionHistory = (questionId: number | string) => {
   return api.get<QuestionHistoryVersion[]>(
     `${apiUrls.standardData.getQuestionHistory}/${questionId}/history`
+  )
+}
+
+/**
+ * 回退标准问题到指定版本
+ * @param versionId 要回退到的版本ID
+ * @param data 回退操作参数
+ * @returns 回退后的问题信息
+ */
+export const rollbackQuestionVersion = (
+  versionId: number | string,
+  data: {
+    userId: number
+    commitMessage: string
+  }
+) => {
+  return api.post<{
+    id: number
+    questionText: string
+    questionType: QuestionType
+    difficulty: DifficultyLevel
+    userId: number
+    tags: string[]
+  }>(
+    `${apiUrls.standardData.rollbackQuestion}/${versionId}/rollback`,
+    data
   )
 }
 
@@ -413,6 +440,7 @@ export const searchStandardQuestions = (params: {
   userId?: string
   page?: string
   size?: string
+  onlyLatest?: boolean | string // 是否只返回叶子节点的标准问题
 }) => {
   return api.get<SearchQuestionResponse>(
     apiUrls.standardData.searchQuestions,
@@ -447,6 +475,7 @@ export const getQuestionOriginalData = (
 export const getQuestionsWithoutAnswers = (params?: {
   page?: string
   size?: string
+  onlyLatest?: boolean | string // 是否只返回叶子节点的标准问题
 }) => {
   return api.get<QuestionsWithoutAnswersResponse>(
     apiUrls.standardData.getQuestionsWithoutAnswers,

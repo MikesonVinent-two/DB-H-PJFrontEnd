@@ -30,6 +30,10 @@ export const apiUrls = {
   },
   user: {
     profile: '/api/users/profile',
+    search: '/api/users/search',
+    delete: '/api/users',
+    update: '/api/users',
+    deactivate: '/api/users/deactivate',
   },
   rawData: {
     createQuestion: '/api/raw-data/questions-dto',
@@ -62,6 +66,7 @@ export const apiUrls = {
     getAnswerVersionTree: '/api/standard/standard-answers',
     compareAnswerVersions: '/api/standard/standard-answers',
     rollbackAnswer: '/api/standard/standard-answers',
+    rollbackQuestion: '/api/standard-questions/version', // 回退标准问题版本
   },
   prompts: {
     tags: '/api/prompts/tags', // 答案标签提示词相关API
@@ -108,6 +113,7 @@ export const apiUrls = {
   llmModels: {
     register: '/api/llm-models/register', // 注册模型API
     getModels: '/api/llm-models', // 获取已注册模型API
+    base: '/api/llm-models', // 模型基础路径
   },
   evaluators: {
     create: '/api/evaluators', // 创建评测者API
@@ -134,6 +140,7 @@ export const apiUrls = {
     byQuestion: '/api/crowdsourced-answers/by-question', // GET /by-question/{questionId}
     byUser: '/api/crowdsourced-answers/by-user', // GET /by-user/{userId}
     byStatus: '/api/crowdsourced-answers/by-status', // GET /by-status/{status}
+    reviewedBy: '/api/crowdsourced-answers/reviewed-by', // GET /reviewed-by/{reviewedByUserId} 获取用户审核过的众包回答
   },
   expert: {
     base: '/api/expert-candidate-answers',  // 基础路径

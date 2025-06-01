@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { UserRole } from '@/api/user'
@@ -139,10 +139,23 @@ const localIsLoggedIn = ref(!!localStorage.getItem('user'))
 // 添加用户信息加载状态
 const isLoadingUserInfo = ref(false)
 
+// 添加组件刷新触发器
+const refreshTrigger = ref(0)
+
 const activeIndex = computed(() => route.name as string)
 
 // 从内存中获取用户信息
 const currentUser = computed(() => {
+  // 利用刷新触发器强制重新计算
+  // eslint-disable-next-line no-unused-vars
+  const _ = refreshTrigger.value
+
+  // 检查localStorage是否有效，如果无效直接返回null
+  const storedUser = localStorage.getItem('user')
+  if (!storedUser || storedUser === '{}') {
+    return null
+  }
+
   // 优先从内存中获取
   if (window.userInfo) {
     return window.userInfo
@@ -150,7 +163,7 @@ const currentUser = computed(() => {
 
   // 尝试从localStorage获取
   const storedUserInfo = localStorage.getItem('userInfo')
-  if (storedUserInfo) {
+  if (storedUserInfo && storedUserInfo !== '{}') {
     try {
       const parsedUser = JSON.parse(storedUserInfo)
       // 验证用户信息完整性
@@ -168,7 +181,16 @@ const currentUser = computed(() => {
 
 // 使用本地状态而不是直接依赖store
 const isLoggedIn = computed(() => {
-  return !!currentUser.value
+  // 利用刷新触发器强制重新计算
+  // eslint-disable-next-line no-unused-vars
+  const _ = refreshTrigger.value
+
+  // 检查localStorage的user键是否存在有效数据
+  const storedUser = localStorage.getItem('user')
+  const hasValidStorage = storedUser && storedUser !== '{}'
+
+  // 同时检查currentUser是否存在
+  return hasValidStorage && !!currentUser.value
 })
 
 const modelSelectorRef = ref<InstanceType<typeof ModelSelector> | null>(null)
@@ -217,22 +239,37 @@ const formatDate = (date: string | undefined) => {
 }
 
 // 处理用户登录事件
-const handleUserLogin = async (event: CustomEvent<UserInfo>) => {
-  const userData = event.detail
-  if (!userData) return
+const handleUserLogin = async (event: Event) => {
+  // 将事件转换为CustomEvent类型
+  const customEvent = event as CustomEvent<UserInfo>
+  const userData = customEvent.detail
+
+  console.log('导航栏组件: 检测到用户登录事件')
 
   isLoadingUserInfo.value = true
   try {
     // 立即更新本地登录状态
     localIsLoggedIn.value = true
 
-    // 确保window.userInfo存在
-    if (!window.userInfo) {
+    // 更新window.userInfo (全局内存)
+    if (userData) {
       window.userInfo = userData
+      console.log('导航栏组件: 用户数据已更新', userData.username)
+    } else if (!window.userInfo) {
+      // 如果事件没有提供数据，尝试从localStorage获取
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        try {
+          window.userInfo = JSON.parse(storedUser)
+          console.log('导航栏组件: 从localStorage加载用户数据')
+        } catch (e) {
+          console.error('解析存储的用户数据失败', e)
+        }
+      }
     }
 
-    // 更新localStorage
-    localStorage.setItem('userInfo', JSON.stringify(userData))
+    // 强制组件重新渲染
+    await nextTick()
   } catch (error) {
     console.error('更新用户信息失败:', error)
   } finally {
@@ -240,24 +277,79 @@ const handleUserLogin = async (event: CustomEvent<UserInfo>) => {
   }
 }
 
+// 监听存储变化事件处理
+const handleStorageChange = (event: StorageEvent) => {
+  if (event.key === 'user' || event.key === 'userInfo') {
+    console.log('导航栏组件: 检测到存储变化事件', event.key)
+
+    // 强制刷新计算属性
+    refreshTrigger.value++
+
+    // 如果用户数据被清除，清理内存中的用户信息
+    if (!event.newValue || event.newValue === '{}') {
+      window.userInfo = undefined
+      localIsLoggedIn.value = false
+    } else {
+      // 如果有新的用户数据，更新本地状态
+      localIsLoggedIn.value = true
+      try {
+        if (event.newValue) {
+          window.userInfo = JSON.parse(event.newValue)
+        }
+      } catch (e) {
+        console.error('解析存储事件数据失败:', e)
+      }
+    }
+
+    // 确保视图更新
+    nextTick()
+  }
+}
+
 // 生命周期钩子
 onMounted(() => {
   console.log('Debug: TheNavbar mounted')
   console.log('Debug: modelSelectorRef:', modelSelectorRef.value)
-  window.addEventListener('user-login', ((e: Event) => handleUserLogin(e as CustomEvent<UserInfo>)) as EventListener)
 
-  // 如果内存中已有用户信息，直接使用
-  if (window.userInfo) {
-    handleUserLogin(new CustomEvent('user-login', { detail: window.userInfo }))
+  // 添加用户登录事件监听
+  window.addEventListener('user-login', handleUserLogin as EventListener)
+
+  // 添加存储变化事件监听
+  window.addEventListener('storage', handleStorageChange)
+
+  // 初始化时检查登录状态
+  const storedUser = localStorage.getItem('user')
+  if (storedUser) {
+    console.log('导航栏组件: 初始化检测到用户已登录')
+    // 手动触发一次登录事件处理
+    handleUserLogin(new CustomEvent('user-login'))
   }
 })
 
 onUnmounted(() => {
-  window.removeEventListener('user-login', ((e: Event) => handleUserLogin(e as CustomEvent<UserInfo>)) as EventListener)
+  // 移除用户登录事件监听
+  window.removeEventListener('user-login', handleUserLogin as EventListener)
+
+  // 移除存储变化事件监听
+  window.removeEventListener('storage', handleStorageChange)
 })
+
+// 监听userStore中currentUser的变化
+watch(
+  () => userStore.currentUser,
+  (newValue) => {
+    console.log('导航栏组件: 检测到userStore.currentUser变化', newValue?.username)
+    refreshTrigger.value++
+    nextTick()
+  },
+  { deep: true }
+)
 
 const handleLogout = async () => {
   try {
+    // 立即更新本地状态
+    localIsLoggedIn.value = false
+
     // 清理所有存储
     window.userInfo = undefined
     localStorage.removeItem('userInfo')
@@ -265,8 +357,8 @@ const handleLogout = async () => {
     sessionStorage.removeItem('userInfo')
     sessionStorage.removeItem('user')
 
-    // 更新状态
-    localIsLoggedIn.value = false
+    // 强制刷新计算属性
+    refreshTrigger.value++
 
     // 执行登出操作
     await userStore.logout()
@@ -278,6 +370,12 @@ const handleLogout = async () => {
     if (userStore.currentUser) {
       userStore.$reset && userStore.$reset()
     }
+
+    // 触发一个存储事件，通知其他组件用户已登出
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'user',
+      newValue: null
+    }))
 
     // 强制重定向到登录页面，确保导航栏刷新
     router.push('/login')

@@ -83,8 +83,8 @@ export const reviewCrowdsourcedAnswer = (
 export const getCrowdsourcedAnswersByQuestion = (
   questionId: number | string,
   params?: {
-    page?: string
-    size?: string
+    page?: string | number
+    size?: string | number
     sort?: string
   }
 ) => {
@@ -103,8 +103,8 @@ export const getCrowdsourcedAnswersByQuestion = (
 export const getCrowdsourcedAnswersByUser = (
   userId: number | string,
   params?: {
-    page?: string
-    size?: string
+    page?: string | number
+    size?: string | number
     sort?: string
   }
 ) => {
@@ -123,8 +123,8 @@ export const getCrowdsourcedAnswersByUser = (
 export const getCrowdsourcedAnswersByStatus = (
   status: QualityReviewStatus | string,
   params?: {
-    page?: string
-    size?: string
+    page?: string | number
+    size?: string | number
     sort?: string
   }
 ) => {
@@ -141,8 +141,8 @@ export const getCrowdsourcedAnswersByStatus = (
  */
 export const getAllCrowdsourcedAnswers = (
   params?: {
-    page?: string
-    size?: string
+    page?: string | number
+    size?: string | number
     sort?: string
   }
 ) => {
@@ -159,13 +159,33 @@ export const getAllCrowdsourcedAnswers = (
  */
 export const getPendingCrowdsourcedAnswers = (
   params?: {
-    page?: string
-    size?: string
+    page?: string | number
+    size?: string | number
     sort?: string
   }
 ) => {
   return api.get<CrowdsourcedAnswerPageResponse>(
     apiUrls.crowdsourced.pending,
+    { params }
+  )
+}
+
+/**
+ * 获取用户审核过的众包回答
+ * @param reviewedByUserId 审核者用户ID
+ * @param params 查询参数
+ * @returns 分页的众包回答列表
+ */
+export const getReviewedCrowdsourcedAnswers = (
+  reviewedByUserId: number | string,
+  params?: {
+    page?: string | number
+    size?: string | number
+    sort?: string
+  }
+) => {
+  return api.get<CrowdsourcedAnswerPageResponse>(
+    `${apiUrls.crowdsourced.reviewedBy}/${reviewedByUserId}`,
     { params }
   )
 }
