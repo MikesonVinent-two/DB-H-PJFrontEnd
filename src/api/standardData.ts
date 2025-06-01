@@ -8,7 +8,8 @@ import type {
   DeleteOperationResponse,
   SearchQuestionResponse,
   OriginalDataResponse,
-  QuestionsWithoutAnswersResponse
+  QuestionsWithoutAnswersResponse,
+  DeleteQuestionResponse
 } from '@/types/standardQuestion'
 import { TagOperationType } from '@/types/standardQuestion'
 
@@ -496,6 +497,25 @@ export const getQuestionsWithoutStandardAnswers = (params?: {
 }) => {
   return api.get<QuestionsWithoutAnswersResponse>(
     apiUrls.standardData.getQuestionsWithoutAnswers,
+    { params }
+  )
+}
+
+/**
+ * 删除标准问题
+ * @param questionId 问题ID
+ * @param params 删除操作参数
+ * @returns 删除操作响应
+ */
+export const deleteStandardQuestion = (
+  questionId: number | string,
+  params?: {
+    userId?: number | string  // 执行删除操作的用户ID
+    permanent?: boolean | string  // 是否永久删除，默认为false（软删除）
+  }
+) => {
+  return api.delete<DeleteQuestionResponse>(
+    `${apiUrls.standardData.deleteQuestion}/${questionId}`,
     { params }
   )
 }

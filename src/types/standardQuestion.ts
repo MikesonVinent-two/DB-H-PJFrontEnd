@@ -113,6 +113,16 @@ export interface DeleteOperationResponse {
 }
 
 /**
+ * 删除标准问题响应接口
+ */
+export interface DeleteQuestionResponse {
+  success: boolean     // 操作是否成功
+  message: string      // 操作结果消息
+  questionId: number   // 被删除的问题ID
+  changeLogId: number  // 相关的变更日志ID
+}
+
+/**
  * 标准问题搜索结果项接口
  */
 export interface SearchQuestionItem {

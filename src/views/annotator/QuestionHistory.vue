@@ -90,6 +90,7 @@
                 <div>
                   <el-tag type="success" style="margin-right: 10px;">版本 {{ selectedQuestion.changeLogId || '未知' }}</el-tag>
                   <el-button type="primary" size="small" @click="showQuestionEditor">编辑问题</el-button>
+                  <el-button type="danger" size="small" @click="confirmDeleteQuestion">删除问题</el-button>
                 </div>
               </div>
             </template>
@@ -451,6 +452,7 @@ import {
   getQuestionVersionTree,
   updateStandardQuestion,
   rollbackQuestionVersion,
+  deleteStandardQuestion,
   type QuestionType,
   type DifficultyLevel,
   type QuestionHistoryVersion,
@@ -844,6 +846,45 @@ const restoreVersion = (version: QuestionVersion) => {
 // 处理仅显示最新版本的切换
 const handleOnlyLatestChange = () => {
   fetchStandardQuestions()
+}
+
+// 确认删除问题
+const confirmDeleteQuestion = () => {
+  if (!selectedQuestion.value) return
+
+  ElMessageBox.confirm(
+    '确定要删除该标准问题吗？默认为软删除，可以在后台恢复。',
+    '删除标准问题',
+    {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    try {
+      const response = await deleteStandardQuestion(selectedQuestion.value!.id, {
+        userId: editorForm.userId,
+        permanent: false // 默认软删除
+      })
+
+      if (response && response.success) {
+        ElMessage.success('标准问题已删除')
+        // 刷新问题列表
+        await fetchStandardQuestions()
+        // 清空当前选中的问题
+        selectedQuestion.value = null
+        versionHistory.value = []
+        versionTree.value = []
+      } else {
+        ElMessage.error('删除失败: ' + (response?.message || '未知错误'))
+      }
+    } catch (error) {
+      console.error('删除标准问题失败:', error)
+      ElMessage.error('删除标准问题失败')
+    }
+  }).catch(() => {
+    // 用户取消删除操作
+  })
 }
 </script>
 

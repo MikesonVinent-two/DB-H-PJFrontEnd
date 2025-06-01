@@ -48,6 +48,7 @@ export const apiUrls = {
   standardData: {
     createQuestion: '/api/standard-questions',
     updateQuestion: '/api/standard-questions',
+    deleteQuestion: '/api/standard-questions', // 删除标准问题
     createAnswer: '/api/standard/standard-answers',
     updateAnswer: '/api/standard/standard-answers',
     deleteAnswer: '/api/standard/standard-answers',

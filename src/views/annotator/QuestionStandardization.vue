@@ -208,6 +208,7 @@ import {
   createStandardQuestion as apiCreateStandardQuestion
 } from '@/api/standardData'
 import { recommendTags } from '@/api/tags'
+import { getRawQuestionsByStatus } from '@/api/rawData'
 import type { RecommendTagsRequest, } from '@/api/tags'
 import type { QuestionType, DifficultyLevel } from '@/api/standardData'
 import type { RawQuestionSearchItem, RawQuestionPageResponse } from '@/types/rawData'
@@ -304,26 +305,26 @@ const fetchRawQuestions = async () => {
   loading.rawQuestions = true
   try {
     const params = {
-      page: (currentPage.value - 1).toString(),
-      size: pageSize.value.toString(),
-      sort: sortOrder.value,
-      status: filterStatus.value || undefined,
-      onlyLatest: onlyLatest.value
+      standardized: filterStatus.value === 'STANDARDIZED' ? true :
+                   filterStatus.value === 'PENDING' ? false : undefined,
+      page: currentPage.value - 1, // 后端分页从0开始
+      size: pageSize.value,
+      sort: sortOrder.value
     }
 
-    const response = await searchStandardQuestions(params)
+    const response = await getRawQuestionsByStatus(params)
 
     // 映射后端返回的数据结构到组件期望的结构
-    if (response && response.questions) {
-      rawQuestions.value = response.questions.map((item) => ({
+    if (response && response.content) {
+      rawQuestions.value = response.content.map((item) => ({
         id: item.id,
-        questionText: item.questionText,
-        source: item.source || '未知',
-        collectionTime: item.creationTime,
+        questionText: item.title || item.content,
+        source: item.sourceSite || '未知',
+        collectionTime: item.crawlTime,
         tags: item.tags || [],
-        status: filterStatus.value || 'PENDING'
+        status: item.standardized ? 'STANDARDIZED' : 'PENDING'
       }));
-      totalRawQuestions.value = response.total || 0;
+      totalRawQuestions.value = response.totalElements || 0;
     } else {
       rawQuestions.value = [];
       totalRawQuestions.value = 0;

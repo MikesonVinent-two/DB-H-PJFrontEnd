@@ -1,4 +1,4 @@
-import { getUserById, UserInfo } from '@/api/user'
+ import { getUserById, UserInfo } from '@/api/user'
 
 /**
  * 获取用户信息示例
