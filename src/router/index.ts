@@ -66,6 +66,18 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
 
+  // WebSocket演示页面
+  {
+    path: '/websocket-demo',
+    name: 'websocket-demo',
+    component: () => import('../components/WebSocketDemo.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'WebSocket演示',
+      roles: ['ADMIN', 'CURATOR', 'EXPERT', 'ANNOTATOR', 'REFEREE', 'CROWDSOURCE_USER']
+    }
+  },
+
   // 数据管理功能
   {
     path: '/data/original-questions',
@@ -200,8 +212,48 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       requiresAuth: true,
       title: '批次评测',
-      roles: ['ADMIN'],
+      roles: ['ADMIN', 'ANNOTATOR', 'EXPERT'],
       requiresEvaluator: true
+    }
+  },
+  {
+    path: '/admin/batch-monitor',
+    name: 'batch-monitor',
+    component: () => import('../views/admin/BatchMonitorView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '批次实时监控',
+      roles: ['ADMIN']
+    }
+  },
+  {
+    path: '/runtime/answer-generation-batches',
+    name: 'answer-generation-batches',
+    component: () => import('../views/runtime/AnswerGenerationBatchesView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '回答生成批次',
+      roles: ['ADMIN', 'ANNOTATOR']
+    }
+  },
+  {
+    path: '/runtime/answer-batch-dashboard',
+    name: 'answer-batch-dashboard',
+    component: () => import('../views/runtime/AnswerBatchDashboardView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '回答批次仪表盘',
+      roles: ['ADMIN', 'ANNOTATOR']
+    }
+  },
+  {
+    path: '/runtime/create-answer-batch',
+    name: 'create-answer-batch',
+    component: () => import('../views/runtime/CreateAnswerBatchView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '创建回答生成批次',
+      roles: ['ADMIN', 'ANNOTATOR']
     }
   },
   {

@@ -19,7 +19,8 @@ export default defineConfig(({ mode }) => {
   ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '/src/types/websocket.ts': fileURLToPath(new URL('./src/types/websocketTypes.ts', import.meta.url))
     },
   },
     // 在这里定义一些与环境相关的值
@@ -29,6 +30,11 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_APP_API_BASE_URL': JSON.stringify(env.VITE_APP_API_BASE_URL || 'http://localhost:8080'),
       'import.meta.env.VITE_APP_API_TIMEOUT': env.VITE_APP_API_TIMEOUT || 10000,
       'import.meta.env.VITE_APP_LLM_CHAT_TIMEOUT': env.VITE_APP_LLM_CHAT_TIMEOUT || 60000,
+      // 为 sockjs-client 添加 global polyfill
+      global: {}
+    },
+    optimizeDeps: {
+      include: ['@stomp/stompjs', 'sockjs-client']
     }
   }
 })

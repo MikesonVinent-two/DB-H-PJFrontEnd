@@ -105,7 +105,8 @@ import {
   UserFilled,
   Briefcase,
   PieChart,
-  QuestionFilled
+  QuestionFilled,
+  Monitor
 } from '@element-plus/icons-vue'
 import { WORKSPACE_TYPES, getAccessibleWorkspaces } from '@/config/workspaceRoles'
 
@@ -173,12 +174,13 @@ const workspaceTypeNames = {
   [WORKSPACE_TYPES.DATA]: '数据管理',
   [WORKSPACE_TYPES.STANDARDIZATION]: '标准化工作台',
   [WORKSPACE_TYPES.PROMPT]: 'Prompt工作台',
-  [WORKSPACE_TYPES.EVALUATION]: '评测功能',
+  [WORKSPACE_TYPES.EVALUATION]: '评审工作台',
   [WORKSPACE_TYPES.GENERATION]: '生成工作台',
   [WORKSPACE_TYPES.SYSTEM]: '系统管理',
   [WORKSPACE_TYPES.CROWDSOURCE]: '众包工作台',
   [WORKSPACE_TYPES.EXPERT]: '专家工作台',
-  [WORKSPACE_TYPES.DATASET]: '数据集工作台'
+  [WORKSPACE_TYPES.DATASET]: '数据集工作台',
+  [WORKSPACE_TYPES.RUNTIME]: '运行工作台'
 }
 
 // 工作台类型图标映射
@@ -191,7 +193,8 @@ const workspaceTypeIcons = {
   [WORKSPACE_TYPES.SYSTEM]: Setting,
   [WORKSPACE_TYPES.CROWDSOURCE]: Briefcase,
   [WORKSPACE_TYPES.EXPERT]: UserFilled,
-  [WORKSPACE_TYPES.DATASET]: Files
+  [WORKSPACE_TYPES.DATASET]: Files,
+  [WORKSPACE_TYPES.RUNTIME]: Connection
 }
 
 // 定义事件
@@ -235,7 +238,8 @@ const getIconComponent = (iconName: string) => {
     'UserFilled': UserFilled,
     'Briefcase': Briefcase,
     'PieChart': PieChart,
-    'QuestionFilled': QuestionFilled
+    'QuestionFilled': QuestionFilled,
+    'Monitor': Monitor
   }
 
   return iconMap[iconName] || Document

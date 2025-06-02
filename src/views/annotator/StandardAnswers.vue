@@ -275,8 +275,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, markRaw } from 'vue'
+import { ref, reactive, computed, onMounted, markRaw, onUnmounted, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
+import type { TableInstance } from 'element-plus'
+import { Search, Refresh, Edit, Delete } from '@element-plus/icons-vue'
 
 // 导入编辑器组件
 import SingleChoiceEditor from './standard-answers/SingleChoiceEditor.vue'
@@ -288,9 +291,27 @@ import SubjectiveEditor from './standard-answers/SubjectiveEditor.vue'
 import { getQuestionsWithoutAnswers, getQuestionOriginalData, createStandardAnswer, QuestionType } from '@/api/standardData'
 import { getCrowdsourcedAnswersByQuestion } from '@/api/crowdsourcedAnswer'
 import { getExpertAnswersByQuestion } from '@/api/expertAnswer'
+import { getStandardQuestions } from '@/api/standardQuestions'
+import websocketService from '@/services/websocket'
+import { WebSocketMessageType } from '@/types/websocketTypes'
 
 // 引入接口类型
 import type { ChoiceAnswerDto, SimpleFactAnswerDto, SubjectiveAnswerDto } from '@/api/standardData'
+
+// 外部组件和状态
+const router = useRouter()
+const searchQuery = ref('')
+const tableData = ref<any[]>([])
+const questionTypes = ['简答题', '单选题', '多选题', '判断题']
+const tableRef = ref<TableInstance>()
+const pageSize = ref(10)
+const currentPage = ref(1)
+const total = ref(0)
+
+// WebSocket相关状态和处理
+let removeConnectionListener: (() => void) | null = null
+const websocketConnected = ref(false)
+const realTimeUpdates = ref(true)
 
 // 状态定义
 const loading = reactive({
@@ -300,7 +321,6 @@ const loading = reactive({
   expertAnswers: false,
   submitting: false
 })
-const searchQuery = ref('')
 const filterQuestionType = ref('')
 const onlyLatest = ref(true) // 默认只显示最新版本
 const questions = ref<any[]>([])
@@ -309,8 +329,6 @@ const rawAnswers = ref<any[]>([])
 const crowdsourcedAnswers = ref<any[]>([])
 const expertAnswers = ref<any[]>([])
 const totalQuestions = ref(0)
-const currentPage = ref(1)
-const pageSize = ref(10)
 const answerEditorRef = ref<any>(null)
 
 // 答案表单数据
@@ -341,9 +359,156 @@ const filteredQuestions = computed(() => {
   })
 })
 
+// 获取标准问题数据
+const fetchData = async () => {
+  loading.questions = true
+  try {
+    const response = await getStandardQuestions({
+      page: currentPage.value - 1,
+      size: pageSize.value,
+      keyword: searchQuery.value
+    })
+
+    tableData.value = response.data.content
+    total.value = response.data.totalElements
+  } catch (error) {
+    console.error('获取标准问题失败:', error)
+    ElMessage.error('获取标准问题失败')
+  } finally {
+    loading.questions = false
+  }
+}
+
+// 刷新数据
+const refreshData = () => {
+  fetchData()
+}
+
+// 搜索
+const handleSearch = () => {
+  currentPage.value = 1
+  fetchData()
+}
+
+// 处理页面变化
+const handleCurrentChange = (val: number) => {
+  currentPage.value = val
+  fetchData()
+}
+
+// 处理每页数量变化
+const handleSizeChange = (val: number) => {
+  pageSize.value = val
+  currentPage.value = 1
+  fetchData()
+}
+
+// WebSocket连接状态变更处理
+const handleConnectionStateChange = (status: string) => {
+  websocketConnected.value = status === 'CONNECTED'
+  console.log('WebSocket连接状态:', status)
+}
+
+// 处理WebSocket接收到的消息
+const handleWebSocketMessage = (message: any) => {
+  // 仅当启用实时更新时处理
+  if (!realTimeUpdates.value) return
+
+  // 根据消息类型处理不同的业务逻辑
+  if (message.type === WebSocketMessageType.STATUS_CHANGE &&
+      message.data && message.data.entity === 'standardQuestion') {
+    // 标准问题状态变更，刷新数据
+    ElMessage.info({
+      message: `收到标准问题更新通知: ${message.data.message || '数据已更新'}`,
+      duration: 3000
+    })
+    // 延迟刷新数据，避免频繁刷新
+    setTimeout(() => {
+      refreshData()
+    }, 300)
+  }
+}
+
+// 根据问题类型获取图标
+const getTypeIcon = (type: string) => {
+  switch (type) {
+    case '简答题':
+      return 'el-icon-document-checked'
+    case '单选题':
+      return 'el-icon-select'
+    case '多选题':
+      return 'el-icon-finished'
+    case '判断题':
+      return 'el-icon-check'
+    default:
+      return 'el-icon-document'
+  }
+}
+
+// 创建标准回答
+const createStandardAnswer = (questionId: number) => {
+  router.push({
+    name: 'create-standard-answer',
+    params: { questionId: questionId.toString() }
+  })
+}
+
+// 启用或禁用实时更新
+const toggleRealTimeUpdates = () => {
+  realTimeUpdates.value = !realTimeUpdates.value
+  ElMessage.info(realTimeUpdates.value ? '已启用实时更新' : '已禁用实时更新')
+}
+
+// 删除标准问题
+const deleteQuestion = (questionId: number) => {
+  ElMessageBox.confirm(
+    '此操作将永久删除该标准问题, 是否继续?',
+    '确认删除',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  )
+    .then(async () => {
+      try {
+        // 调用删除API
+        // await deleteStandardQuestion(questionId)
+        ElMessage.success('删除成功')
+        fetchData() // 刷新数据
+      } catch (error) {
+        console.error('删除失败:', error)
+        ElMessage.error('删除失败')
+      }
+    })
+    .catch(() => {
+      ElMessage.info('已取消删除')
+    })
+}
+
 // 生命周期钩子
-onMounted(() => {
-  fetchQuestionsWithoutAnswers()
+onMounted(async () => {
+  // 获取初始数据
+  await fetchData()
+
+  // 检查并确保WebSocket连接
+  const connected = await websocketService.checkConnectionAndReconnect()
+  websocketConnected.value = connected
+
+  // 添加WebSocket连接状态监听器
+  removeConnectionListener = websocketService.addConnectionListener(handleConnectionStateChange)
+
+  // 订阅标准问题更新主题
+  websocketService.subscribeToQueue('standard-questions', handleWebSocketMessage)
+})
+
+// 组件卸载前
+onBeforeUnmount(() => {
+  // 取消订阅并移除监听器
+  websocketService.unsubscribeFromQueue('standard-questions')
+  if (removeConnectionListener) {
+    removeConnectionListener()
+  }
 })
 
 // 获取未回答标准问题列表
@@ -607,7 +772,7 @@ const submitStandardAnswer = async () => {
   // 提交答案
   loading.submitting = true
   try {
-    await createStandardAnswer(requestData)
+    await createStandardAnswer(selectedQuestion.value.id)
     ElMessage.success('标准答案提交成功')
 
     // 刷新问题列表

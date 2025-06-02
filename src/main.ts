@@ -1,3 +1,6 @@
+// 导入 polyfill
+import './polyfills'
+
 import './assets/main.css'
 
 import { createApp } from 'vue'

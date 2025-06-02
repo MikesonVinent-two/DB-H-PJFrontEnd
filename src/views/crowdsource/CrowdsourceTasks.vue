@@ -189,8 +189,8 @@ async function loadAnswers() {
     }
 
     const response = await getCrowdsourcedAnswersByUser(userId.value.toString(), params)
-    myAnswers.value = response.data.content || []
-    totalItems.value = response.data.totalElements || 0
+    myAnswers.value = response.content || []
+    totalItems.value = response.totalElements || 0
 
     // 获取问题文本
     await loadQuestionTexts()

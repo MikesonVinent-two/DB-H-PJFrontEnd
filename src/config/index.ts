@@ -102,14 +102,13 @@ export const apiUrls = {
     getUserEvaluationConfigs: '/api/prompt-assembly/evaluation-configs/user', // 获取用户创建的评测提示词组装配置API
   },
   answerGeneration: {
-    batches: '/api/answer-generation/batches', // 回答生成批次相关API
-    startBatch: '/api/answer-generation/batches', // 启动批次API
-    pauseBatch: '/api/answer-generation/batches', // 暂停批次API
-    resumeBatch: '/api/answer-generation/batches', // 恢复批次API
-    getBatchStatus: '/api/answer-generation/batches', // 获取批次状态API
-    testConnectivity: '/api/answer-generation/batches', // 测试模型连通性API
-    testSystemConnectivity: '/api/answer-generation/system/test-connectivity', // 系统级测试模型连通性API
-    testModelConnectivity: '/api/answer-generation/models', // 单个模型测试连通性API
+    batches: '/api/answer-generation/batches',
+    startBatch: '/api/answer-generation/batches',
+    pauseBatch: '/api/answer-generation/batches',
+    resumeBatch: '/api/answer-generation/batches',
+    getBatchStatus: '/api/answer-generation/batches',
+    testConnectivity: '/api/answer-generation/batches',
+    getUserBatches: '/api/answer-generation/batches/user'
   },
   llmModels: {
     register: '/api/llm-models/register', // 注册模型API

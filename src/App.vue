@@ -5,6 +5,7 @@ import TheSidebar from '@/components/TheSidebar.vue'
 import { useUserStore } from '@/stores/user'
 import { onMounted, onUnmounted, ref, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import websocketService from '@/services/websocket'
 
 const userStore = useUserStore()
 const route = useRoute()
@@ -98,12 +99,18 @@ onMounted(async () => {
     // 手动触发一次登录事件，确保所有组件都能正确响应
     window.dispatchEvent(new CustomEvent('user-login'))
   }
+
+  // 初始化WebSocket连接
+  websocketService.connect()
 })
 
 // 在组件卸载时移除事件监听器
 onUnmounted(() => {
   window.removeEventListener('storage', handleStorageChange)
   window.removeEventListener('user-login', handleUserLogin as EventListener)
+
+  // 关闭WebSocket连接
+  websocketService.disconnect()
 })
 </script>
 

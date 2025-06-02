@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import {
@@ -21,9 +21,12 @@ import {
   List,
   Histogram
 } from '@element-plus/icons-vue'
+import websocketService from '@/services/websocket'
+import { WebSocketConnectionStatus } from '@/types/websocketTypes'
 
 const router = useRouter()
 const userStore = useUserStore()
+let removeConnectionListener: (() => void) | null = null
 
 // 用户角色和显示名称
 const userRole = computed(() => userStore.currentUser?.role || '')
@@ -43,10 +46,74 @@ const userRoleDisplay = computed(() => {
 const isEvaluator = computed(() => userStore.currentUser?.isEvaluator || false)
 const evaluatorId = computed(() => userStore.currentUser?.evaluatorId || '-')
 
+// WebSocket状态处理
+const wsStatus = computed(() => websocketService.status.value)
+const isConnected = computed(() => wsStatus.value === WebSocketConnectionStatus.CONNECTED)
+const isConnecting = computed(() => wsStatus.value === WebSocketConnectionStatus.CONNECTING)
+
+const wsStatusText = computed(() => {
+  switch (wsStatus.value) {
+    case WebSocketConnectionStatus.CONNECTED:
+      return '已连接'
+    case WebSocketConnectionStatus.CONNECTING:
+      return '正在连接...'
+    case WebSocketConnectionStatus.DISCONNECTED:
+      return '已断开'
+    case WebSocketConnectionStatus.ERROR:
+      return '连接错误'
+    default:
+      return '未知状态'
+  }
+})
+
+const wsStatusClass = computed(() => {
+  switch (wsStatus.value) {
+    case WebSocketConnectionStatus.CONNECTED:
+      return 'status-connected'
+    case WebSocketConnectionStatus.CONNECTING:
+      return 'status-connecting'
+    case WebSocketConnectionStatus.DISCONNECTED:
+      return 'status-disconnected'
+    case WebSocketConnectionStatus.ERROR:
+      return 'status-error'
+    default:
+      return ''
+  }
+})
+
 // 页面导航
 const navigateTo = (routeName: string) => {
   router.push({ name: routeName })
 }
+
+// 连接WebSocket
+const connectWebSocket = async () => {
+  await websocketService.connect()
+}
+
+// 断开WebSocket连接
+const disconnectWebSocket = async () => {
+  await websocketService.disconnect()
+}
+
+// 导航到WebSocket演示页面
+const navigateToDemo = () => {
+  router.push('/websocket-demo')
+}
+
+onMounted(() => {
+  // 添加WebSocket连接状态监听器
+  removeConnectionListener = websocketService.addConnectionListener((status) => {
+    console.log('WebSocket连接状态已更改:', status)
+  })
+})
+
+onBeforeUnmount(() => {
+  // 移除WebSocket连接状态监听器
+  if (removeConnectionListener) {
+    removeConnectionListener()
+  }
+})
 </script>
 
 <template>
@@ -257,6 +324,40 @@ const navigateTo = (routeName: string) => {
         </el-col>
       </template>
     </el-row>
+
+    <!-- 添加WebSocket连接状态指示器 -->
+    <div class="websocket-status-widget">
+      <h3>WebSocket连接状态</h3>
+      <div class="status-display">
+        <div class="status-indicator" :class="wsStatusClass"></div>
+        <span>{{ wsStatusText }}</span>
+      </div>
+      <div class="status-actions">
+        <el-button
+          type="primary"
+          size="small"
+          @click="connectWebSocket"
+          :disabled="isConnected || isConnecting"
+        >
+          连接
+        </el-button>
+        <el-button
+          type="danger"
+          size="small"
+          @click="disconnectWebSocket"
+          :disabled="!isConnected"
+        >
+          断开
+        </el-button>
+        <el-button
+          type="success"
+          size="small"
+          @click="navigateToDemo"
+        >
+          查看演示页面
+        </el-button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -329,5 +430,65 @@ const navigateTo = (routeName: string) => {
 .function-card p {
   color: var(--light-text);
   font-size: 14px;
+}
+
+/* WebSocket状态组件样式 */
+.websocket-status-widget {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  max-width: 400px;
+}
+
+.websocket-status-widget h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.status-display {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.status-connected {
+  background-color: #4caf50;
+  box-shadow: 0 0 8px #4caf50;
+}
+
+.status-connecting {
+  background-color: #2196f3;
+  animation: blink 1s infinite;
+}
+
+.status-disconnected {
+  background-color: #9e9e9e;
+}
+
+.status-error {
+  background-color: #f44336;
+  box-shadow: 0 0 8px #f44336;
+}
+
+.status-actions {
+  display: flex;
+  gap: 10px;
+}
+
+@keyframes blink {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
 }
 </style>

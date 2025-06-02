@@ -22,20 +22,23 @@ export const WORKSPACE_TYPES = {
   SYSTEM: 'system',          // 系统管理工作台
   CROWDSOURCE: 'crowdsource', // 众包工作台
   EXPERT: 'expert',          // 专家工作台
-  DATASET: 'dataset'         // 数据集工作台
+  DATASET: 'dataset',         // 数据集工作台
+  RUNTIME: 'runtime'          // 运行工作台
 }
 
 /**
- * 工作台配置
- * @typedef {Object} WorkspaceConfig
- * @property {string} id - 工作台唯一标识符
- * @property {string} name - 工作台名称
- * @property {string} type - 工作台类型
- * @property {string} path - 路由路径
- * @property {string[]} roles - 允许访问的角色
- * @property {string} description - 工作台描述
- * @property {string} icon - 图标名称
+ * 工作台配置类型
  */
+interface WorkspaceConfig {
+  id: string;
+  name: string;
+  type: string;
+  path: string;
+  roles: string[];
+  description: string;
+  icon: string;
+  requiresEvaluator?: boolean;
+}
 
 /**
  * 工作台配置列表
@@ -50,7 +53,8 @@ export const WORKSPACES = [
     path: '/data/original-questions',
     roles: [ROLES.CURATOR, ROLES.ADMIN],
     description: '管理系统中的原始问题数据',
-    icon: 'Document'
+    icon: 'Document',
+    requiresEvaluator: false
   },
 
   // 标准化工作台
@@ -139,34 +143,34 @@ export const WORKSPACES = [
   },
 
   // 评测工作台
-  {
-    id: 'batch-evaluation',
-    name: '批次评测',
-    type: WORKSPACE_TYPES.EVALUATION,
-    path: '/evaluation/batch-evaluation',
-    roles: [ROLES.ADMIN],
-    description: '批量评测回答',
-    requiresEvaluator: true,
-    icon: 'DataAnalysis'
-  },
-  {
-    id: 'evaluations',
-    name: '评测管理',
-    type: WORKSPACE_TYPES.EVALUATION,
-    path: '/evaluation/evaluations',
-    roles: [ROLES.ADMIN],
-    description: '管理评测结果',
-    icon: 'Management'
-  },
-  {
-    id: 'scoring',
-    name: '评分管理',
-    type: WORKSPACE_TYPES.EVALUATION,
-    path: '/evaluation/scoring',
-    roles: [ROLES.ADMIN],
-    description: '管理评分结果',
-    icon: 'StarFilled'
-  },
+  // {
+  //   id: 'batch-evaluation',
+  //   name: '批次评测',
+  //   type: WORKSPACE_TYPES.EVALUATION,
+  //   path: '/evaluation/batch-evaluation',
+  //   roles: [ROLES.ADMIN],
+  //   description: '批量评测回答',
+  //   requiresEvaluator: true,
+  //   icon: 'DataAnalysis'
+  // },
+  // {
+  //   id: 'evaluations',
+  //   name: '评测管理',
+  //   type: WORKSPACE_TYPES.EVALUATION,
+  //   path: '/evaluation/evaluations',
+  //   roles: [ROLES.ADMIN],
+  //   description: '管理评测结果',
+  //   icon: 'Management'
+  // },
+  // {
+  //   id: 'scoring',
+  //   name: '评分管理',
+  //   type: WORKSPACE_TYPES.EVALUATION,
+  //   path: '/evaluation/scoring',
+  //   roles: [ROLES.ADMIN],
+  //   description: '管理评分结果',
+  //   icon: 'StarFilled'
+  // },
 
   // 评审员工作台
   {
@@ -313,7 +317,55 @@ export const WORKSPACES = [
     roles: [ROLES.ADMIN, ROLES.CURATOR],
     description: '创建新的数据集',
     icon: 'FolderAdd'
-  }
+  },
+
+  // 运行工作台
+  {
+    id: 'batch-monitor',
+    name: '批次实时监控',
+    type: WORKSPACE_TYPES.RUNTIME,
+    path: '/admin/batch-monitor',
+    roles: [ROLES.ADMIN, ROLES.ANNOTATOR],
+    description: '使用WebSocket实时监控批次状态',
+    icon: 'Monitor'
+  },
+  {
+    id: 'answer-generation-batches',
+    name: '回答生成批次',
+    type: WORKSPACE_TYPES.RUNTIME,
+    path: '/runtime/answer-generation-batches',
+    roles: [ROLES.ADMIN, ROLES.ANNOTATOR],
+    description: '管理和监控回答生成批次',
+    icon: 'List'
+  },
+  {
+    id: 'answer-batch-dashboard',
+    name: '回答批次仪表盘',
+    type: WORKSPACE_TYPES.RUNTIME,
+    path: '/runtime/answer-batch-dashboard',
+    roles: [ROLES.ADMIN, ROLES.ANNOTATOR],
+    description: '回答批次详细分析和统计',
+    icon: 'PieChart'
+  },
+  {
+    id: 'create-answer-batch',
+    name: '创建回答批次',
+    type: WORKSPACE_TYPES.RUNTIME,
+    path: '/runtime/create-answer-batch',
+    roles: [ROLES.ADMIN, ROLES.ANNOTATOR],
+    description: '创建新的回答生成批次',
+    icon: 'Plus'
+  },
+  // 系统工具
+  {
+    id: 'websocket-demo',
+    name: 'WebSocket演示',
+    type: WORKSPACE_TYPES.SYSTEM,
+    path: '/websocket-demo',
+    roles: [ROLES.ADMIN, ROLES.CURATOR, ROLES.EXPERT, ROLES.ANNOTATOR, ROLES.REFEREE, ROLES.CROWDSOURCE_USER],
+    description: 'WebSocket连接演示和测试',
+    icon: 'Connection'
+  },
 ]
 
 /**
@@ -326,7 +378,7 @@ export const WORKSPACES_BY_TYPE = WORKSPACES.reduce((acc, workspace) => {
   }
   acc[workspace.type].push(workspace)
   return acc
-}, {} as Record<string, typeof WORKSPACES>)
+}, {} as Record<string, WorkspaceConfig[]>)
 
 /**
  * 按角色分组的工作台配置
@@ -340,7 +392,7 @@ export const WORKSPACES_BY_ROLE = WORKSPACES.reduce((acc, workspace) => {
     acc[role].push(workspace)
   })
   return acc
-}, {} as Record<string, typeof WORKSPACES>)
+}, {} as Record<string, WorkspaceConfig[]>)
 
 /**
  * 检查用户是否有权限访问工作台
@@ -365,7 +417,7 @@ export const canAccessWorkspace = (workspaceId: string, userRole: string, isEval
  * @param {boolean} isEvaluator - 用户是否为评测员
  * @returns {WorkspaceConfig[]} - 可访问的工作台列表
  */
-export const getAccessibleWorkspaces = (userRole: string, isEvaluator = false): typeof WORKSPACES => {
+export const getAccessibleWorkspaces = (userRole: string, isEvaluator = false): WorkspaceConfig[] => {
   return WORKSPACES.filter(workspace => {
     const hasRole = workspace.roles.includes(userRole)
     const meetsEvaluatorRequirement = workspace.requiresEvaluator ? isEvaluator : true
