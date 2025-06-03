@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import websocketService from '@/services/websocket'
 import {
   WebSocketConnectionStatus,
@@ -8,16 +8,13 @@ import {
 import type { WebSocketMessage } from '@/types/websocketTypes'
 
 export const useWebSocketStore = defineStore('websocket', () => {
+  const messages = ref<WebSocketMessage[]>([])
+  const isConnected = ref(false)
+  const isConnecting = ref(false)
+
   // 从WebSocket服务获取状态
   const status = computed(() => websocketService.status.value)
   const lastError = computed(() => websocketService.lastError.value)
-  const messages = computed(() => websocketService.messages.value)
-
-  // 计算属性：是否已连接
-  const isConnected = computed(() => status.value === WebSocketConnectionStatus.CONNECTED)
-
-  // 计算属性：是否正在连接
-  const isConnecting = computed(() => status.value === WebSocketConnectionStatus.CONNECTING)
 
   // 计算属性：是否有错误
   const hasError = computed(() => status.value === WebSocketConnectionStatus.ERROR)
@@ -34,13 +31,22 @@ export const useWebSocketStore = defineStore('websocket', () => {
   }
 
   // 连接WebSocket
-  const connect = (url?: string) => {
-    websocketService.connect(url)
+  const connect = async () => {
+    if (isConnected.value || isConnecting.value) return
+
+    isConnecting.value = true
+    try {
+      const connected = await websocketService.connect()
+      isConnected.value = connected
+    } finally {
+      isConnecting.value = false
+    }
   }
 
   // 断开WebSocket连接
-  const disconnect = () => {
-    websocketService.disconnect()
+  const disconnect = async () => {
+    await websocketService.disconnect()
+    isConnected.value = false
   }
 
   // 发送消息
@@ -49,18 +55,28 @@ export const useWebSocketStore = defineStore('websocket', () => {
   }
 
   // 订阅批次状态更新
-  const subscribeToBatch = (batchId: number) => {
-    websocketService.subscribeToBatchUpdates(batchId)
+  const subscribeToBatchUpdates = () => {
+    if (!isConnected.value) return
+    websocketService.subscribeToAllBatches()
   }
 
   // 取消订阅批次状态更新
-  const unsubscribeFromBatch = (batchId: number) => {
-    websocketService.unsubscribeFromBatchUpdates(batchId)
+  const unsubscribeFromBatchUpdates = () => {
+    websocketService.unsubscribeFromAllBatches()
   }
 
-  // 清除消息历史
+  // 添加消息
+  const addMessage = (message: WebSocketMessage) => {
+    messages.value.push(message)
+    // 限制消息数量
+    if (messages.value.length > 1000) {
+      messages.value = messages.value.slice(-1000)
+    }
+  }
+
+  // 清除消息
   const clearMessages = () => {
-    websocketService.clearMessages()
+    messages.value = []
   }
 
   return {
@@ -76,10 +92,11 @@ export const useWebSocketStore = defineStore('websocket', () => {
     connect,
     disconnect,
     send,
-    subscribeToBatch,
-    unsubscribeFromBatch,
+    subscribeToBatchUpdates,
+    unsubscribeFromBatchUpdates,
     getMessagesByType,
     getLatestMessageByType,
+    addMessage,
     clearMessages
   }
 })

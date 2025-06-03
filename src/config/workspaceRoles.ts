@@ -14,17 +14,18 @@ export const ROLES = {
  * 工作台类型定义
  */
 export const WORKSPACE_TYPES = {
-  DATA: 'data',             // 数据管理工作台
-  STANDARDIZATION: 'standardization', // 标准化工作台
-  PROMPT: 'prompt',         // 提示词工作台
-  EVALUATION: 'evaluation', // 评测工作台
-  GENERATION: 'generation', // 生成工作台
-  SYSTEM: 'system',          // 系统管理工作台
-  CROWDSOURCE: 'crowdsource', // 众包工作台
-  EXPERT: 'expert',          // 专家工作台
-  DATASET: 'dataset',         // 数据集工作台
-  RUNTIME: 'runtime'          // 运行工作台
-}
+  DATA: 'DATA',
+  STANDARDIZATION: 'STANDARDIZATION',
+  PROMPT: 'PROMPT',
+  EVALUATION: 'EVALUATION',
+  ASSESSMENT: 'ASSESSMENT', // 新增评测工作台类型
+  GENERATION: 'GENERATION',
+  SYSTEM: 'SYSTEM',
+  CROWDSOURCE: 'CROWDSOURCE',
+  EXPERT: 'EXPERT',
+  DATASET: 'DATASET',
+  RUNTIME: 'RUNTIME'
+} as const
 
 /**
  * 工作台配置类型
@@ -38,6 +39,7 @@ interface WorkspaceConfig {
   description: string;
   icon: string;
   requiresEvaluator?: boolean;
+  parentId?: string;
 }
 
 /**
@@ -144,33 +146,35 @@ export const WORKSPACES = [
 
   // 评测工作台
   // {
-  //   id: 'batch-evaluation',
-  //   name: '批次评测',
-  //   type: WORKSPACE_TYPES.EVALUATION,
-  //   path: '/evaluation/batch-evaluation',
+  //   id: 'assessment-workbench',
+  //   name: '评测工作台',
+  //   type: WORKSPACE_TYPES.ASSESSMENT,
+  //   path: '/assessment/workbench',
   //   roles: [ROLES.ADMIN],
-  //   description: '批量评测回答',
+  //   description: '评测工作台',
   //   requiresEvaluator: true,
   //   icon: 'DataAnalysis'
   // },
-  // {
-  //   id: 'evaluations',
-  //   name: '评测管理',
-  //   type: WORKSPACE_TYPES.EVALUATION,
-  //   path: '/evaluation/evaluations',
-  //   roles: [ROLES.ADMIN],
-  //   description: '管理评测结果',
-  //   icon: 'Management'
-  // },
-  // {
-  //   id: 'scoring',
-  //   name: '评分管理',
-  //   type: WORKSPACE_TYPES.EVALUATION,
-  //   path: '/evaluation/scoring',
-  //   roles: [ROLES.ADMIN],
-  //   description: '管理评分结果',
-  //   icon: 'StarFilled'
-  // },
+  {
+    id: 'evaluations',
+    name: '评测管理',
+    type: WORKSPACE_TYPES.ASSESSMENT,
+    path: '/assessment/evaluations',
+    roles: [ROLES.ADMIN],
+    description: '管理评测结果',
+    icon: 'Management',
+    parentId: 'assessment-workbench'
+  },
+  {
+    id: 'scoring',
+    name: '评分管理',
+    type: WORKSPACE_TYPES.ASSESSMENT,
+    path: '/assessment/scoring',
+    roles: [ROLES.ADMIN],
+    description: '管理评分结果',
+    icon: 'StarFilled',
+    parentId: 'assessment-workbench'
+  },
 
   // 评审员工作台
   {
@@ -191,26 +195,6 @@ export const WORKSPACES = [
     description: '审核众包回答并提供反馈',
     icon: 'Check'
   },
-
-  // // 生成工作台
-  // {
-  //   id: 'answer-generation',
-  //   name: '回答生成',
-  //   type: WORKSPACE_TYPES.GENERATION,
-  //   path: '/generation/answer-generation',
-  //   roles: [ROLES.ADMIN, ROLES.ANNOTATOR],
-  //   description: '生成回答',
-  //   icon: 'Magic'
-  // },
-  // {
-  //   id: 'generation-batches',
-  //   name: '生成批次管理',
-  //   type: WORKSPACE_TYPES.GENERATION,
-  //   path: '/generation/batches',
-  //   roles: [ROLES.ADMIN],
-  //   description: '管理生成批次',
-  //   icon: 'List'
-  // },
 
   // 众包工作台
   {
@@ -271,15 +255,6 @@ export const WORKSPACES = [
     description: '管理系统用户',
     icon: 'User'
   },
-  // {
-  //   id: 'role-management',
-  //   name: '角色管理',
-  //   type: WORKSPACE_TYPES.SYSTEM,
-  //   path: '/system/roles',
-  //   roles: [ROLES.ADMIN],
-  //   description: '管理系统角色',
-  //   icon: 'UserFilled'
-  // },
   {
     id: 'model-management',
     name: '模型管理',
@@ -423,6 +398,21 @@ export const getAccessibleWorkspaces = (userRole: string, isEvaluator = false): 
     const meetsEvaluatorRequirement = workspace.requiresEvaluator ? isEvaluator : true
     return hasRole && meetsEvaluatorRequirement
   })
+}
+
+// 工作台类型名称映射
+const workspaceTypeNames = {
+  [WORKSPACE_TYPES.DATA]: '数据管理',
+  [WORKSPACE_TYPES.STANDARDIZATION]: '标准化工作台',
+  [WORKSPACE_TYPES.PROMPT]: 'Prompt工作台',
+  [WORKSPACE_TYPES.EVALUATION]: '评审工作台',
+  [WORKSPACE_TYPES.ASSESSMENT]: '评测工作台', // 新增评测工作台名称
+  [WORKSPACE_TYPES.GENERATION]: '生成工作台',
+  [WORKSPACE_TYPES.SYSTEM]: '系统管理',
+  [WORKSPACE_TYPES.CROWDSOURCE]: '众包工作台',
+  [WORKSPACE_TYPES.EXPERT]: '专家工作台',
+  [WORKSPACE_TYPES.DATASET]: '数据集工作台',
+  [WORKSPACE_TYPES.RUNTIME]: '运行工作台'
 }
 
 export default {

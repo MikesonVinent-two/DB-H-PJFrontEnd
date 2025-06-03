@@ -146,12 +146,23 @@ import {
 } from '@/api/answerGenerationBatch'
 import { WebSocketMessageType } from '@/types/websocketTypes'
 import type { BatchStatusUpdateData } from '@/types/websocketTypes'
+import { useUserStore } from '@/stores/user'
+import { getUserAnswerGenerationBatches } from '@/api/answerGenerationBatch'
 
 const router = useRouter()
 const wsStore = useWebSocketStore()
+const userStore = useUserStore()
 
 // 批次列表数据
 const batches = ref<AnswerGenerationBatch[]>([])
+const loading = ref(false)
+const filterStatus = ref<BatchStatus | null>(null)
+const statistics = ref({
+  totalBatches: 0,
+  runningBatches: 0,
+  completedBatches: 0,
+  totalAnswers: 0
+})
 
 // 格式化日期
 const formatDate = (dateString: string) => {
@@ -248,115 +259,40 @@ const resumeBatch = async (batchId: number) => {
 
 // 加载批次列表
 const loadBatches = async () => {
-  // 这里应该调用API获取批次列表
-  // 由于没有现成的API，这里使用模拟数据
-  batches.value = [
-    {
-      id: 1,
-      name: '批次测试 - GPT-4',
-      description: 'GPT-4模型测试批次',
-      datasetVersionId: 1,
-      datasetVersionName: '测试数据集 v1.0',
-      status: BatchStatus.COMPLETED,
-      creationTime: '2023-05-20T14:30:00',
-      answerAssemblyConfigId: 1,
-      globalParameters: { param1: 'value1', param2: 'value2' },
-      createdByUserId: 1,
-      createdByUsername: 'admin',
-      progressPercentage: 100,
-      lastActivityTime: '2023-05-20T15:30:00',
-      resumeCount: 0,
-      answerRepeatCount: 3,
-      totalRuns: 100,
-      pendingRuns: 0,
-      completedRuns: 100,
-      failedRuns: 0
-    },
-    {
-      id: 2,
-      name: '批次测试 - Claude 3',
-      description: 'Claude 3模型测试批次',
-      datasetVersionId: 1,
-      datasetVersionName: '测试数据集 v1.0',
-      status: BatchStatus.GENERATING_ANSWERS,
-      creationTime: '2023-05-21T10:15:00',
-      answerAssemblyConfigId: 1,
-      globalParameters: { param1: 'value1', param2: 'value2' },
-      createdByUserId: 1,
-      createdByUsername: 'admin',
-      progressPercentage: 75,
-      lastActivityTime: '2023-05-21T11:30:00',
-      resumeCount: 0,
-      answerRepeatCount: 3,
-      totalRuns: 100,
-      pendingRuns: 25,
-      completedRuns: 75,
-      failedRuns: 0
-    },
-    {
-      id: 3,
-      name: '批次测试 - Gemini',
-      description: 'Gemini模型测试批次',
-      datasetVersionId: 2,
-      datasetVersionName: '测试数据集 v2.0',
-      status: BatchStatus.PAUSED,
-      creationTime: '2023-05-22T09:00:00',
-      answerAssemblyConfigId: 2,
-      globalParameters: { param1: 'value1', param2: 'value2' },
-      createdByUserId: 1,
-      createdByUsername: 'admin',
-      progressPercentage: 45,
-      lastActivityTime: '2023-05-22T10:30:00',
-      resumeCount: 1,
-      answerRepeatCount: 2,
-      totalRuns: 80,
-      pendingRuns: 44,
-      completedRuns: 36,
-      failedRuns: 0
-    },
-    {
-      id: 4,
-      name: '批次测试 - Mixtral',
-      description: 'Mixtral模型测试批次',
-      datasetVersionId: 2,
-      datasetVersionName: '测试数据集 v2.0',
-      status: BatchStatus.PENDING,
-      creationTime: '2023-05-23T14:00:00',
-      answerAssemblyConfigId: 2,
-      globalParameters: { param1: 'value1', param2: 'value2' },
-      createdByUserId: 1,
-      createdByUsername: 'admin',
-      progressPercentage: 0,
-      lastActivityTime: '2023-05-23T14:00:00',
-      resumeCount: 0,
-      answerRepeatCount: 1,
-      totalRuns: 50,
-      pendingRuns: 50,
-      completedRuns: 0,
-      failedRuns: 0
-    },
-    {
-      id: 5,
-      name: '批次测试 - Llama 3',
-      description: 'Llama 3模型测试批次',
-      datasetVersionId: 3,
-      datasetVersionName: '测试数据集 v3.0',
-      status: BatchStatus.FAILED,
-      creationTime: '2023-05-24T09:30:00',
-      answerAssemblyConfigId: 1,
-      globalParameters: { param1: 'value1', param2: 'value2' },
-      createdByUserId: 1,
-      createdByUsername: 'admin',
-      progressPercentage: 23,
-      lastActivityTime: '2023-05-24T10:15:00',
-      resumeCount: 0,
-      answerRepeatCount: 3,
-      totalRuns: 100,
-      pendingRuns: 77,
-      completedRuns: 20,
-      failedRuns: 3
-    }
-  ]
+  const userId = userStore.currentUser?.id
+  if (!userId) {
+    ElMessage.error('用户未登录')
+    return
+  }
+
+  loading.value = true
+  try {
+    const response = await getUserAnswerGenerationBatches(userId, {
+      page: 0,
+      size: 100,
+      status: filterStatus.value as BatchStatus || undefined
+    })
+
+    batches.value = response|| []
+
+    // 更新统计信息
+    statistics.value.totalBatches = batches.value.length
+    statistics.value.runningBatches = batches.value.filter(
+      batch => batch.status === BatchStatus.GENERATING_ANSWERS
+    ).length
+    statistics.value.completedBatches = batches.value.filter(
+      batch => batch.status === BatchStatus.COMPLETED
+    ).length
+    statistics.value.totalAnswers = batches.value.reduce(
+      (sum, batch) => sum + (batch.completedRuns || 0),
+      0
+    )
+  } catch (error) {
+    ElMessage.error('加载批次列表失败: ' + (error instanceof Error ? error.message : '未知错误'))
+    batches.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 // 返回上一页
@@ -365,17 +301,54 @@ const goBack = () => {
 }
 
 // 处理WebSocket批次状态更新
-const handleBatchStatusUpdate = (data: BatchStatusUpdateData) => {
-  if (!data || !data.batchId) return
+const handleBatchStatusUpdate = (data: WebSocketMessage['payload']) => {
+  if (!data.batchId) return
 
   // 查找并更新批次状态
   const batchIndex = batches.value.findIndex(b => b.id === data.batchId)
   if (batchIndex >= 0) {
-    batches.value[batchIndex] = {
-      ...batches.value[batchIndex],
-      ...data,
-      status: data.status as BatchStatus
+    // 更新批次信息
+    const updatedBatch = {
+      ...batches.value[batchIndex]
     }
+
+    // 更新状态（如果有）
+    if (data.status) {
+      updatedBatch.status = data.status
+    }
+
+    // 更新进度信息（如果有）
+    if (data.progressPercentage !== undefined) {
+      updatedBatch.progressPercentage = data.progressPercentage
+    }
+    if (data.completedRuns !== undefined) {
+      updatedBatch.completedRuns = data.completedRuns
+    }
+    if (data.pendingRuns !== undefined) {
+      updatedBatch.pendingRuns = data.pendingRuns
+    }
+    if (data.failedRuns !== undefined) {
+      updatedBatch.failedRuns = data.failedRuns
+    }
+    if (data.lastActivityTime) {
+      updatedBatch.lastActivityTime = data.lastActivityTime
+    }
+
+    // 更新批次
+    batches.value[batchIndex] = updatedBatch
+
+    // 更新统计信息
+    statistics.value.totalBatches = batches.value.length
+    statistics.value.runningBatches = batches.value.filter(
+      batch => batch.status === BatchStatus.GENERATING_ANSWERS
+    ).length
+    statistics.value.completedBatches = batches.value.filter(
+      batch => batch.status === BatchStatus.COMPLETED
+    ).length
+    statistics.value.totalAnswers = batches.value.reduce(
+      (sum, batch) => sum + (batch.completedRuns || 0),
+      0
+    )
   }
 }
 
@@ -386,46 +359,49 @@ const setupWebSocketListeners = () => {
     wsStore.connect()
   }
 
+  // 订阅批次状态更新
+  wsStore.subscribeToBatchUpdates()
+
   // 监听批次状态更新消息
   const unsubscribe = watch(() => wsStore.messages, (newMessages, oldMessages) => {
     if (!newMessages || newMessages.length === 0) return
-    if (!oldMessages || oldMessages.length === 0) {
-      // 首次获取消息，检查所有消息
-      newMessages.forEach((msg) => {
-        if (msg.type === WebSocketMessageType.STATUS_CHANGE ||
-            msg.type === WebSocketMessageType.TASK_COMPLETED ||
-            msg.type === WebSocketMessageType.TASK_FAILED) {
-          handleBatchStatusUpdate(msg.data as BatchStatusUpdateData)
-        }
-      })
-      return
-    }
 
-    // 只处理新增的消息
-    const newlyAddedMessages = newMessages.slice(oldMessages.length)
-    newlyAddedMessages.forEach((msg) => {
+    const processMessage = (msg: WebSocketMessage) => {
       if (msg.type === WebSocketMessageType.STATUS_CHANGE ||
+          msg.type === WebSocketMessageType.PROGRESS_UPDATE ||
           msg.type === WebSocketMessageType.TASK_COMPLETED ||
           msg.type === WebSocketMessageType.TASK_FAILED) {
-        handleBatchStatusUpdate(msg.data as BatchStatusUpdateData)
+        handleBatchStatusUpdate(msg.payload)
       }
-    })
+    }
+
+    if (!oldMessages || oldMessages.length === 0) {
+      // 首次获取消息，处理所有消息
+      newMessages.forEach(processMessage)
+    } else {
+      // 只处理新增的消息
+      const newlyAddedMessages = newMessages.slice(oldMessages.length)
+      newlyAddedMessages.forEach(processMessage)
+    }
   }, { deep: true })
 
-  // 返回取消订阅函数
-  return unsubscribe
+  return () => {
+    unsubscribe()
+    wsStore.unsubscribeFromBatchUpdates()
+  }
 }
 
-onMounted(() => {
+// 组件挂载时
+onMounted(async () => {
   // 加载批次列表
-  loadBatches()
+  await loadBatches()
 
   // 设置WebSocket监听
-  const unsubscribe = setupWebSocketListeners()
+  const cleanup = setupWebSocketListeners()
 
-  // 组件卸载时取消订阅
+  // 组件卸载时清理
   onUnmounted(() => {
-    unsubscribe()
+    cleanup()
   })
 })
 </script>

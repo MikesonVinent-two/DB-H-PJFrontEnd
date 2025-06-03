@@ -247,8 +247,9 @@ const statistics = reactive({
 
 // 过滤后的批次列表
 const filteredBatches = computed(() => {
-  if (!filterStatus.value) return batches.value
-  return batches.value.filter(batch => batch.status === filterStatus.value)
+  const batchList = batches.value || []
+  if (!filterStatus.value) return batchList
+  return batchList.filter(batch => batch.status === filterStatus.value)
 })
 
 // 格式化日期
@@ -359,10 +360,11 @@ const refreshBatches = async () => {
       size: 100,
       status: filterStatus.value as BatchStatus || undefined
     })
-    batches.value = response.batches
+    batches.value = response || []
     updateStatistics()
   } catch (error) {
     ElMessage.error('加载批次列表失败: ' + (error instanceof Error ? error.message : '未知错误'))
+    batches.value = []
   } finally {
     loading.value = false
   }
@@ -370,23 +372,16 @@ const refreshBatches = async () => {
 
 // 更新统计数据
 const updateStatistics = () => {
-  // 确保 batches.value 存在
-  if (!batches.value) {
-    statistics.totalBatches = 0
-    statistics.runningBatches = 0
-    statistics.completedBatches = 0
-    statistics.totalAnswers = 0
-    return
-  }
+  const batchList = batches.value || []
 
-  statistics.totalBatches = batches.value.length
-  statistics.runningBatches = batches.value.filter(
+  statistics.totalBatches = batchList.length
+  statistics.runningBatches = batchList.filter(
     batch => batch.status === BatchStatus.GENERATING_ANSWERS
   ).length
-  statistics.completedBatches = batches.value.filter(
+  statistics.completedBatches = batchList.filter(
     batch => batch.status === BatchStatus.COMPLETED
   ).length
-  statistics.totalAnswers = batches.value.reduce(
+  statistics.totalAnswers = batchList.reduce(
     (sum, batch) => sum + (batch.completedRuns || 0),
     0
   )
@@ -395,7 +390,10 @@ const updateStatistics = () => {
 // 处理WebSocket批次状态更新
 const handleBatchStatusUpdate = (data: BatchStatusUpdateData) => {
   if (!data || !data.batchId) return
-  if (!batches.value) return
+
+  if (!Array.isArray(batches.value)) {
+    batches.value = []
+  }
 
   const batchIndex = batches.value.findIndex(b => b.id === data.batchId)
   if (batchIndex >= 0) {
@@ -432,7 +430,6 @@ const setupWebSocketListeners = () => {
       return
     }
 
-    // 确保 oldMessages 存在且有 length 属性
     const oldLength = oldMessages ? oldMessages.length : 0
     const newlyAddedMessages = newMessages.slice(oldLength)
 

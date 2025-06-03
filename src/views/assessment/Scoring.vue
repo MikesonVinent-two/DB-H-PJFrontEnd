@@ -30,7 +30,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Tools } from '@element-plus/icons-vue'
+import { Tools, Refresh } from '@element-plus/icons-vue'
 
 // 状态
 const loading = ref(false)

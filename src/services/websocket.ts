@@ -1,14 +1,20 @@
 import { Client } from '@stomp/stompjs'
-import SockJS from 'sockjs-client'
 import { appConfig } from '@/config'
 import { ref } from 'vue'
 import {
   WebSocketConnectionStatus,
-  WebSocketMessageType
-} from '@/types/websocketTypes'
-import type {
-  WebSocketConfig,
-  WebSocketMessage
+  WebSocketMessageType,
+  WebSocketTopic,
+  WebSocketDestination,
+  type WebSocketConfig,
+  type WebSocketMessage,
+  type ProgressUpdateMessage,
+  type StatusChangeMessage,
+  type ErrorMessage,
+  type NotificationMessage,
+  type BatchesStatusMessage,
+  type BatchInfo,
+  BatchStatus
 } from '@/types/websocketTypes'
 
 // WebSocket服务类
@@ -101,9 +107,13 @@ class WebSocketService {
       console.log(`正在连接WebSocket服务器: ${url}`)
 
       try {
-        // 创建STOMP客户端
+        // 创建STOMP客户端，使用原生WebSocket
         this.client = new Client({
-          webSocketFactory: () => new SockJS(url),
+          webSocketFactory: () => {
+            // 将 http:// 或 https:// 替换为 ws:// 或 wss://
+            const wsUrl = url.replace(/^http(s)?:\/\//, 'ws$1://')
+            return new WebSocket(wsUrl)
+          },
           connectHeaders: {
             // 可以在这里添加认证信息
             //Authorization: `Bearer ${localStorage.getItem(appConfig.storage.tokenKey)}`
@@ -128,8 +138,8 @@ class WebSocketService {
           // 发送连接成功消息
           this.addMessage({
             type: WebSocketMessageType.CONNECTION_ESTABLISHED,
-            data: { message: 'WebSocket连接已建立' },
-            timestamp: Date.now()
+            payload: { message: 'WebSocket连接已建立' },
+            timestamp: new Date().toISOString()
           })
 
           // 订阅全局消息
@@ -168,8 +178,8 @@ class WebSocketService {
           // 发送连接断开消息
           this.addMessage({
             type: WebSocketMessageType.CONNECTION_CLOSED,
-            data: { message: 'WebSocket连接已断开' },
-            timestamp: Date.now()
+            payload: { message: 'WebSocket连接已断开' },
+            timestamp: new Date().toISOString()
           })
 
           // 只有在非手动断开的情况下才尝试重连
@@ -239,8 +249,8 @@ class WebSocketService {
             if (prevStatus === WebSocketConnectionStatus.CONNECTED) {
               this.addMessage({
                 type: WebSocketMessageType.CONNECTION_CLOSED,
-                data: { message: 'WebSocket连接已手动断开' },
-                timestamp: Date.now()
+                payload: { message: 'WebSocket连接已手动断开' },
+                timestamp: new Date().toISOString()
               })
             }
 
@@ -285,14 +295,16 @@ class WebSocketService {
     if (!this.client || !this.client.connected) return
 
     // 订阅全局消息主题
-    const subscription = this.client.subscribe('/topic/global', (message) => {
+    const subscription = this.client.subscribe(WebSocketTopic.GLOBAL, (message) => {
       this.handleMessage(message)
     })
 
     this.subscriptions.set('global', subscription)
 
     // 发送订阅确认请求
-    this.send('/app/global/subscribe', {})
+    this.send(WebSocketDestination.GLOBAL_SUBSCRIBE, {
+      timestamp: Date.now()
+    })
     console.log('已订阅全局消息')
   }
 
@@ -452,8 +464,16 @@ class WebSocketService {
       this.messages.value.shift()
     }
 
+    // 确保timestamp是字符串类型
+    const messageWithStringTimestamp = {
+      ...message,
+      timestamp: typeof message.timestamp === 'number'
+        ? new Date(message.timestamp).toISOString()
+        : message.timestamp
+    }
+
     // 添加新消息
-    this.messages.value.push(message)
+    this.messages.value.push(messageWithStringTimestamp)
   }
 
   // 处理接收到的消息
@@ -464,23 +484,37 @@ class WebSocketService {
         return undefined
       }
 
-      const body = JSON.parse(message.body)
-      console.log('收到WebSocket消息:', body)
+      const parsedMessage = JSON.parse(message.body)
+      console.log('收到WebSocket消息:', parsedMessage)
 
       // 确保消息格式正确
-      if (!body || !body.type) {
-        console.error('WebSocket消息格式不正确:', body)
+      if (!parsedMessage || !parsedMessage.type) {
+        console.error('WebSocket消息格式不正确:', parsedMessage)
         return undefined
       }
 
       // 创建消息对象
       const webSocketMessage: WebSocketMessage = {
-        type: body.type as WebSocketMessageType,
-        data: body.data || {},
-        timestamp: body.timestamp || Date.now()
+        type: parsedMessage.type as WebSocketMessageType,
+        payload: parsedMessage.payload || {},
+        timestamp: parsedMessage.timestamp
       }
 
-      // 将消息添加到消息列表，使用addMessage控制数量
+      // 根据消息类型进行特定处理
+      switch (webSocketMessage.type) {
+        case WebSocketMessageType.STATUS_CHANGE:
+          this.handleStatusChange(webSocketMessage.payload)
+          break
+        case WebSocketMessageType.PROGRESS_UPDATE:
+          this.handleProgressUpdate(webSocketMessage.payload)
+          break
+        case WebSocketMessageType.TASK_COMPLETED:
+        case WebSocketMessageType.TASK_FAILED:
+          this.handleTaskUpdate(webSocketMessage.payload)
+          break
+      }
+
+      // 将消息添加到消息列表
       this.addMessage(webSocketMessage)
 
       return webSocketMessage
@@ -488,6 +522,47 @@ class WebSocketService {
       console.error('解析WebSocket消息失败:', error)
       return undefined
     }
+  }
+
+  // 处理状态变更消息
+  private handleStatusChange(data: WebSocketMessage['payload']): void {
+    // 如果是订阅确认消息，直接返回
+    if (data.subscribed) {
+      console.log(data.message || '订阅成功')
+      return
+    }
+
+    // 检查必要字段是否存在
+    const entityId = data.batchId || data.entityId
+    const oldStatus = data.oldStatus
+    const newStatus = data.newStatus
+
+    if (!entityId || !oldStatus || !newStatus) {
+      console.warn('状态变更消息缺少必要字段:', data)
+      return
+    }
+
+    console.log(`实体 ${entityId} 的状态从 ${oldStatus} 变更为 ${newStatus}`)
+  }
+
+  // 处理进度更新消息
+  private handleProgressUpdate(data: WebSocketMessage['payload']): void {
+    if (!data.batchId || data.progressPercentage === undefined) {
+      console.warn('进度更新消息缺少必要字段:', data)
+      return
+    }
+
+    console.log(`批次 ${data.batchId} 的进度: ${data.progressPercentage}%`)
+  }
+
+  // 处理任务更新消息
+  private handleTaskUpdate(data: WebSocketMessage['payload']): void {
+    if (!data.batchId || !data.status) {
+      console.warn('任务更新消息缺少必要字段:', data)
+      return
+    }
+
+    console.log(`批次 ${data.batchId} 的任务状态更新为: ${data.status}`)
   }
 
   // 重连
@@ -528,8 +603,8 @@ class WebSocketService {
     // 发送错误消息
     this.addMessage({
       type: WebSocketMessageType.ERROR,
-      data: { error: errorMessage },
-      timestamp: Date.now()
+      payload: { error: errorMessage },
+      timestamp: new Date().toISOString()
     })
 
     // 尝试重连
@@ -613,6 +688,129 @@ class WebSocketService {
       reconnectAttempts: this.reconnectAttempts,
       lastError: this.lastError.value,
       messageCount: this.messages.value.length
+    }
+  }
+
+  // 订阅状态更新消息
+  public subscribeToStatusUpdates(entityId: number): void {
+    if (!this.client || !this.client.connected) {
+      console.error('WebSocket未连接，无法订阅状态更新')
+      return
+    }
+
+    const topicId = `status-${entityId}`
+
+    // 如果已经订阅，先取消订阅
+    if (this.subscriptions.has(topicId)) {
+      this.unsubscribeFromStatusUpdates(entityId)
+    }
+
+    // 订阅状态更新主题
+    const subscription = this.client.subscribe(`${WebSocketTopic.STATUS}/${entityId}`, (message) => {
+      this.handleMessage(message)
+    })
+
+    this.subscriptions.set(topicId, subscription)
+    console.log(`已订阅实体 ${entityId} 的状态更新`)
+  }
+
+  // 取消订阅状态更新消息
+  public unsubscribeFromStatusUpdates(entityId: number): void {
+    const topicId = `status-${entityId}`
+
+    if (this.subscriptions.has(topicId)) {
+      this.subscriptions.get(topicId)?.unsubscribe()
+      this.subscriptions.delete(topicId)
+      console.log(`已取消订阅实体 ${entityId} 的状态更新`)
+    }
+  }
+
+  // 订阅进度更新消息
+  public subscribeToProgressUpdates(runId: number): void {
+    if (!this.client || !this.client.connected) {
+      console.error('WebSocket未连接，无法订阅进度更新')
+      return
+    }
+
+    const topicId = `progress-${runId}`
+
+    // 如果已经订阅，先取消订阅
+    if (this.subscriptions.has(topicId)) {
+      this.unsubscribeFromProgressUpdates(runId)
+    }
+
+    // 订阅进度更新主题
+    const subscription = this.client.subscribe(`${WebSocketTopic.PROGRESS}/${runId}`, (message) => {
+      this.handleMessage(message)
+    })
+
+    this.subscriptions.set(topicId, subscription)
+    console.log(`已订阅运行 ${runId} 的进度更新`)
+  }
+
+  // 取消订阅进度更新消息
+  public unsubscribeFromProgressUpdates(runId: number): void {
+    const topicId = `progress-${runId}`
+
+    if (this.subscriptions.has(topicId)) {
+      this.subscriptions.get(topicId)?.unsubscribe()
+      this.subscriptions.delete(topicId)
+      console.log(`已取消订阅运行 ${runId} 的进度更新`)
+    }
+  }
+
+  // 订阅错误消息
+  public subscribeToErrors(): void {
+    if (!this.client || !this.client.connected) {
+      console.error('WebSocket未连接，无法订阅错误消息')
+      return
+    }
+
+    // 订阅错误消息主题
+    const subscription = this.client.subscribe(WebSocketTopic.ERRORS, (message) => {
+      this.handleMessage(message)
+    })
+
+    this.subscriptions.set('errors', subscription)
+    console.log('已订阅错误消息')
+  }
+
+  // 订阅所有批次状态
+  public subscribeToAllBatches(): void {
+    if (!this.client || !this.client.connected) {
+      console.error('WebSocket未连接，无法订阅批次状态')
+      return
+    }
+
+    const topicId = 'batches-all'
+
+    // 如果已经订阅，先取消订阅
+    if (this.subscriptions.has(topicId)) {
+      this.unsubscribeFromAllBatches()
+    }
+
+    // 订阅所有批次状态主题
+    const subscription = this.client.subscribe(WebSocketTopic.BATCHES_ALL, (message) => {
+      this.handleMessage(message)
+    })
+
+    this.subscriptions.set(topicId, subscription)
+
+    // 发送订阅确认请求
+    this.send(WebSocketDestination.BATCHES_ALL_SUBSCRIBE, {
+      timestamp: Date.now()
+    })
+    console.log('已订阅所有批次状态')
+  }
+
+  // 取消订阅所有批次状态
+  public unsubscribeFromAllBatches(): void {
+    const topicId = 'batches-all'
+
+    if (this.subscriptions.has(topicId)) {
+      this.subscriptions.get(topicId)?.unsubscribe()
+      this.subscriptions.delete(topicId)
+      console.log('已取消订阅所有批次状态')
     }
   }
 }

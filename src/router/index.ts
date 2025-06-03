@@ -204,77 +204,39 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
 
-  // 评测功能
+  // 评测工作台
   {
-    path: '/evaluation/batch-evaluation',
-    name: 'batch-evaluation',
-    component: () => import('../views/evaluator/BatchEvaluation.vue'),
+    path: '/assessment/workbench',
+    name: 'assessment-workbench',
+    component: () => import('../views/assessment/AssessmentWorkbench.vue'),
     meta: {
       requiresAuth: true,
-      title: '批次评测',
-      roles: ['ADMIN', 'ANNOTATOR', 'EXPERT'],
+      title: '评测工作台',
+      roles: ['ADMIN'],
       requiresEvaluator: true
-    }
-  },
-  {
-    path: '/admin/batch-monitor',
-    name: 'batch-monitor',
-    component: () => import('../views/admin/BatchMonitorView.vue'),
-    meta: {
-      requiresAuth: true,
-      title: '批次实时监控',
-      roles: ['ADMIN']
-    }
-  },
-  {
-    path: '/runtime/answer-generation-batches',
-    name: 'answer-generation-batches',
-    component: () => import('../views/runtime/AnswerGenerationBatchesView.vue'),
-    meta: {
-      requiresAuth: true,
-      title: '回答生成批次',
-      roles: ['ADMIN', 'ANNOTATOR']
-    }
-  },
-  {
-    path: '/runtime/answer-batch-dashboard',
-    name: 'answer-batch-dashboard',
-    component: () => import('../views/runtime/AnswerBatchDashboardView.vue'),
-    meta: {
-      requiresAuth: true,
-      title: '回答批次仪表盘',
-      roles: ['ADMIN', 'ANNOTATOR']
-    }
-  },
-  {
-    path: '/runtime/create-answer-batch',
-    name: 'create-answer-batch',
-    component: () => import('../views/runtime/CreateAnswerBatchView.vue'),
-    meta: {
-      requiresAuth: true,
-      title: '创建回答生成批次',
-      roles: ['ADMIN', 'ANNOTATOR']
-    }
-  },
-  {
-    path: '/evaluation/evaluations',
-    name: 'evaluations',
-    component: () => import('../views/evaluator/Evaluations.vue'),
-    meta: {
-      requiresAuth: true,
-      title: '评测管理',
-      roles: ['ADMIN']
-    }
-  },
-  {
-    path: '/evaluation/scoring',
-    name: 'scoring',
-    component: () => import('../views/evaluator/Scoring.vue'),
-    meta: {
-      requiresAuth: true,
-      title: '评分管理',
-      roles: ['ADMIN']
-    }
+    },
+    children: [
+      {
+        path: '/assessment/evaluations',
+        name: 'evaluations',
+        component: () => import('../views/assessment/Evaluations.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '评测管理',
+          roles: ['ADMIN']
+        }
+      },
+      {
+        path: '/assessment/scoring',
+        name: 'scoring',
+        component: () => import('../views/assessment/Scoring.vue'),
+        meta: {
+          requiresAuth: true,
+          title: '评分管理',
+          roles: ['ADMIN']
+        }
+      }
+    ]
   },
 
   // 评审员工作台

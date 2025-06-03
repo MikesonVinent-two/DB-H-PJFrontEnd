@@ -131,16 +131,23 @@
         <el-form-item v-if="form.evaluatorType === EvaluatorType.HUMAN" label="关联用户" prop="userId">
           <el-select
             v-model="form.userId"
-            placeholder="请选择用户"
+            placeholder="请输入用户名或姓名搜索"
             filterable
             remote
-            :remote-method="searchUsers"
-            :loading="isLoadingUsers">
+            :remote-method="handleUserSearch"
+            :loading="isLoadingUsers"
+            clearable>
             <el-option
               v-for="user in userOptions"
               :key="user.id"
-              :label="`${user.username}(${user.name || '未设置姓名'})`"
-              :value="user.id" />
+              :label="user.name ? `${user.username}(${user.name})` : user.username"
+              :value="user.id">
+              <div class="user-option">
+                <span>{{ user.username }}</span>
+                <span v-if="user.name" class="user-name">({{ user.name }})</span>
+                <el-tag size="small" class="user-role">{{ user.role }}</el-tag>
+              </div>
+            </el-option>
           </el-select>
         </el-form-item>
 
@@ -187,6 +194,7 @@ import {
 } from '@/api/evaluator'
 import { useUserStore } from '@/stores/user'
 import { getRegisteredLlmModels, type ModelInfo } from '@/api/llmModel'
+import { searchUsers, type UserInfo, type UserSearchParams } from '@/api/user'
 import type { FormInstance, FormRules } from 'element-plus'
 
 // 评测员列表
@@ -215,10 +223,13 @@ const currentEditId = ref<number | null>(null)
 const formRef = ref<FormInstance | null>(null)
 
 // 用户和模型选项
-const userOptions = ref<any[]>([])
+const userOptions = ref<UserInfo[]>([])
 const modelOptions = ref<ModelInfo[]>([])
 const isLoadingUsers = ref(false)
 const isLoadingModels = ref(false)
+
+// 用户搜索相关
+const userSearchTimeout = ref<number | null>(null)
 
 // 表单数据
 const form = reactive({
@@ -317,7 +328,10 @@ const showEditDialog = (row: EvaluatorInfo) => {
     userOptions.value = [{
       id: row.user.id,
       username: '用户ID: ' + row.user.id,
-      name: ''
+      name: '',
+      contactInfo: row.user.contactInfo || '',
+      createdAt: row.user.createdAt || new Date().toISOString(),
+      updatedAt: row.user.updatedAt || new Date().toISOString()
     }]
   } else if (row.evaluatorType === EvaluatorType.AI_MODEL && row.llmModel) {
     form.modelId = row.llmModel.id
@@ -351,32 +365,44 @@ const handleFormTypeChange = () => {
 }
 
 // 搜索用户
-const searchUsers = async (query: string) => {
-  if (query.trim() === '') return
-
-  try {
-    isLoadingUsers.value = true
-    // 这里应该调用搜索用户的API，但示例中没有提供，所以使用模拟数据
-    // 在实际应用中，您需要替换为真实的API调用
-
-    // 模拟的API请求延迟
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // 模拟的搜索结果
-    userOptions.value = [
-      { id: 1, username: 'admin', name: '管理员' },
-      { id: 2, username: 'curator', name: '策展人' },
-      { id: 3, username: 'annotator', name: '标注员' }
-    ].filter(user =>
-      user.username.toLowerCase().includes(query.toLowerCase()) ||
-      (user.name && user.name.includes(query))
-    )
-  } catch (error) {
-    console.error('搜索用户失败:', error)
-    ElMessage.error('搜索用户失败')
-  } finally {
-    isLoadingUsers.value = false
+const handleUserSearch = async (query: string) => {
+  if (query.length < 2) {
+    userOptions.value = []
+    return
   }
+
+  // 清除之前的定时器
+  if (userSearchTimeout.value) {
+    clearTimeout(userSearchTimeout.value)
+  }
+
+  // 设置新的定时器，防抖处理
+  userSearchTimeout.value = window.setTimeout(async () => {
+    isLoadingUsers.value = true
+    try {
+      const params: UserSearchParams = {
+        keyword: query,
+        page: 0,
+        size: 10
+      }
+      const response = await searchUsers(params)
+      userOptions.value = response.users.map(user => ({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        contactInfo: user.contactInfo || '',
+        createdAt: user.createdAt || new Date().toISOString(),
+        updatedAt: user.updatedAt || new Date().toISOString()
+      }))
+    } catch (error) {
+      console.error('搜索用户失败:', error)
+      ElMessage.error('搜索用户失败')
+      userOptions.value = []
+    } finally {
+      isLoadingUsers.value = false
+    }
+  }, 300)
 }
 
 // 获取模型列表
@@ -558,5 +584,20 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 16px;
+}
+
+.user-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-name {
+  color: #666;
+}
+
+.user-role {
+  margin-left: auto;
+  font-size: 12px;
 }
 </style>
