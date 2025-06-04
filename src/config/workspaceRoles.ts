@@ -293,6 +293,15 @@ export const WORKSPACES = [
     description: '创建新的数据集',
     icon: 'FolderAdd'
   },
+  {
+    id: 'edit-dataset',
+    name: '编辑数据集',
+    type: WORKSPACE_TYPES.DATASET,
+    path: '/dataset/edit/:id',
+    roles: [ROLES.ADMIN, ROLES.CURATOR],
+    description: '编辑数据集',
+    icon: 'Edit'
+  },
 
   // 运行工作台
   {
@@ -400,8 +409,10 @@ export const getAccessibleWorkspaces = (userRole: string, isEvaluator = false): 
   })
 }
 
-// 工作台类型名称映射
-const workspaceTypeNames = {
+/**
+ * 工作台类型名称映射
+ */
+export const workspaceTypeNames = {
   [WORKSPACE_TYPES.DATA]: '数据管理',
   [WORKSPACE_TYPES.STANDARDIZATION]: '标准化工作台',
   [WORKSPACE_TYPES.PROMPT]: 'Prompt工作台',
@@ -415,6 +426,43 @@ const workspaceTypeNames = {
   [WORKSPACE_TYPES.RUNTIME]: '运行工作台'
 }
 
+/**
+ * 工作台类型图标名称映射
+ * 注意：这里只定义图标名称，不导入具体组件
+ * 组件需要在使用处导入
+ */
+export const workspaceTypeIconNames = {
+  [WORKSPACE_TYPES.DATA]: 'Collection',
+  [WORKSPACE_TYPES.STANDARDIZATION]: 'EditPen',
+  [WORKSPACE_TYPES.PROMPT]: 'Document',
+  [WORKSPACE_TYPES.EVALUATION]: 'StarFilled',
+  [WORKSPACE_TYPES.ASSESSMENT]: 'DataAnalysis',
+  [WORKSPACE_TYPES.GENERATION]: 'MagicStick',
+  [WORKSPACE_TYPES.SYSTEM]: 'Setting',
+  [WORKSPACE_TYPES.CROWDSOURCE]: 'Briefcase',
+  [WORKSPACE_TYPES.EXPERT]: 'UserFilled',
+  [WORKSPACE_TYPES.DATASET]: 'Files',
+  [WORKSPACE_TYPES.RUNTIME]: 'Connection'
+}
+
+/**
+ * 工作台类型顺序定义（用于控制侧边栏显示顺序）
+ * 数字越小，显示越靠前
+ */
+export const workspaceTypeOrder = {
+  [WORKSPACE_TYPES.SYSTEM]: 1,        // 系统管理最靠前
+  [WORKSPACE_TYPES.DATA]: 2,          // 数据管理
+  [WORKSPACE_TYPES.DATASET]: 3,       // 数据集工作台
+  [WORKSPACE_TYPES.STANDARDIZATION]: 4, // 标准化工作台
+  [WORKSPACE_TYPES.PROMPT]: 5,        // Prompt工作台
+  [WORKSPACE_TYPES.EXPERT]: 6,        // 专家工作台
+  [WORKSPACE_TYPES.EVALUATION]: 7,    // 评审工作台
+  [WORKSPACE_TYPES.ASSESSMENT]: 10,    // 评测工作台
+  [WORKSPACE_TYPES.CROWDSOURCE]:8 ,   // 众包工作台
+  [WORKSPACE_TYPES.RUNTIME]: 9,      // 运行工作台
+  [WORKSPACE_TYPES.GENERATION]: 11    // 生成工作台
+}
+
 export default {
   ROLES,
   WORKSPACE_TYPES,
@@ -422,5 +470,8 @@ export default {
   WORKSPACES_BY_TYPE,
   WORKSPACES_BY_ROLE,
   canAccessWorkspace,
-  getAccessibleWorkspaces
+  getAccessibleWorkspaces,
+  workspaceTypeNames,
+  workspaceTypeIconNames,
+  workspaceTypeOrder
 }

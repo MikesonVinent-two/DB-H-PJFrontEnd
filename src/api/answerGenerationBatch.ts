@@ -223,3 +223,11 @@ export const getUserAnswerGenerationBatches = (
     { params }
   )
 }
+
+/**
+ * 获取所有回答生成批次
+ * @returns 所有回答生成批次列表
+ */
+export const getAllAnswerGenerationBatches = () => {
+  return api.get<unknown, AnswerGenerationBatch[]>(apiUrls.answerGeneration.batches)
+}

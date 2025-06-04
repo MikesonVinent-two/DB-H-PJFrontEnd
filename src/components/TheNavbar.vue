@@ -10,7 +10,7 @@
       <!-- 左侧 Logo 和标题 -->
       <div class="navbar-left">
         <div class="logo-container" @click="router.push('/')" role="button">
-          <img src="@/assets/logo.svg" alt="Logo" class="logo" />
+          <img src="@/assets/llm-logo.svg" alt="LLM评测系统" class="logo" />
           <span class="title">LLM评测系统</span>
         </div>
       </div>
@@ -404,7 +404,11 @@ const handleModelConfig = () => {
   height: var(--navbar-height);
   z-index: 2000;
   background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background-color: rgba(255, 255, 255, 0.95);
+  transition: all 0.3s ease;
 }
 
 .navbar {
@@ -412,8 +416,8 @@ const handleModelConfig = () => {
   height: 100%;
   display: flex;
   justify-content: space-between;
-  background-color: #fff;
-  border-bottom: 1px solid var(--border-color);
+  background-color: transparent;
+  border-bottom: 1px solid rgba(230, 230, 230, 0.7);
   padding: 0;
   margin: 0;
 }
@@ -458,23 +462,84 @@ const handleModelConfig = () => {
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 0 20px;
+  padding: 0 24px;
   height: 100%;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #4F46E5, #3B82F6, #0EA5E9);
+  transform: translateY(3px);
+  transition: transform 0.3s ease;
+}
+
+.logo-container:hover::after {
+  transform: translateY(0);
+}
+
+.logo-container:hover {
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 .logo {
-  height: 32px;
-  margin-right: 10px;
+  height: 36px;
+  margin-right: 14px;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
+  transition: all 0.3s ease;
+}
+
+.logo-container:hover .logo {
+  transform: scale(1.05);
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.2));
 }
 
 .title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
-  color: var(--primary-color);
+  background: linear-gradient(135deg, #4F46E5, #3B82F6, #0EA5E9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  letter-spacing: 0.5px;
 }
 
 .nav-item {
-  padding: 0 12px;
+  padding: 0 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-item::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #4F46E5, #3B82F6, #0EA5E9);
+  transform: translateY(3px);
+  transition: transform 0.3s ease;
+}
+
+.nav-item:hover::after {
+  transform: translateY(0);
+}
+
+:deep(.el-menu--horizontal > .el-menu-item.is-active) {
+  border-bottom: none;
+  color: #4F46E5;
+}
+
+:deep(.el-menu--horizontal > .el-menu-item.is-active)::after {
+  transform: translateY(0);
 }
 
 .nav-button {
@@ -483,27 +548,57 @@ const handleModelConfig = () => {
   align-items: center;
   justify-content: center;
   min-width: 48px;
+  transition: all 0.3s ease;
 }
 
 .nav-text {
-  font-size: 12px;
-  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.nav-item:hover .nav-text {
+  color: #4F46E5;
 }
 
 .auth-item {
-  margin-left: 8px;
+  margin-left: 10px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.auth-item:hover {
+  background-color: rgba(79, 70, 229, 0.1);
 }
 
 .user-dropdown {
-  margin-left: 12px;
+  margin-left: 14px;
   margin-right: 0;
   cursor: pointer;
+  position: relative;
 }
 
 .user-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+}
+
+:deep(.el-avatar) {
+  border: 2px solid transparent;
+  box-sizing: content-box;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+:deep(.el-dropdown:hover .el-avatar) {
+  border-color: rgba(79, 70, 229, 0.3);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
 }
 
 .user-info-header {

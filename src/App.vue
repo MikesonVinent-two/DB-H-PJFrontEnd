@@ -5,7 +5,7 @@ import TheSidebar from '@/components/TheSidebar.vue'
 import { useUserStore } from '@/stores/user'
 import { onMounted, onUnmounted, ref, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import websocketService from '@/services/websocket'
+import { websocketService } from '@/services/websocket'
 
 const userStore = useUserStore()
 const route = useRoute()

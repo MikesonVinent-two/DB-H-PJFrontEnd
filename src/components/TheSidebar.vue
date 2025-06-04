@@ -42,17 +42,17 @@
     </el-menu-item>
 
     <!-- 动态生成工作台菜单 -->
-    <template v-for="(workspaces, type) in accessibleWorkspacesByType" :key="type">
+    <template v-for="type in sortedWorkspaceTypes" :key="type">
       <el-sub-menu :index="type">
         <template #title>
           <el-icon>
-            <component :is="workspaceTypeIcons[type]" />
+            <component :is="getWorkspaceTypeIcon(type)" />
           </el-icon>
-          <span>{{ workspaceTypeNames[type] }}</span>
+          <span>{{ getWorkspaceTypeName(type) }}</span>
         </template>
 
         <el-menu-item
-          v-for="workspace in workspaces"
+          v-for="workspace in accessibleWorkspacesByType[type]"
           :key="workspace.id"
           :index="workspace.id"
         >
@@ -108,7 +108,7 @@ import {
   QuestionFilled,
   Monitor
 } from '@element-plus/icons-vue'
-import { WORKSPACE_TYPES, getAccessibleWorkspaces } from '@/config/workspaceRoles'
+import { WORKSPACE_TYPES, getAccessibleWorkspaces, workspaceTypeNames, workspaceTypeIconNames, workspaceTypeOrder } from '@/config/workspaceRoles'
 
 const router = useRouter()
 const route = useRoute()
@@ -169,35 +169,56 @@ const accessibleWorkspacesByType = computed(() => {
   return result
 })
 
-// 工作台类型名称映射
-const workspaceTypeNames = {
-  [WORKSPACE_TYPES.DATA]: '数据管理',
-  [WORKSPACE_TYPES.STANDARDIZATION]: '标准化工作台',
-  [WORKSPACE_TYPES.PROMPT]: 'Prompt工作台',
-  [WORKSPACE_TYPES.EVALUATION]: '评审工作台',
-  [WORKSPACE_TYPES.ASSESSMENT]: '评测工作台',
-  [WORKSPACE_TYPES.GENERATION]: '生成工作台',
-  [WORKSPACE_TYPES.SYSTEM]: '系统管理',
-  [WORKSPACE_TYPES.CROWDSOURCE]: '众包工作台',
-  [WORKSPACE_TYPES.EXPERT]: '专家工作台',
-  [WORKSPACE_TYPES.DATASET]: '数据集工作台',
-  [WORKSPACE_TYPES.RUNTIME]: '运行工作台'
-}
+// 排序后的工作台类型
+const sortedWorkspaceTypes = computed(() => {
+  // 获取所有可访问的工作台类型
+  const types = Object.keys(accessibleWorkspacesByType.value)
+
+  // 使用workspaceTypeOrder进行排序
+  return types.sort((a, b) => {
+    const orderA = workspaceTypeOrder?.[a] ?? 999
+    const orderB = workspaceTypeOrder?.[b] ?? 999
+    return orderA - orderB
+  })
+})
 
 // 工作台类型图标映射
-const workspaceTypeIcons = {
-  [WORKSPACE_TYPES.DATA]: Collection,
-  [WORKSPACE_TYPES.STANDARDIZATION]: EditPen,
-  [WORKSPACE_TYPES.PROMPT]: Document,
-  [WORKSPACE_TYPES.EVALUATION]: StarFilled,
-  [WORKSPACE_TYPES.ASSESSMENT]: DataAnalysis,
-  [WORKSPACE_TYPES.GENERATION]: MagicStick,
-  [WORKSPACE_TYPES.SYSTEM]: Setting,
-  [WORKSPACE_TYPES.CROWDSOURCE]: Briefcase,
-  [WORKSPACE_TYPES.EXPERT]: UserFilled,
-  [WORKSPACE_TYPES.DATASET]: Files,
-  [WORKSPACE_TYPES.RUNTIME]: Connection
-}
+const workspaceTypeIcons = computed(() => {
+  // 确保所有图标组件都可用
+  const iconMap: Record<string, unknown> = {
+    Collection,
+    EditPen,
+    Document,
+    StarFilled,
+    DataAnalysis,
+    MagicStick,
+    Setting,
+    Briefcase,
+    UserFilled,
+    Files,
+    Connection
+  }
+
+  const result: Record<string, unknown> = {}
+
+  // 确保workspaceTypeIconNames存在并且是对象
+  if (workspaceTypeIconNames && typeof workspaceTypeIconNames === 'object') {
+    // 遍历工作台类型图标名称映射
+    Object.keys(workspaceTypeIconNames).forEach(type => {
+      // 使用类型断言来避免TypeScript错误
+      const iconName = (workspaceTypeIconNames as Record<string, string>)[type]
+      // 确保iconName是字符串并且在iconMap中存在
+      if (typeof iconName === 'string' && iconName in iconMap) {
+        result[type] = iconMap[iconName]
+      } else {
+        // 默认使用Collection图标
+        result[type] = Collection
+      }
+    })
+  }
+
+  return result
+})
 
 // 定义事件
 const emit = defineEmits(['collapse-change'])
@@ -337,6 +358,21 @@ watch(
   },
   { deep: true }
 )
+
+// 获取工作台类型图标
+const getWorkspaceTypeIcon = (type: string) => {
+  return workspaceTypeIcons.value[type] || Collection
+}
+
+// 获取工作台类型名称
+const getWorkspaceTypeName = (type: string) => {
+  // 确保workspaceTypeNames存在并且是对象
+  if (workspaceTypeNames && typeof workspaceTypeNames === 'object') {
+    // 使用类型断言来避免TypeScript错误
+    return (workspaceTypeNames as Record<string, string>)[type] || type
+  }
+  return type
+}
 </script>
 
 <style scoped>

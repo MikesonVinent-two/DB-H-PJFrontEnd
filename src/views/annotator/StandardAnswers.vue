@@ -292,7 +292,7 @@ import { getQuestionsWithoutAnswers, getQuestionOriginalData, createStandardAnsw
 import { getCrowdsourcedAnswersByQuestion } from '@/api/crowdsourcedAnswer'
 import { getExpertAnswersByQuestion } from '@/api/expertAnswer'
 import { getStandardQuestions } from '@/api/standardQuestions'
-import websocketService from '@/services/websocket'
+import { websocketService } from '@/services/websocket'
 import { WebSocketMessageType } from '@/types/websocketTypes'
 
 // 引入接口类型

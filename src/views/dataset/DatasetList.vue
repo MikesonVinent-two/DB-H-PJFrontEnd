@@ -195,11 +195,11 @@
       </div>
       <div v-else-if="!datasetQuestions.length" class="empty-container">
         <el-empty description="此数据集暂无问题" />
-        <el-button type="primary" @click="goToEditDataset(currentDatasetVersion?.id || 0)">添加问题</el-button>
+        <el-button type="primary" @click="currentDatasetVersion?.id ? goToEditDataset(currentDatasetVersion.id) : ElMessage.error('数据集ID不存在')">添加问题</el-button>
       </div>
       <div v-else>
         <div class="dialog-actions">
-          <el-button type="primary" @click="goToEditDataset(currentDatasetVersion?.id || 0)">添加问题</el-button>
+          <el-button type="primary" @click="currentDatasetVersion?.id ? goToEditDataset(currentDatasetVersion.id) : ElMessage.error('数据集ID不存在')">添加问题</el-button>
         </div>
         <el-table :data="datasetQuestions" border stripe style="width: 100%; margin-top: 15px;">
           <el-table-column prop="standardQuestionId" label="问题ID" width="80" />
@@ -351,7 +351,11 @@ const goToCreateDataset = () => {
 
 // 前往编辑数据集页面
 const goToEditDataset = (datasetId: number) => {
-  router.push(`/dataset/edit/${datasetId}`)
+  if (datasetId) {
+    router.push(`/dataset/edit/${datasetId}`)
+  } else {
+    ElMessage.error('数据集ID不存在')
+  }
 }
 
 // 打开编辑对话框

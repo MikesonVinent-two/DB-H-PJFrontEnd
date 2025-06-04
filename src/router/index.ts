@@ -473,6 +473,48 @@ const routes: Array<RouteRecordRaw> = [
       roles: ['ADMIN', 'CURATOR']
     }
   },
+
+  // 运行时工作台路由
+  {
+    path: '/admin/batch-monitor',
+    name: 'batch-monitor',
+    component: () => import('../views/admin/BatchMonitorView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '批次实时监控',
+      roles: ['ADMIN', 'ANNOTATOR']
+    }
+  },
+  {
+    path: '/runtime/answer-generation-batches',
+    name: 'answer-generation-batches',
+    component: () => import('../views/runtime/AnswerGenerationBatchesView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '回答生成批次',
+      roles: ['ADMIN', 'ANNOTATOR']
+    }
+  },
+  {
+    path: '/runtime/answer-batch-dashboard',
+    name: 'answer-batch-dashboard',
+    component: () => import('../views/runtime/AnswerBatchDashboardView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '回答批次仪表盘',
+      roles: ['ADMIN', 'ANNOTATOR']
+    }
+  },
+  {
+    path: '/runtime/create-answer-batch',
+    name: 'create-answer-batch',
+    component: () => import('../views/runtime/CreateAnswerBatchView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '创建回答批次',
+      roles: ['ADMIN', 'ANNOTATOR']
+    }
+  },
 ]
 
 // 创建路由实例

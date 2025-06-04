@@ -152,6 +152,8 @@ import { sendChatRequest, createDefaultChatRequest } from '@/api/llm'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useLLMStore } from '@/stores/llm'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github.css' // 导入GitHub风格的代码高亮样式
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -233,19 +235,47 @@ const removeThinking = (content: string): string => {
   return content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
 }
 
+// 配置marked以使用highlight.js进行代码高亮
+onMounted(() => {
+  // 初始欢迎消息
+  messages.value.push({
+    role: 'assistant',
+    content: '你好！我是AI助手，有什么我可以帮你的吗？',
+    timestamp: Date.now()
+  })
+
+  // 配置marked使用highlight.js
+  marked.setOptions({
+    highlight: function(code, lang) {
+      const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+      return hljs.highlight(code, { language }).value;
+    },
+    langPrefix: 'hljs language-' // 添加类名前缀
+  });
+
+  // 初始化设置
+  initSettings()
+})
+
 // 渲染思考过程
 const renderThinking = (content: string): string => {
   const thinking = extractThinking(content)
   if (!thinking) return ''
   const html = marked.parse(thinking, { async: false }) as string
-  return DOMPurify.sanitize(html)
+  // 添加代码块语言标签
+  const processedHtml = html.replace(/<pre><code class="hljs language-([a-zA-Z0-9]+)">/g,
+    (match, lang) => `<pre data-lang="${lang}"><code class="hljs language-${lang}">`)
+  return DOMPurify.sanitize(processedHtml)
 }
 
 // 渲染正常内容（排除思考过程）
 const renderContent = (content: string): string => {
   const cleanContent = removeThinking(content)
   const html = marked.parse(cleanContent, { async: false }) as string
-  return DOMPurify.sanitize(html)
+  // 添加代码块语言标签
+  const processedHtml = html.replace(/<pre><code class="hljs language-([a-zA-Z0-9]+)">/g,
+    (match, lang) => `<pre data-lang="${lang}"><code class="hljs language-${lang}">`)
+  return DOMPurify.sanitize(processedHtml)
 }
 
 // 检查是否已配置模型
@@ -374,16 +404,20 @@ const newline = () => {
   userInput.value += '\n'
 }
 
-onMounted(() => {
-  // 初始欢迎消息
+// 清空消息
+const clearMessages = () => {
+  messages.value = []
+  // 添加初始欢迎消息
   messages.value.push({
     role: 'assistant',
     content: '你好！我是AI助手，有什么我可以帮你的吗？',
     timestamp: Date.now()
   })
+}
 
-  // 初始化设置
-  initSettings()
+// 暴露方法给父组件
+defineExpose({
+  clearMessages
 })
 </script>
 
@@ -391,40 +425,61 @@ onMounted(() => {
 .chat-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--navbar-height) - 40px);
+  height: 100%;
   width: 100%;
-  margin: 0 auto;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  background-color: #f5f7fa;
   overflow: hidden;
   position: relative;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .model-selector-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
-  background-color: #f9f9f9;
-  border-bottom: 1px solid #eee;
+  padding: 12px 24px;
+  background-color: #fff;
+  border-bottom: 1px solid #eaedf1;
   z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .current-model {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  background-color: #f9fafc;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #eaedf1;
+  transition: all 0.3s ease;
+}
+
+.current-model:hover {
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
 }
 
 .model-label {
   font-size: 14px;
   color: var(--el-text-color-secondary);
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .model-select {
-  width: 200px;
+  width: 220px;
+}
+
+:deep(.el-select .el-input__wrapper) {
+  background-color: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+:deep(.el-select .el-input__wrapper.is-focus) {
+  box-shadow: none;
 }
 
 .model-option {
@@ -441,19 +496,112 @@ onMounted(() => {
 }
 
 :deep(.el-select-dropdown__item) {
-  padding: 8px 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 4px 6px;
+  transition: all 0.2s ease;
+}
+
+:deep(.el-select-dropdown__item.hover) {
+  background-color: rgba(64, 158, 255, 0.1);
+}
+
+:deep(.el-select-dropdown__item.selected) {
+  background-color: rgba(64, 158, 255, 0.15);
+  color: var(--el-color-primary);
+  font-weight: 600;
 }
 
 :deep(.el-tag) {
   margin-left: 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.model-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.history-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  background-color: #f9fafc;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #eaedf1;
+  transition: all 0.3s ease;
+}
+
+.history-toggle:hover {
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+}
+
+.toggle-label {
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+:deep(.el-switch) {
+  --el-switch-on-color: var(--el-color-primary);
+  --el-switch-off-color: #dcdfe6;
+}
+
+:deep(.el-switch.is-checked .el-switch__core) {
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.history-status {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--el-color-success);
+  display: none;
+  box-shadow: 0 0 0 2px #fff;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(64, 158, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(64, 158, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(64, 158, 255, 0);
+  }
+}
+
+.history-active .history-status {
+  display: block;
+}
+
+.history-count {
+  font-size: 12px;
+  color: var(--el-color-primary);
+  margin-left: 5px;
+  font-weight: 600;
 }
 
 /* 消息容器 */
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  background-color: #f9f9f9;
+  padding: 24px;
+  background-color: #f5f7fa;
+  background-image: radial-gradient(#e6e6e6 1px, transparent 1px);
+  background-size: 20px 20px;
   display: flex;
   flex-direction: column;
   scrollbar-width: thin;
@@ -479,9 +627,15 @@ onMounted(() => {
 
 /* 消息样式 */
 .message-wrapper {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   width: 100%;
   display: block;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .message {
@@ -505,10 +659,15 @@ onMounted(() => {
 
 .avatar-container {
   flex-shrink: 0;
-  margin: 0 10px;
+  margin: 0 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.avatar-container .el-avatar {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 2px solid #fff;
 }
 
 .user-avatar-container {
@@ -516,38 +675,56 @@ onMounted(() => {
 }
 
 .message-bubble {
-  border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border-radius: 16px;
+  padding: 14px 18px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   max-width: calc(100% - 60px);
+  transition: all 0.3s ease;
 }
 
 .user-bubble {
-  background-color: #e8f4ff;
+  background-color: #e1f0ff;
   border: 1px solid #c9e2ff;
-  border-top-right-radius: 2px;
+  border-top-right-radius: 4px;
   margin-left: 0;
   margin-right: 10px;
-  box-shadow: 0 1px 4px rgba(0, 120, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 120, 255, 0.08);
 }
 
 .ai-bubble {
   background-color: #fff;
-  border: 1px solid #eee;
-  border-top-left-radius: 2px;
+  border: 1px solid #eaedf1;
+  border-top-left-radius: 4px;
   margin-left: 10px;
   margin-right: 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* 悬停效果 */
+.message-bubble:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.user-bubble:hover {
+  box-shadow: 0 4px 12px rgba(0, 120, 255, 0.12);
+}
+
+.ai-bubble:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
 .message-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   font-size: 13px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding-bottom: 6px;
 }
 
 .sender-name {
-  font-weight: bold;
+  font-weight: 600;
   color: #333;
 }
 
@@ -564,32 +741,54 @@ onMounted(() => {
 
 /* 思考过程样式 */
 .thinking-process {
-  margin-bottom: 10px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  margin-bottom: 16px;
+  border: 1px solid #e1e4e8;
+  border-radius: 10px;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.thinking-process:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .thinking-header {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
-  background-color: #f5f5f5;
+  padding: 12px 16px;
+  background-color: #f6f8fa;
+  background-image: linear-gradient(to right, #f6f8fa, #eef2f7);
   cursor: pointer;
   font-size: 13px;
-  color: #666;
+  color: #24292e;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid transparent;
+}
+
+.thinking-header:hover {
+  background-color: #eef2f7;
+  background-image: linear-gradient(to right, #eef2f7, #e6ebf2);
 }
 
 .thinking-header .el-icon {
-  margin-right: 5px;
+  margin-right: 8px;
+  color: #0366d6;
+  transition: transform 0.3s ease;
+}
+
+.thinking-header:hover .el-icon {
+  transform: scale(1.1);
 }
 
 .thinking-content {
-  padding: 10px;
-  background-color: #fafafa;
-  border-top: 1px solid #e0e0e0;
+  padding: 16px;
+  background-color: #fafbfc;
+  border-top: 1px solid #e1e4e8;
   font-size: 13px;
-  color: #666;
+  color: #444d56;
+  transition: all 0.3s ease;
 }
 
 .rotate-icon {
@@ -606,23 +805,29 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  margin: 12px 0;
-  padding-left: 60px;
+  margin: 16px 0;
+  padding: 12px 16px;
   color: #666;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(4px);
+  max-width: 200px;
+  margin-left: 60px;
 }
 
 .typing-indicator {
   display: flex;
-  margin-right: 8px;
+  margin-right: 10px;
 }
 
 .typing-indicator span {
   height: 8px;
   width: 8px;
   border-radius: 50%;
-  background-color: #666;
+  background-color: var(--el-color-primary);
   margin: 0 2px;
-  animation: typing 1s infinite ease-in-out;
+  animation: typing 1.2s infinite ease-in-out;
 }
 
 .typing-indicator span:nth-child(1) {
@@ -640,122 +845,334 @@ onMounted(() => {
 @keyframes typing {
   0% {
     transform: translateY(0);
+    opacity: 0.6;
   }
   50% {
-    transform: translateY(-5px);
+    transform: translateY(-6px);
+    opacity: 1;
   }
   100% {
     transform: translateY(0);
+    opacity: 0.6;
   }
 }
 
 /* 输入区域 */
 .input-container {
-  padding: 15px 20px;
-  border-top: 1px solid #eee;
+  padding: 18px 24px;
+  border-top: 1px solid #eaedf1;
   background-color: #fff;
   z-index: 10;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
 }
 
 .input-wrapper {
   display: flex;
   align-items: flex-end;
+  background-color: #f9fafc;
+  border-radius: 12px;
+  padding: 8px;
+  border: 1px solid #eaedf1;
+  transition: all 0.3s ease;
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
 }
 
 .custom-input {
   flex: 1;
 }
 
+:deep(.el-textarea__inner) {
+  border: none;
+  background-color: transparent;
+  box-shadow: none;
+  padding: 8px 12px;
+  resize: none;
+}
+
+:deep(.el-textarea__inner:focus) {
+  box-shadow: none;
+}
+
 .send-button {
   margin-left: 10px;
-  height: 40px;
-  padding: 0 20px;
+  height: 42px;
+  padding: 0 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.send-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
 }
 
 .input-hint {
-  margin-top: 5px;
+  margin-top: 8px;
   font-size: 12px;
-  color: #999;
+  color: #909399;
   text-align: right;
 }
 
 /* Markdown内容样式 */
 .markdown-body {
   font-size: 14px;
+  line-height: 1.7;
+  color: #24292e;
 }
 
 .markdown-body pre {
   background-color: #f6f8fa;
   border-radius: 6px;
-  padding: 12px;
+  padding: 16px;
   overflow-x: auto;
+  margin: 16px 0;
+  border: 1px solid #e1e4e8;
+  position: relative;
+}
+
+/* 代码块语言标签 */
+.markdown-body pre::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 0;
+  right: 0;
+  color: #6a737d;
+  font-size: 12px;
+  padding: 4px 8px;
+  background: #f1f1f1;
+  border-bottom-left-radius: 4px;
+  border-top-right-radius: 4px;
+  text-transform: uppercase;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 }
 
 .markdown-body code {
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 13px;
-  background-color: #f0f0f0;
-  padding: 2px 4px;
+  background-color: rgba(27, 31, 35, 0.05);
+  padding: 3px 6px;
   border-radius: 3px;
 }
 
 .markdown-body pre code {
   background-color: transparent;
   padding: 0;
+  font-size: 13px;
+  color: #24292e;
+  word-break: normal;
+  white-space: pre;
+  display: block;
+  overflow-x: auto;
+  padding-top: 8px;
 }
 
 .markdown-body p {
-  margin: 0 0 10px;
+  margin: 0 0 16px;
 }
 
 .markdown-body ul, .markdown-body ol {
-  padding-left: 20px;
-  margin: 0 0 10px;
+  padding-left: 2em;
+  margin: 8px 0 16px;
+}
+
+.markdown-body li {
+  margin: 4px 0;
 }
 
 .markdown-body h1, .markdown-body h2, .markdown-body h3,
 .markdown-body h4, .markdown-body h5, .markdown-body h6 {
-  margin-top: 16px;
-  margin-bottom: 8px;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
-.model-controls {
-  display: flex;
-  align-items: center;
-  gap: 15px;
+.markdown-body h1 {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #eaecef;
 }
 
-.history-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
+.markdown-body h2 {
+  font-size: 1.3em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #eaecef;
 }
 
-.toggle-label {
-  font-size: 14px;
-  color: var(--el-text-color-secondary);
-  white-space: nowrap;
+.markdown-body h3 {
+  font-size: 1.1em;
 }
 
-.history-status {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--el-color-success);
-  display: none;
+.markdown-body h4 {
+  font-size: 1em;
 }
 
-.history-active .history-status {
+.markdown-body blockquote {
+  margin: 16px 0;
+  padding: 0 16px;
+  color: #6a737d;
+  border-left: 4px solid #dfe2e5;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: 4px;
+  margin: 12px 0;
+}
+
+.markdown-body table {
   display: block;
+  width: 100%;
+  overflow: auto;
+  border-spacing: 0;
+  border-collapse: collapse;
+  margin: 16px 0;
 }
 
-.history-count {
-  font-size: 12px;
-  color: var(--el-color-primary);
-  margin-left: 5px;
+.markdown-body table th {
+  font-weight: 600;
+  padding: 8px 13px;
+  border: 1px solid #dfe2e5;
+  background-color: #f6f8fa;
+}
+
+.markdown-body table td {
+  padding: 8px 13px;
+  border: 1px solid #dfe2e5;
+}
+
+.markdown-body table tr {
+  background-color: #fff;
+  border-top: 1px solid #c6cbd1;
+}
+
+.markdown-body table tr:nth-child(2n) {
+  background-color: #f6f8fa;
+}
+
+.markdown-body hr {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: #e1e4e8;
+  border: 0;
+}
+
+.markdown-body a {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.markdown-body strong {
+  font-weight: 600;
+}
+
+.markdown-body em {
+  font-style: italic;
+}
+
+/* 高亮.js相关样式 */
+.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 0;
+  color: #24292e;
+  background: transparent;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+  color: #d73a49;
+}
+
+.hljs-literal,
+.hljs-number,
+.hljs-tag .hljs-attr,
+.hljs-template-variable,
+.hljs-variable {
+  color: #005cc5;
+}
+
+.hljs-doctag,
+.hljs-string {
+  color: #032f62;
+}
+
+.hljs-section,
+.hljs-selector-id,
+.hljs-title {
+  color: #6f42c1;
+  font-weight: bold;
+}
+
+.hljs-subst {
+  font-weight: normal;
+}
+
+.hljs-type {
+  color: #d73a49;
+  font-weight: bold;
+}
+
+.hljs-class .hljs-title {
+  color: #6f42c1;
+}
+
+.hljs-tag {
+  color: #22863a;
+}
+
+.hljs-name {
+  color: #22863a;
+  font-weight: bold;
+}
+
+.hljs-attribute {
+  color: #005cc5;
+}
+
+.hljs-link,
+.hljs-regexp {
+  color: #032f62;
+}
+
+.hljs-symbol {
+  color: #005cc5;
+}
+
+.hljs-bullet,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-meta,
+.hljs-meta .hljs-string,
+.hljs-selector-attr,
+.hljs-selector-pseudo {
+  color: #e36209;
+}
+
+.hljs-deletion {
+  background: #ffeef0;
+  color: #b31d28;
+}
+
+.hljs-addition {
+  background: #f0fff4;
+  color: #22863a;
 }
 </style>

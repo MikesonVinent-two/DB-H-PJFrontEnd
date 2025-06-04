@@ -41,7 +41,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import websocketService from '@/services/websocket'
+import { websocketService } from '@/services/websocket'
 import { WebSocketConnectionStatus, WebSocketMessageType } from '@/types/websocketTypes'
 import type { WebSocketMessage } from '@/types/websocketTypes'
 
@@ -51,8 +51,14 @@ export default defineComponent({
   setup() {
     // 响应式状态
     const messages = ref<WebSocketMessage[]>([])
-    const connectionStats = ref<any>(null)
+    const connectionStats = ref<{
+      status: WebSocketConnectionStatus,
+      reconnectAttempts: number,
+      lastError: string | null,
+      messageCount: number
+    } | null>(null)
     const batchId = ref<number>(1) // 示例批次ID
+    const isComponentMounted = ref(true) // 跟踪组件是否已挂载
 
     // 创建一个取消监听函数的引用
     let removeConnectionListener: (() => void) | null = null
@@ -96,16 +102,19 @@ export default defineComponent({
 
     // 更新消息列表
     const updateMessages = () => {
+      if (!isComponentMounted.value) return // 组件卸载后不更新
       messages.value = [...websocketService.messages.value]
     }
 
     // 更新连接统计
     const updateStats = () => {
+      if (!isComponentMounted.value) return // 组件卸载后不更新
       connectionStats.value = websocketService.getConnectionStats()
     }
 
     // 连接WebSocket
     const connect = async () => {
+      if (!isComponentMounted.value) return false // 组件卸载后不连接
       const connected = await websocketService.connect()
       if (connected) {
         console.log('连接成功')
@@ -113,16 +122,20 @@ export default defineComponent({
         console.error('连接失败')
       }
       updateStats()
+      return connected
     }
 
     // 断开连接
     const disconnect = async () => {
       await websocketService.disconnect()
-      updateStats()
+      if (isComponentMounted.value) {
+        updateStats()
+      }
     }
 
     // 订阅全局消息
     const subscribeToGlobal = () => {
+      if (!isComponentMounted.value) return // 组件卸载后不订阅
       // 全局消息已在连接时自动订阅，这里只是一个演示按钮
       websocketService.send('/app/global/subscribe', {})
       addLocalMessage('已发送全局订阅请求')
@@ -130,12 +143,14 @@ export default defineComponent({
 
     // 订阅批次消息
     const subscribeToBatch = () => {
+      if (!isComponentMounted.value) return // 组件卸载后不订阅
       websocketService.subscribeToBatchUpdates(batchId.value)
       addLocalMessage(`已订阅批次 ${batchId.value} 消息`)
     }
 
     // 发送测试消息
     const sendTestMessage = () => {
+      if (!isComponentMounted.value) return // 组件卸载后不发送
       const testMessage = {
         content: '测试消息',
         timestamp: Date.now()
@@ -151,28 +166,28 @@ export default defineComponent({
 
     // 添加本地消息（不经过WebSocket，仅用于UI显示）
     const addLocalMessage = (text: string) => {
+      if (!isComponentMounted.value) return // 组件卸载后不添加
       messages.value.push({
         type: WebSocketMessageType.CONNECTION_ESTABLISHED,
-        data: { message: text },
-        timestamp: Date.now()
+        payload: { message: text },
+        timestamp: new Date().toISOString()
       })
     }
 
     // 清除消息
     const clearMessages = () => {
+      if (!isComponentMounted.value) return // 组件卸载后不清除
       websocketService.clearMessages()
       updateMessages()
     }
 
     // 格式化消息内容
     const formatMessageContent = (message: WebSocketMessage) => {
-      if (message.data) {
-        if (message.data.message) {
-          return message.data.message
-        } else if (message.data.error) {
-          return `错误: ${message.data.error}`
-        } else {
-          return JSON.stringify(message.data)
+      if (message.payload) {
+        if (message.payload.message) {
+          return message.payload.message
+        } else if (typeof message.payload === 'object' && message.payload !== null) {
+          return JSON.stringify(message.payload)
         }
       }
       return '无内容'
@@ -193,16 +208,20 @@ export default defineComponent({
     }
 
     // 格式化时间戳
-    const formatTime = (timestamp: number) => {
+    const formatTime = (timestamp: string) => {
       return new Date(timestamp).toLocaleTimeString()
     }
 
     // 组件挂载时
     onMounted(() => {
+      isComponentMounted.value = true
+
       // 添加连接状态监听
-      removeConnectionListener = websocketService.addConnectionListener((newStatus) => {
-        updateStats()
-        updateMessages()
+      removeConnectionListener = websocketService.addConnectionListener((_newStatus) => {
+        if (isComponentMounted.value) {
+          updateStats()
+          updateMessages()
+        }
       })
 
       // 初始连接
@@ -212,9 +231,20 @@ export default defineComponent({
 
     // 组件卸载前
     onBeforeUnmount(() => {
+      // 标记组件已卸载
+      isComponentMounted.value = false
+
       // 移除状态监听器
       if (removeConnectionListener) {
         removeConnectionListener()
+        removeConnectionListener = null
+      }
+
+      // 确保不再有批次订阅
+      try {
+        websocketService.unsubscribeFromBatchUpdates(batchId.value)
+      } catch (e) {
+        console.error('取消批次订阅失败:', e)
       }
     })
 

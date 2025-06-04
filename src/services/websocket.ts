@@ -603,7 +603,7 @@ class WebSocketService {
     // 发送错误消息
     this.addMessage({
       type: WebSocketMessageType.ERROR,
-      payload: { error: errorMessage },
+      payload: { message: errorMessage },
       timestamp: new Date().toISOString()
     })
 
@@ -740,7 +740,7 @@ class WebSocketService {
     }
 
     // 订阅进度更新主题
-    const subscription = this.client.subscribe(`${WebSocketTopic.PROGRESS}/${runId}`, (message) => {
+    const subscription = this.client.subscribe(`${WebSocketTopic.RUN_PROGRESS}/${runId}`, (message) => {
       this.handleMessage(message)
     })
 
@@ -817,6 +817,3 @@ class WebSocketService {
 
 // 创建单例实例
 export const websocketService = new WebSocketService()
-
-// 默认导出
-export default websocketService

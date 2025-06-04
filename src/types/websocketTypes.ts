@@ -145,24 +145,40 @@ export interface BatchesStatusMessage {
  * 订阅主题枚举
  */
 export enum WebSocketTopic {
-  GLOBAL = '/topic/global',
-  BATCH = '/topic/batch',
+  // 批次相关
+  BATCH = '/topic/batch',  // 使用时需要拼接批次ID: ${WebSocketTopic.BATCH}/${batchId}
   BATCHES_ALL = '/topic/batches/all',
-  RUN = '/topic/run',
-  STATUS = '/topic/status',
-  PROGRESS = '/topic/progress/run',
-  USER_MESSAGES = '/user',
-  ERRORS = '/queue/errors'
+
+  // 运行相关
+  RUN = '/topic/run',  // 使用时需要拼接运行ID: ${WebSocketTopic.RUN}/${runId}
+  RUN_PROGRESS = '/topic/progress/run',  // 使用时需要拼接运行ID: ${WebSocketTopic.RUN_PROGRESS}/${runId}
+
+  // 全局消息
+  GLOBAL = '/topic/global',
+  ERRORS = '/topic/errors',
+
+  // 状态变更
+  STATUS = '/topic/status',  // 使用时需要拼接实体ID: ${WebSocketTopic.STATUS}/${entityId}
+
+  // 用户消息 - 使用时需要拼接用户ID: /user/${userId}/queue/messages
+  USER_MESSAGES = '/queue/messages'  // 注意：这个会被前缀为 /user/{userId}
 }
 
 /**
  * 消息发送目的地枚举
  */
 export enum WebSocketDestination {
-  BATCH_SUBSCRIBE = '/app/batch',
-  BATCHES_ALL_SUBSCRIBE = '/app/batches/all/subscribe',
-  RUN_SUBSCRIBE = '/app/run',
-  GLOBAL_SUBSCRIBE = '/app/global/subscribe'
+  // 批次订阅
+  BATCH_SUBSCRIBE = '/app/batch',  // 使用时需要拼接批次ID和/subscribe: ${WebSocketDestination.BATCH_SUBSCRIBE}/${batchId}/subscribe
+
+  // 运行订阅
+  RUN_SUBSCRIBE = '/app/run',  // 使用时需要拼接运行ID和/subscribe: ${WebSocketDestination.RUN_SUBSCRIBE}/${runId}/subscribe
+
+  // 全局订阅
+  GLOBAL_SUBSCRIBE = '/app/global/subscribe',
+
+  // 所有批次订阅
+  BATCHES_ALL_SUBSCRIBE = '/app/batches/all/subscribe'
 }
 
 /**

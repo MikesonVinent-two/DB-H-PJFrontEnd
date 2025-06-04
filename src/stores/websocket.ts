@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import websocketService from '@/services/websocket'
+import { websocketService } from '@/services/websocket'
 import {
   WebSocketConnectionStatus,
   WebSocketMessageType
@@ -50,7 +50,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
   }
 
   // 发送消息
-  const send = (destination: string, body: any): boolean => {
+  const send = (destination: string, body: unknown): boolean => {
     return websocketService.send(destination, body)
   }
 
@@ -63,6 +63,21 @@ export const useWebSocketStore = defineStore('websocket', () => {
   // 取消订阅批次状态更新
   const unsubscribeFromBatchUpdates = () => {
     websocketService.unsubscribeFromAllBatches()
+  }
+
+  // 订阅特定批次
+  const subscribeToBatch = (batchId: number) => {
+    if (!isConnected.value) {
+      console.warn('WebSocket未连接，无法订阅批次')
+      return false
+    }
+    websocketService.subscribeToBatchUpdates(batchId)
+    return true
+  }
+
+  // 取消订阅特定批次
+  const unsubscribeFromBatch = (batchId: number) => {
+    websocketService.unsubscribeFromBatchUpdates(batchId)
   }
 
   // 添加消息
@@ -94,6 +109,8 @@ export const useWebSocketStore = defineStore('websocket', () => {
     send,
     subscribeToBatchUpdates,
     unsubscribeFromBatchUpdates,
+    subscribeToBatch,
+    unsubscribeFromBatch,
     getMessagesByType,
     getLatestMessageByType,
     addMessage,

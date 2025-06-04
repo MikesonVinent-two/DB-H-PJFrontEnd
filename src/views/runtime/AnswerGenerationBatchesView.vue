@@ -147,7 +147,7 @@ import {
 import { WebSocketMessageType } from '@/types/websocketTypes'
 import type { BatchStatusUpdateData } from '@/types/websocketTypes'
 import { useUserStore } from '@/stores/user'
-import { getUserAnswerGenerationBatches } from '@/api/answerGenerationBatch'
+import { getUserAnswerGenerationBatches, getAllAnswerGenerationBatches } from '@/api/answerGenerationBatch'
 
 const router = useRouter()
 const wsStore = useWebSocketStore()
@@ -259,21 +259,11 @@ const resumeBatch = async (batchId: number) => {
 
 // 加载批次列表
 const loadBatches = async () => {
-  const userId = userStore.currentUser?.id
-  if (!userId) {
-    ElMessage.error('用户未登录')
-    return
-  }
-
   loading.value = true
   try {
-    const response = await getUserAnswerGenerationBatches(userId, {
-      page: 0,
-      size: 100,
-      status: filterStatus.value as BatchStatus || undefined
-    })
+    const response = await getAllAnswerGenerationBatches()
 
-    batches.value = response|| []
+    batches.value = response || []
 
     // 更新统计信息
     statistics.value.totalBatches = batches.value.length

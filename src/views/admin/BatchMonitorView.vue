@@ -33,10 +33,13 @@
             <template #header>
               <div class="card-header">
                 <h2>批次列表</h2>
+                <el-button type="primary" size="small" @click="fetchBatches" :loading="loading">
+                  刷新
+                </el-button>
               </div>
             </template>
             <div class="batch-list">
-              <el-table :data="recentBatches" style="width: 100%">
+              <el-table :data="recentBatches" style="width: 100%" v-loading="loading">
                 <el-table-column prop="id" label="批次ID" width="80" />
                 <el-table-column prop="name" label="批次名称" />
                 <el-table-column prop="status" label="状态">
@@ -68,6 +71,8 @@
                   </template>
                 </el-table-column>
               </el-table>
+
+              <el-empty v-if="!loading && recentBatches.length === 0" description="暂无批次数据" />
             </div>
           </el-card>
         </el-col>
@@ -81,30 +86,40 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { QuestionFilled, Monitor } from '@element-plus/icons-vue'
 import BatchStatusMonitor from '@/components/BatchStatusMonitor.vue'
-import { BatchStatus } from '@/api/answerGenerationBatch'
+import { BatchStatus, getAllAnswerGenerationBatches, type AnswerGenerationBatch } from '@/api/answerGenerationBatch'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 
-// 模拟批次数据
-const recentBatches = ref([
-  { id: 1, name: '批次测试 - GPT-4', status: 'COMPLETED', progressPercentage: 100 },
-  { id: 2, name: '批次测试 - Claude 3', status: 'GENERATING_ANSWERS', progressPercentage: 75 },
-  { id: 3, name: '批次测试 - Gemini', status: 'PAUSED', progressPercentage: 45 },
-  { id: 4, name: '批次测试 - Mixtral', status: 'PENDING', progressPercentage: 0 },
-  { id: 5, name: '批次测试 - Llama 3', status: 'FAILED', progressPercentage: 23 },
-])
+// 批次数据
+const recentBatches = ref<AnswerGenerationBatch[]>([])
+const loading = ref(false)
+
+// 获取批次数据
+const fetchBatches = async () => {
+  loading.value = true
+  try {
+    const batches = await getAllAnswerGenerationBatches()
+    recentBatches.value = batches
+  } catch (error) {
+    console.error('获取批次数据失败:', error)
+    ElMessage.error('获取批次数据失败')
+  } finally {
+    loading.value = false
+  }
+}
 
 // 获取批次状态类型
 const getBatchStatusType = (status: string) => {
   switch (status) {
-    case 'COMPLETED':
+    case BatchStatus.COMPLETED:
       return 'success'
-    case 'FAILED':
+    case BatchStatus.FAILED:
       return 'danger'
-    case 'PAUSED':
+    case BatchStatus.PAUSED:
       return 'warning'
-    case 'GENERATING_ANSWERS':
-    case 'RESUMING':
+    case BatchStatus.GENERATING_ANSWERS:
+    case BatchStatus.RESUMING:
       return 'primary'
     default:
       return 'info'
@@ -114,12 +129,12 @@ const getBatchStatusType = (status: string) => {
 // 获取批次状态文本
 const getBatchStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
-    'PENDING': '等待中',
-    'GENERATING_ANSWERS': '生成回答中',
-    'COMPLETED': '已完成',
-    'FAILED': '失败',
-    'PAUSED': '已暂停',
-    'RESUMING': '恢复中'
+    [BatchStatus.PENDING]: '等待中',
+    [BatchStatus.GENERATING_ANSWERS]: '生成回答中',
+    [BatchStatus.COMPLETED]: '已完成',
+    [BatchStatus.FAILED]: '失败',
+    [BatchStatus.PAUSED]: '已暂停',
+    [BatchStatus.RESUMING]: '恢复中'
   }
 
   return statusMap[status] || '未知'
@@ -128,11 +143,11 @@ const getBatchStatusText = (status: string) => {
 // 获取批次进度状态
 const getBatchProgressStatus = (status: string) => {
   switch (status) {
-    case 'COMPLETED':
+    case BatchStatus.COMPLETED:
       return 'success'
-    case 'FAILED':
+    case BatchStatus.FAILED:
       return 'exception'
-    case 'PAUSED':
+    case BatchStatus.PAUSED:
       return 'warning'
     default:
       return ''
@@ -158,8 +173,8 @@ const goBack = () => {
 }
 
 onMounted(() => {
-  // 这里可以加载最近的批次数据
-  // loadRecentBatches()
+  // 加载批次数据
+  fetchBatches()
 })
 </script>
 

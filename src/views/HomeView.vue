@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import {
@@ -19,10 +19,19 @@ import {
   View,
   Connection,
   List,
-  Histogram
+  Histogram,
+  User,
+  Cpu,
+  UserFilled,
+  FolderAdd,
+  Monitor,
+  PieChart,
+  Timer,
+  Plus
 } from '@element-plus/icons-vue'
-import websocketService from '@/services/websocket'
+import { websocketService } from '@/services/websocket'
 import { WebSocketConnectionStatus } from '@/types/websocketTypes'
+import { getAccessibleWorkspaces, workspaceTypeNames } from '@/config/workspaceRoles'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -33,10 +42,10 @@ const userRole = computed(() => userStore.currentUser?.role || '')
 const userRoleDisplay = computed(() => {
   const roleMap: Record<string, string> = {
     'ADMIN': '管理员',
-    'CURATOR': '策展人',
+    'CURATOR': '数据管理员',
     'EXPERT': '专家',
     'ANNOTATOR': '标注员',
-    'REFEREE': '审核员',
+    'REFEREE': '评审员',
     'CROWDSOURCE_USER': '众包用户'
   }
   return roleMap[userRole.value] || '未知角色'
@@ -45,6 +54,56 @@ const userRoleDisplay = computed(() => {
 // 评测员信息
 const isEvaluator = computed(() => userStore.currentUser?.isEvaluator || false)
 const evaluatorId = computed(() => userStore.currentUser?.evaluatorId || '-')
+
+// 获取当前用户可访问的工作台
+const accessibleWorkspaces = computed(() => {
+  return getAccessibleWorkspaces(userRole.value, isEvaluator.value)
+})
+
+// 按工作台类型分组
+const workspacesByType = computed(() => {
+  const result: Record<string, Array<{
+    id: string;
+    name: string;
+    type: string;
+    path: string;
+    roles: string[];
+    description: string;
+    icon: string;
+    requiresEvaluator?: boolean;
+    parentId?: string;
+  }>> = {}
+
+  accessibleWorkspaces.value.forEach(workspace => {
+    if (!result[workspace.type]) {
+      result[workspace.type] = []
+    }
+    result[workspace.type].push(workspace)
+  })
+
+  return result
+})
+
+// 获取工作台类型名称
+const getWorkspaceTypeName = (type: string) => {
+  // 确保workspaceTypeNames存在并且是对象
+  if (workspaceTypeNames && typeof workspaceTypeNames === 'object') {
+    // 使用类型断言来避免TypeScript错误
+    return (workspaceTypeNames as Record<string, string>)[type] || type
+  }
+  return type
+}
+
+// 获取图标组件
+const getIconComponent = (iconName: string) => {
+  const iconMap: Record<string, unknown> = {
+    Setting, Files, VideoPlay, DataAnalysis, Collection,
+    QuestionFilled, ChatDotRound, Star, StarFilled, EditPen,
+    Document, TopRight, Check, View, Connection, List, Histogram,
+    User, Cpu, UserFilled, FolderAdd, Monitor, PieChart, Timer, Plus
+  }
+  return iconMap[iconName] || Setting
+}
 
 // WebSocket状态处理
 const wsStatus = computed(() => websocketService.status.value)
@@ -82,8 +141,8 @@ const wsStatusClass = computed(() => {
 })
 
 // 页面导航
-const navigateTo = (routeName: string) => {
-  router.push({ name: routeName })
+const navigateTo = (path: string) => {
+  router.push(path)
 }
 
 // 连接WebSocket
@@ -123,7 +182,7 @@ onBeforeUnmount(() => {
         <el-card class="welcome-card">
           <template #header>
             <div class="card-header">
-              <h2>欢迎使用数据集评测系统</h2>
+              <h2>欢迎使用LLM评测系统</h2>
             </div>
           </template>
           <div class="welcome-content">
@@ -140,7 +199,7 @@ onBeforeUnmount(() => {
     <!-- 通用功能卡片 - 所有用户可见 -->
     <el-row :gutter="20" class="function-row">
       <el-col :xs="24" :sm="12" :md="8" :lg="6">
-        <el-card class="function-card" @click="navigateTo('chat')">
+        <el-card class="function-card" @click="navigateTo('/chat')">
           <el-icon class="card-icon"><ChatDotRound /></el-icon>
           <h3>AI对话</h3>
           <p>与AI助手进行对话交流</p>
@@ -148,182 +207,21 @@ onBeforeUnmount(() => {
       </el-col>
     </el-row>
 
+    <!-- 根据工作台类型分组显示卡片 -->
+    <template v-for="(workspaces, type) in workspacesByType" :key="type">
+      <h2 class="workspace-type-title">{{ getWorkspaceTypeName(type) }}</h2>
     <el-row :gutter="20" class="function-row">
-      <!-- 管理员功能卡片 -->
-      <template v-if="userRole === 'ADMIN'">
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('admin')">
-            <el-icon class="card-icon"><Setting /></el-icon>
-            <h3>管理员控制台</h3>
-            <p>系统管理、用户管理、权限设置</p>
+        <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="workspace in workspaces" :key="workspace.id">
+          <el-card class="function-card" @click="navigateTo(workspace.path)">
+            <el-icon class="card-icon">
+              <component :is="getIconComponent(workspace.icon)" />
+            </el-icon>
+            <h3>{{ workspace.name }}</h3>
+            <p>{{ workspace.description }}</p>
           </el-card>
         </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('admin-datasets')">
-            <el-icon class="card-icon"><Files /></el-icon>
-            <h3>数据集管理</h3>
-            <p>创建和更新数据集版本</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('admin-batch-runs')">
-            <el-icon class="card-icon"><VideoPlay /></el-icon>
-            <h3>批次运行</h3>
-            <p>创建和执行批次运行</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('admin-evaluations')">
-            <el-icon class="card-icon"><DataAnalysis /></el-icon>
-            <h3>评测管理</h3>
-            <p>执行和管理评测任务</p>
-          </el-card>
-        </el-col>
+      </el-row>
       </template>
-
-      <!-- 策展人功能卡片 -->
-      <template v-if="userRole === 'CURATOR' || userRole === 'ADMIN'">
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('curator')">
-            <el-icon class="card-icon"><Collection /></el-icon>
-            <h3>策展工作台</h3>
-            <p>内容管理和策展工作</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('curator-questions')">
-            <el-icon class="card-icon"><QuestionFilled /></el-icon>
-            <h3>原始问题管理</h3>
-            <p>录入和管理原始问题</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('curator-answers')">
-            <el-icon class="card-icon"><ChatDotRound /></el-icon>
-            <h3>原始回答管理</h3>
-            <p>录入和管理原始回答</p>
-          </el-card>
-        </el-col>
-      </template>
-
-      <!-- 专家功能卡片 -->
-      <template v-if="userRole === 'EXPERT' || userRole === 'ADMIN'">
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('expert')">
-            <el-icon class="card-icon"><Star /></el-icon>
-            <h3>专家工作台</h3>
-            <p>专业知识回答管理</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('expert-questions')">
-            <el-icon class="card-icon"><QuestionFilled /></el-icon>
-            <h3>标准问题</h3>
-            <p>查看标准问题列表</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('expert-answers')">
-            <el-icon class="card-icon"><ChatDotRound /></el-icon>
-            <h3>专家回答</h3>
-            <p>提供专业知识回答</p>
-          </el-card>
-        </el-col>
-      </template>
-
-      <!-- 标注员功能卡片 -->
-      <template v-if="userRole === 'ANNOTATOR' || userRole === 'ADMIN'">
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('annotator')">
-            <el-icon class="card-icon"><EditPen /></el-icon>
-            <h3>标注工作台</h3>
-            <p>数据标注和配置管理</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('annotator-prompts')">
-            <el-icon class="card-icon"><Document /></el-icon>
-            <h3>Prompt管理</h3>
-            <p>编写和管理各类Prompt</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('annotator-standardization')">
-            <el-icon class="card-icon"><TopRight /></el-icon>
-            <h3>问题标准化</h3>
-            <p>标准化原始问题</p>
-          </el-card>
-        </el-col>
-      </template>
-
-      <!-- 审核员功能卡片 -->
-      <template v-if="userRole === 'REFEREE' || userRole === 'ADMIN'">
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('referee')">
-            <el-icon class="card-icon"><Check /></el-icon>
-            <h3>审核工作台</h3>
-            <p>内容审核工作</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('referee-crowdsource-review')">
-            <el-icon class="card-icon"><View /></el-icon>
-            <h3>众包回答审核</h3>
-            <p>审核众包用户的回答</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('referee-expert-rating')">
-            <el-icon class="card-icon"><StarFilled /></el-icon>
-            <h3>专家回答评分</h3>
-            <p>为专家回答评分</p>
-          </el-card>
-        </el-col>
-      </template>
-
-      <!-- 众包用户功能卡片 -->
-      <template v-if="userRole === 'CROWDSOURCE_USER' || userRole === 'ADMIN'">
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('crowdsource')">
-            <el-icon class="card-icon"><Connection /></el-icon>
-            <h3>众包工作台</h3>
-            <p>众包任务参与</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('crowdsource-questions')">
-            <el-icon class="card-icon"><QuestionFilled /></el-icon>
-            <h3>标准问题</h3>
-            <p>查看标准问题列表</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('crowdsource-tasks')">
-            <el-icon class="card-icon"><List /></el-icon>
-            <h3>众包任务</h3>
-            <p>参与众包任务</p>
-          </el-card>
-        </el-col>
-      </template>
-
-      <!-- 评测员功能卡片 -->
-      <template v-if="isEvaluator">
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('evaluator')">
-            <el-icon class="card-icon"><DataAnalysis /></el-icon>
-            <h3>评测工作台</h3>
-            <p>大模型回答评测</p>
-          </el-card>
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="8" :lg="6">
-          <el-card class="function-card" @click="navigateTo('evaluator-batch-evaluation')">
-            <el-icon class="card-icon"><Histogram /></el-icon>
-            <h3>批次评测</h3>
-            <p>评测批次回答</p>
-          </el-card>
-        </el-col>
-      </template>
-    </el-row>
 
     <!-- 添加WebSocket连接状态指示器 -->
     <div class="websocket-status-widget">
@@ -393,6 +291,14 @@ onBeforeUnmount(() => {
 
 .evaluator-badge span {
   margin-left: 10px;
+}
+
+.workspace-type-title {
+  margin: 30px 0 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eaeaea;
+  color: #333;
+  font-size: 18px;
 }
 
 .function-row {

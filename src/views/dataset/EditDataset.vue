@@ -1,280 +1,318 @@
 <template>
   <div class="edit-dataset-container">
-    <el-card class="header-card">
+    <!-- 无效ID提示页面 -->
+    <el-card v-if="!isValidId" class="empty-dataset-card">
       <template #header>
         <div class="card-header">
-          <h2>编辑数据集: {{ datasetName }}</h2>
+          <h2>数据集编辑</h2>
           <div class="header-actions">
             <el-button @click="backToList" :icon="Back">
               返回列表
             </el-button>
-            <el-button type="primary" @click="saveChanges" :loading="isSaving">
-              保存更改
-            </el-button>
           </div>
         </div>
       </template>
-
-      <el-form :model="datasetForm" label-width="100px" class="dataset-form">
-        <el-form-item label="版本号">
-          <el-input v-model="datasetForm.versionNumber" disabled />
-        </el-form-item>
-        <el-form-item label="名称">
-          <el-input v-model="datasetForm.name" placeholder="请输入数据集名称" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input
-            v-model="datasetForm.description"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入数据集描述"
-          />
-        </el-form-item>
-      </el-form>
+      <div class="empty-dataset-content">
+        <div class="empty-illustration">
+          <el-empty description="未找到有效的数据集ID" :image-size="200" />
+        </div>
+        <div class="guide-content">
+          <h3 class="guide-title">数据集编辑功能说明</h3>
+          <p class="guide-text">该页面用于编辑数据集中的问题，您可以：</p>
+          <ul class="feature-list">
+            <li><el-icon><Plus /></el-icon> 添加或删除数据集中的问题</li>
+            <li><el-icon><Edit /></el-icon> 修改数据集的基本信息</li>
+            <li><el-icon><Files /></el-icon> 管理数据集版本</li>
+          </ul>
+          <div class="action-buttons">
+            <el-button type="primary" size="large" @click="goToDatasetList">
+              <el-icon><List /></el-icon> 查看数据集列表
+            </el-button>
+            <el-button type="success" size="large" @click="goToCreateDataset">
+              <el-icon><Plus /></el-icon> 创建新数据集
+            </el-button>
+          </div>
+        </div>
+      </div>
     </el-card>
 
-    <!-- 问题管理区域 -->
-    <div class="questions-container">
-      <!-- 左侧：数据集内问题 -->
-      <el-card class="questions-card included-questions">
+    <template v-else>
+      <el-card class="header-card">
         <template #header>
           <div class="card-header">
-            <h3>数据集内问题 ({{ includedQuestions.length }})</h3>
-            <div class="search-container">
-              <el-input
-                v-model="includedKeyword"
-                placeholder="搜索已选问题..."
-                clearable
-                @clear="searchIncludedQuestions"
-                style="width: 200px;"
-              >
-                <template #append>
-                  <el-button :icon="Search" @click="searchIncludedQuestions" />
-                </template>
-              </el-input>
-              <el-button
-                type="danger"
-                :disabled="!selectedIncludedQuestions.length"
-                @click="removeSelectedQuestions"
-              >
-                移除所选 ({{ selectedIncludedQuestions.length }})
+            <h2>编辑数据集: {{ datasetName }}</h2>
+            <div class="header-actions">
+              <el-button @click="backToList" :icon="Back">
+                返回列表
+              </el-button>
+              <el-button type="primary" @click="saveChanges" :loading="isSaving">
+                保存更改
               </el-button>
             </div>
           </div>
         </template>
 
-        <div v-if="isLoadingIncluded" class="loading-container">
-          <el-skeleton :rows="5" animated />
-        </div>
-        <div v-else-if="!displayedIncludedQuestions.length" class="empty-container">
-          <el-empty description="暂无数据集内问题" />
-        </div>
-        <div v-else>
-          <el-table
-            ref="includedTableRef"
-            :data="displayedIncludedQuestions"
-            border
-            stripe
-            style="width: 100%"
-            @selection-change="handleIncludedSelectionChange"
-            height="500"
-            :row-class-name="getIncludedRowClassName"
-          >
-            <el-table-column type="selection" width="55" />
-            <el-table-column prop="id" label="ID" width="80" />
-            <el-table-column prop="questionText" label="问题文本" min-width="250" show-overflow-tooltip />
-            <el-table-column prop="questionType" label="类型" width="100">
-              <template #default="scope">
-                <el-tag :type="getQuestionTypeTagType(scope.row.questionType)">
-                  {{ getQuestionTypeDisplay(scope.row.questionType) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="difficulty" label="难度" width="80">
-              <template #default="scope">
-                <el-tag :type="getDifficultyTagType(scope.row.difficulty)">
-                  {{ getDifficultyDisplay(scope.row.difficulty) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="120">
-              <template #default="scope">
-                <el-tag v-if="scope.row.toBeRemoved" type="danger">将要移除</el-tag>
-                <span v-else>-</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="120" fixed="right">
-              <template #default="scope">
+        <el-form :model="datasetForm" label-width="100px" class="dataset-form">
+          <el-form-item label="版本号">
+            <el-input v-model="datasetForm.versionNumber" disabled />
+          </el-form-item>
+          <el-form-item label="名称">
+            <el-input v-model="datasetForm.name" placeholder="请输入数据集名称" />
+          </el-form-item>
+          <el-form-item label="描述">
+            <el-input
+              v-model="datasetForm.description"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入数据集描述"
+            />
+          </el-form-item>
+        </el-form>
+      </el-card>
+
+      <!-- 问题管理区域 -->
+      <div class="questions-container">
+        <!-- 左侧：数据集内问题 -->
+        <el-card class="questions-card included-questions">
+          <template #header>
+            <div class="card-header">
+              <h3>数据集内问题 ({{ includedQuestions.length }})</h3>
+              <div class="search-container">
+                <el-input
+                  v-model="includedKeyword"
+                  placeholder="搜索已选问题..."
+                  clearable
+                  @clear="searchIncludedQuestions"
+                  style="width: 200px;"
+                >
+                  <template #append>
+                    <el-button :icon="Search" @click="searchIncludedQuestions" />
+                  </template>
+                </el-input>
                 <el-button
-                  v-if="!scope.row.toBeRemoved"
-                  size="small"
                   type="danger"
-                  plain
-                  @click="removeQuestion(scope.row)"
+                  :disabled="!selectedIncludedQuestions.length"
+                  @click="removeSelectedQuestions"
                 >
-                  移除
+                  移除所选 ({{ selectedIncludedQuestions.length }})
                 </el-button>
-                <el-button
-                  v-else
-                  size="small"
-                  type="success"
-                  plain
-                  @click="cancelRemoveQuestion(scope.row)"
-                >
-                  取消移除
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+              </div>
+            </div>
+          </template>
 
-          <!-- 分页器 -->
-          <div class="pagination-container">
-            <el-pagination
-              v-model:current-page="includedPage"
-              v-model:page-size="includedPageSize"
-              :page-sizes="[10, 20, 50, 100]"
-              layout="total, sizes, prev, pager, next"
-              :total="includedTotal"
-              @size-change="handleIncludedSizeChange"
-              @current-change="handleIncludedPageChange"
-            />
+          <div v-if="isLoadingIncluded" class="loading-container">
+            <el-skeleton :rows="5" animated />
           </div>
-        </div>
-      </el-card>
-
-      <!-- 右侧：可添加问题 -->
-      <el-card class="questions-card available-questions">
-        <template #header>
-          <div class="card-header">
-            <h3>可添加问题</h3>
-            <div class="search-container">
-              <el-input
-                v-model="availableKeyword"
-                placeholder="搜索问题..."
-                clearable
-                @clear="searchAvailableQuestions"
-                style="width: 180px;"
-              >
-                <template #append>
-                  <el-button :icon="Search" @click="searchAvailableQuestions" />
+          <div v-else-if="!displayedIncludedQuestions.length" class="empty-container">
+            <el-empty description="暂无数据集内问题" />
+          </div>
+          <div v-else>
+            <el-table
+              ref="includedTableRef"
+              :data="displayedIncludedQuestions"
+              border
+              stripe
+              style="width: 100%"
+              @selection-change="handleIncludedSelectionChange"
+              height="500"
+              :row-class-name="getIncludedRowClassName"
+            >
+              <el-table-column type="selection" width="55" />
+              <el-table-column prop="id" label="ID" width="80" />
+              <el-table-column prop="questionText" label="问题文本" min-width="250" show-overflow-tooltip />
+              <el-table-column prop="questionType" label="类型" width="100">
+                <template #default="scope">
+                  <el-tag :type="getQuestionTypeTagType(scope.row.questionType)">
+                    {{ getQuestionTypeDisplay(scope.row.questionType) }}
+                  </el-tag>
                 </template>
-              </el-input>
-              <el-input
-                v-model="availableTags"
-                placeholder="标签(用逗号分隔)"
-                clearable
-                @clear="searchAvailableQuestions"
-                style="width: 180px; margin-left: 10px;"
+              </el-table-column>
+              <el-table-column prop="difficulty" label="难度" width="80">
+                <template #default="scope">
+                  <el-tag :type="getDifficultyTagType(scope.row.difficulty)">
+                    {{ getDifficultyDisplay(scope.row.difficulty) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="状态" width="120">
+                <template #default="scope">
+                  <el-tag v-if="scope.row.toBeRemoved" type="danger">将要移除</el-tag>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="120" fixed="right">
+                <template #default="scope">
+                  <el-button
+                    v-if="!scope.row.toBeRemoved"
+                    size="small"
+                    type="danger"
+                    plain
+                    @click="removeQuestion(scope.row)"
+                  >
+                    移除
+                  </el-button>
+                  <el-button
+                    v-else
+                    size="small"
+                    type="success"
+                    plain
+                    @click="cancelRemoveQuestion(scope.row)"
+                  >
+                    取消移除
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <!-- 分页器 -->
+            <div class="pagination-container">
+              <el-pagination
+                v-model:current-page="includedPage"
+                v-model:page-size="includedPageSize"
+                :page-sizes="[10, 20, 50, 100]"
+                layout="total, sizes, prev, pager, next"
+                :total="includedTotal"
+                @size-change="handleIncludedSizeChange"
+                @current-change="handleIncludedPageChange"
               />
-              <el-checkbox
-                v-model="onlyWithStandardAnswers"
-                label="仅显示有标准答案"
-                @change="searchAvailableQuestions"
-                style="margin-left: 10px;"
-              />
-              <el-button
-                type="primary"
-                :disabled="!selectedAvailableQuestions.length"
-                @click="addSelectedQuestions"
-              >
-                添加所选 ({{ selectedAvailableQuestions.length }})
-              </el-button>
             </div>
           </div>
-        </template>
+        </el-card>
 
-        <div v-if="isLoadingAvailable" class="loading-container">
-          <el-skeleton :rows="5" animated />
-        </div>
-        <div v-else-if="!availableQuestions.length" class="empty-container">
-          <el-empty description="暂无可添加的问题" />
-        </div>
-        <div v-else>
-          <el-table
-            ref="availableTableRef"
-            :data="availableQuestions"
-            border
-            stripe
-            style="width: 100%"
-            @selection-change="handleAvailableSelectionChange"
-            height="500"
-            :row-class-name="getAvailableRowClassName"
-          >
-            <el-table-column type="selection" width="55" />
-            <el-table-column prop="id" label="ID" width="80" />
-            <el-table-column prop="questionText" label="问题文本" min-width="250" show-overflow-tooltip />
-            <el-table-column prop="questionType" label="类型" width="100">
-              <template #default="scope">
-                <el-tag :type="getQuestionTypeTagType(scope.row.questionType)">
-                  {{ getQuestionTypeDisplay(scope.row.questionType) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="difficulty" label="难度" width="80">
-              <template #default="scope">
-                <el-tag :type="getDifficultyTagType(scope.row.difficulty)">
-                  {{ getDifficultyDisplay(scope.row.difficulty) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="标准答案" width="100" align="center">
-              <template #default="scope">
-                <el-tag v-if="scope.row.hasStandardAnswer" type="success">已有</el-tag>
-                <el-tag v-else type="info">无</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="120">
-              <template #default="scope">
-                <el-tag v-if="scope.row.toBeAdded" type="success">将要添加</el-tag>
-                <span v-else>-</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="120" fixed="right">
-              <template #default="scope">
+        <!-- 右侧：可添加问题 -->
+        <el-card class="questions-card available-questions">
+          <template #header>
+            <div class="card-header">
+              <h3>可添加问题</h3>
+              <div class="search-container">
+                <el-input
+                  v-model="availableKeyword"
+                  placeholder="搜索问题..."
+                  clearable
+                  @clear="searchAvailableQuestions"
+                  style="width: 180px;"
+                >
+                  <template #append>
+                    <el-button :icon="Search" @click="searchAvailableQuestions" />
+                  </template>
+                </el-input>
+                <el-input
+                  v-model="availableTags"
+                  placeholder="标签(用逗号分隔)"
+                  clearable
+                  @clear="searchAvailableQuestions"
+                  style="width: 180px; margin-left: 10px;"
+                />
+                <el-checkbox
+                  v-model="onlyWithStandardAnswers"
+                  label="仅显示有标准答案"
+                  @change="searchAvailableQuestions"
+                  style="margin-left: 10px;"
+                />
                 <el-button
-                  v-if="!scope.row.toBeAdded"
-                  size="small"
                   type="primary"
-                  plain
-                  @click="addQuestion(scope.row)"
+                  :disabled="!selectedAvailableQuestions.length"
+                  @click="addSelectedQuestions"
                 >
-                  添加
+                  添加所选 ({{ selectedAvailableQuestions.length }})
                 </el-button>
-                <el-button
-                  v-else
-                  size="small"
-                  type="warning"
-                  plain
-                  @click="cancelAddQuestion(scope.row)"
-                >
-                  取消添加
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+              </div>
+            </div>
+          </template>
 
-          <!-- 分页器 -->
-          <div class="pagination-container">
-            <el-pagination
-              v-model:current-page="availablePage"
-              v-model:page-size="availablePageSize"
-              :page-sizes="[10, 20, 50, 100]"
-              layout="total, sizes, prev, pager, next"
-              :total="availableTotal"
-              @size-change="handleAvailableSizeChange"
-              @current-change="handleAvailablePageChange"
-            />
+          <div v-if="isLoadingAvailable" class="loading-container">
+            <el-skeleton :rows="5" animated />
           </div>
-        </div>
-      </el-card>
-    </div>
+          <div v-else-if="!availableQuestions.length" class="empty-container">
+            <el-empty description="暂无可添加的问题" />
+          </div>
+          <div v-else>
+            <el-table
+              ref="availableTableRef"
+              :data="availableQuestions"
+              border
+              stripe
+              style="width: 100%"
+              @selection-change="handleAvailableSelectionChange"
+              height="500"
+              :row-class-name="getAvailableRowClassName"
+            >
+              <el-table-column type="selection" width="55" />
+              <el-table-column prop="id" label="ID" width="80" />
+              <el-table-column prop="questionText" label="问题文本" min-width="250" show-overflow-tooltip />
+              <el-table-column prop="questionType" label="类型" width="100">
+                <template #default="scope">
+                  <el-tag :type="getQuestionTypeTagType(scope.row.questionType)">
+                    {{ getQuestionTypeDisplay(scope.row.questionType) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="difficulty" label="难度" width="80">
+                <template #default="scope">
+                  <el-tag :type="getDifficultyTagType(scope.row.difficulty)">
+                    {{ getDifficultyDisplay(scope.row.difficulty) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="标准答案" width="100" align="center">
+                <template #default="scope">
+                  <el-tag v-if="scope.row.hasStandardAnswer" type="success">已有</el-tag>
+                  <el-tag v-else type="info">无</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="状态" width="120">
+                <template #default="scope">
+                  <el-tag v-if="scope.row.toBeAdded" type="success">将要添加</el-tag>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="120" fixed="right">
+                <template #default="scope">
+                  <el-button
+                    v-if="!scope.row.toBeAdded"
+                    size="small"
+                    type="primary"
+                    plain
+                    @click="addQuestion(scope.row)"
+                  >
+                    添加
+                  </el-button>
+                  <el-button
+                    v-else
+                    size="small"
+                    type="warning"
+                    plain
+                    @click="cancelAddQuestion(scope.row)"
+                  >
+                    取消添加
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <!-- 分页器 -->
+            <div class="pagination-container">
+              <el-pagination
+                v-model:current-page="availablePage"
+                v-model:page-size="availablePageSize"
+                :page-sizes="[10, 20, 50, 100]"
+                layout="total, sizes, prev, pager, next"
+                :total="availableTotal"
+                @size-change="handleAvailableSizeChange"
+                @current-change="handleAvailablePageChange"
+              />
+            </div>
+          </div>
+        </el-card>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Back, Search } from '@element-plus/icons-vue'
+import { Back, Search, Plus, Edit, Files, List } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type TableInstance } from 'element-plus'
 import {
   getQuestionsInDataset,
@@ -289,6 +327,7 @@ import { useUserStore } from '@/stores/user'
 const router = useRouter()
 const route = useRoute()
 const datasetId = ref<number>(Number(route.params.id))
+const isValidId = computed(() => !!datasetId.value && !isNaN(datasetId.value))
 const datasetName = ref<string>('')
 
 // 用户信息
@@ -331,6 +370,15 @@ const onlyWithStandardAnswers = ref(true)
 // 问题变更跟踪
 const questionsToAdd = ref<number[]>([])
 const questionsToRemove = ref<number[]>([])
+
+// 导航函数
+const goToDatasetList = () => {
+  router.push('/dataset/list')
+}
+
+const goToCreateDataset = () => {
+  router.push('/dataset/create')
+}
 
 // 返回列表页
 const backToList = () => {
@@ -682,9 +730,8 @@ const getAvailableRowClassName = ({ row }: { row: any }): string => {
 
 // 生命周期钩子
 onMounted(() => {
-  if (!datasetId.value) {
-    ElMessage.error('未找到数据集ID')
-    router.push('/dataset/list')
+  if (!isValidId.value) {
+    console.warn('无效的数据集ID:', route.params.id)
     return
   }
 
@@ -778,6 +825,90 @@ onMounted(() => {
 @media (max-width: 1200px) {
   .questions-container {
     flex-direction: column;
+  }
+}
+
+.empty-dataset-card {
+  width: 100%;
+  margin: 0;
+  height: calc(100vh - 100px);
+}
+
+.empty-dataset-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 60px;
+  height: 100%;
+}
+
+.empty-illustration {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.guide-content {
+  flex: 1;
+  text-align: left;
+  max-width: 500px;
+}
+
+.guide-title {
+  margin-bottom: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.guide-text {
+  margin: 20px 0;
+  font-size: 16px;
+  color: #606266;
+}
+
+.feature-list {
+  margin: 30px 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.feature-list li {
+  margin-bottom: 15px;
+  color: #606266;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.feature-list li .el-icon {
+  margin-right: 10px;
+  color: var(--el-color-primary);
+  font-size: 18px;
+}
+
+.action-buttons {
+  margin-top: 40px;
+  display: flex;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .empty-dataset-content {
+    flex-direction: column;
+    padding: 20px;
+    gap: 30px;
+  }
+
+  .guide-content {
+    text-align: center;
+  }
+
+  .feature-list li {
+    justify-content: center;
   }
 }
 </style>
