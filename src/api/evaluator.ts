@@ -246,3 +246,30 @@ export const getEvaluatorByUserId = (userId: number | string) => {
   return api.get<unknown, EvaluatorInfo>(`${apiUrls.evaluators.getByUserId}/${userId}`)
 }
 
+/**
+ * AI评测员连通性测试结果接口
+ */
+export interface AiEvaluatorConnectivityResult {
+  modelInfo: {
+    provider: string
+    name: string
+    id: number
+    apiType: string
+  }
+  success: boolean
+  responseTime: number
+  response: string
+  message: string
+}
+
+/**
+ * 测试AI评测员连通性
+ * @param evaluatorId 评测员ID
+ * @returns 连通性测试结果
+ */
+export const testAiEvaluatorConnectivity = (evaluatorId: number | string) => {
+  return api.get<unknown, AiEvaluatorConnectivityResult>(
+    `${apiUrls.evaluators.testAiConnectivity}/${evaluatorId}`
+  )
+}
+

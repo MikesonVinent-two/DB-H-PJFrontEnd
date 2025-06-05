@@ -30,10 +30,41 @@
       <div class="search-area">
         <el-form :model="searchForm" inline>
           <el-form-item label="关键词">
-            <el-input v-model="searchForm.keyword" placeholder="标题或内容关键词" clearable />
+            <el-input
+              v-model="searchForm.keyword"
+              placeholder="标题或内容关键词"
+              clearable
+              prefix-icon="Search"
+            />
           </el-form-item>
           <el-form-item label="来源网站">
-            <el-input v-model="searchForm.sourceSite" placeholder="来源网站" clearable />
+            <el-input
+              v-model="searchForm.sourceSite"
+              placeholder="来源网站"
+              clearable
+              prefix-icon="House"
+            />
+          </el-form-item>
+          <el-form-item label="标签">
+            <el-select
+              v-model="searchForm.tags"
+              multiple
+              filterable
+              allow-create
+              default-first-option
+              placeholder="选择或输入标签（回车确认）"
+              clearable
+              style="min-width: 220px;"
+              @keyup.enter="handleSearchTagEnter"
+              popper-class="tag-select-dropdown"
+            >
+              <el-option
+                v-for="tag in allTags"
+                :key="tag"
+                :label="tag"
+                :value="tag"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="标准化状态">
             <el-select v-model="searchForm.standardized" placeholder="全部" clearable>
@@ -42,8 +73,8 @@
             </el-select>
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click="searchQuestions">搜索</el-button>
-            <el-button @click="resetSearch">重置</el-button>
+            <el-button type="primary" @click="searchQuestions" :icon="Search">搜索</el-button>
+            <el-button @click="resetSearch" :icon="RefreshRight">重置</el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -65,15 +96,18 @@
         <el-table-column prop="crawlTime" label="收集时间" width="180" sortable />
         <el-table-column label="标签" width="200" show-overflow-tooltip>
           <template #default="scope">
-            <el-tag
-              v-for="tag in scope.row.tags"
-              :key="tag"
-              size="small"
-              class="tag-item"
-            >
-              {{ tag }}
-            </el-tag>
-            <span v-if="!scope.row.tags || scope.row.tags.length === 0">无标签</span>
+            <div class="tag-container">
+              <el-tag
+                v-for="tag in scope.row.tags"
+                :key="tag"
+                size="small"
+                class="tag-item"
+                effect="light"
+              >
+                {{ tag }}
+              </el-tag>
+              <span v-if="!scope.row.tags || scope.row.tags.length === 0" class="no-tags">无标签</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="标准化状态" width="120">
@@ -165,6 +199,7 @@
               default-first-option
               placeholder="请选择或输入标签（回车确认）"
               style="width: 100%"
+              @keyup.enter="handleTagEnter"
             >
               <el-option
                 v-for="tag in allTags"
@@ -319,15 +354,18 @@
         <div class="detail-item">
           <div class="detail-label">标签：</div>
           <div class="detail-value">
-            <el-tag
-              v-for="tag in currentQuestion.tags"
-              :key="tag"
-              size="small"
-              class="tag-item"
-            >
-              {{ tag }}
-            </el-tag>
-            <span v-if="!currentQuestion.tags || currentQuestion.tags.length === 0">无标签</span>
+            <div class="tag-container">
+              <el-tag
+                v-for="tag in currentQuestion.tags"
+                :key="tag"
+                size="small"
+                class="tag-item"
+                effect="light"
+              >
+                {{ tag }}
+              </el-tag>
+              <span v-if="!currentQuestion.tags || currentQuestion.tags.length === 0" class="no-tags">无标签</span>
+            </div>
           </div>
         </div>
         <div class="detail-item">
@@ -474,10 +512,13 @@
       <div class="batch-upload-container">
         <div class="upload-instructions">
           <h3>导入说明</h3>
-          <p>支持以下两种格式导入：</p>
+          <p>支持以下格式导入：</p>
           <ol>
             <li>
-              <strong>JSON格式</strong>：数组格式，每项包含title、content、sourceSite、sourceUrl、tags字段
+              <strong>标准JSON格式</strong>：数组格式，每项包含title、content、sourceSite、sourceUrl、tags字段
+            </li>
+            <li>
+              <strong>StackExchange格式</strong>：数组格式，每项包含question_title、question_body、answer_body、source、source_url、source_question_id等字段
             </li>
             <li>
               <strong>CSV格式</strong>：第一行为表头，必须包含title、content字段，可选包含sourceSite、sourceUrl、tags字段
@@ -488,25 +529,66 @@
 
         <div class="file-preview" v-if="batchData.length > 0">
           <h3>预览数据（显示前5条）</h3>
-          <el-table :data="batchData.slice(0, 5)" border style="width: 100%">
-            <el-table-column prop="title" label="标题" min-width="150" show-overflow-tooltip />
-            <el-table-column prop="content" label="内容" min-width="200" show-overflow-tooltip />
-            <el-table-column prop="sourceSite" label="来源网站" width="120" show-overflow-tooltip />
-            <el-table-column prop="sourceUrl" label="来源URL" width="150" show-overflow-tooltip />
-            <el-table-column label="标签" width="150" show-overflow-tooltip>
-              <template #default="scope">
-                <el-tag
-                  v-for="tag in scope.row.tags"
-                  :key="tag"
-                  size="small"
-                  class="tag-item"
-                >
-                  {{ tag }}
-                </el-tag>
-                <span v-if="!scope.row.tags || scope.row.tags.length === 0">无标签</span>
-              </template>
-            </el-table-column>
-          </el-table>
+
+          <!-- 标准格式数据预览 -->
+          <div v-if="batchDataFormat === 'standard'">
+            <el-table :data="batchData.slice(0, 5)" border style="width: 100%">
+              <el-table-column prop="title" label="标题" min-width="150" show-overflow-tooltip />
+              <el-table-column prop="content" label="内容" min-width="200" show-overflow-tooltip />
+              <el-table-column prop="sourceSite" label="来源网站" width="120" show-overflow-tooltip />
+              <el-table-column prop="sourceUrl" label="来源URL" width="150" show-overflow-tooltip />
+              <el-table-column label="标签" width="150" show-overflow-tooltip>
+                <template #default="scope">
+                  <div class="tag-container">
+                    <el-tag
+                      v-for="tag in scope.row.tags"
+                      :key="tag"
+                      size="small"
+                      class="tag-item"
+                      effect="light"
+                    >
+                      {{ tag }}
+                    </el-tag>
+                    <span v-if="!scope.row.tags || scope.row.tags.length === 0" class="no-tags">无标签</span>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <!-- StackExchange格式数据预览 -->
+          <div v-else>
+            <el-table :data="batchData.slice(0, 5)" border style="width: 100%">
+              <el-table-column label="问题标题" min-width="150" show-overflow-tooltip>
+                <template #default="scope">
+                  {{ scope.row.question.title }}
+                </template>
+              </el-table-column>
+              <el-table-column label="问题内容" min-width="150" show-overflow-tooltip>
+                <template #default="scope">
+                  {{ scope.row.question.content }}
+                </template>
+              </el-table-column>
+              <el-table-column label="来源" width="120" show-overflow-tooltip>
+                <template #default="scope">
+                  {{ scope.row.question.sourceSite }}
+                </template>
+              </el-table-column>
+              <el-table-column label="回答数量" width="80" align="center">
+                <template #default="scope">
+                  {{ scope.row.answers.length }}
+                </template>
+              </el-table-column>
+              <el-table-column label="回答预览" min-width="200" show-overflow-tooltip>
+                <template #default="scope">
+                  <div v-if="scope.row.answers.length > 0">
+                    {{ scope.row.answers[0].content.substring(0, 100) }}{{ scope.row.answers[0].content.length > 100 ? '...' : '' }}
+                  </div>
+                  <span v-else>无回答</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
 
           <div class="batch-summary">
             <p>共 {{ batchData.length }} 条数据</p>
@@ -528,10 +610,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type UploadFile } from 'element-plus'
-import { Plus, Refresh, Upload } from '@element-plus/icons-vue'
+import { Plus, Refresh, Upload, Search, RefreshRight } from '@element-plus/icons-vue'
 import { createRawQuestion, getRawQuestions, deleteRawQuestion, searchRawQuestions, getRawQuestionsByStatus, createRawAnswer, deleteRawAnswer, createQuestionWithAnswers, getQuestionAnswers } from '@/api/rawData'
 import type { RawQuestionDto, RawQuestionSearchItem, RawAnswerDto, RawAnswerResponse, QuestionWithAnswersDto, PageResponse } from '@/api/rawData'
-import { fetchAllTags, getTagRecommendations } from '@/utils/tagUtils'
+import { getTagRecommendations } from '@/utils/tagUtils'
+import { getAllTags } from '@/api/tags'
 import Papa from 'papaparse'
 
 // 搜索原始问题的响应数据项接口（扩展现有类型以添加otherMetadata）
@@ -598,7 +681,8 @@ const pagination = reactive({
 const searchForm = reactive({
   keyword: '',
   sourceSite: '',
-  standardized: null as boolean | null
+  standardized: null as boolean | null,
+  tags: [] as string[]
 })
 
 // 问题表单
@@ -665,7 +749,9 @@ const questionAnswerInputs = ref<Omit<RawAnswerDto, 'rawQuestionId'>[]>([])
 const activeAnswers = ref<number[]>([0]) // 展开的回答面板
 
 // 批量导入数据
-const batchData = ref<RawQuestionDto[]>([])
+const batchData = ref<any[]>([])
+// 批量数据格式标识: 'standard' 或 'stackexchange'
+const batchDataFormat = ref('standard')
 
 // 问题列表
 const questions = ref<ExtendedRawQuestionSearchItem[]>([])
@@ -673,7 +759,7 @@ const questions = ref<ExtendedRawQuestionSearchItem[]>([])
 // 当前查看的问题
 const currentQuestion = ref<ExtendedRawQuestionSearchItem | null>(null)
 
-// 所有标签列表
+// 所有可用标签
 const allTags = ref<string[]>([])
 
 // 格式化JSON显示
@@ -688,43 +774,49 @@ const formatJson = (jsonStr: string) => {
 
 // 获取所有标签
 const loadAllTags = async () => {
-  allTags.value = await fetchAllTags()
+  try {
+    const response = await getAllTags()
+    if (response) {
+      // 提取标签名称(tagName)
+      allTags.value = response.map((tag: any) => tag.tagName || tag)
+    }
+  } catch (error) {
+    console.error('获取标签失败:', error)
+    ElMessage.error('获取标签列表失败')
+  }
 }
 
 // 获取标签推荐
 const getTagSuggestions = async () => {
   if (!questionForm.content) {
-    ElMessage.warning('请先输入问题内容，以便获取相关标签推荐')
+    ElMessage.warning('请先填写问题内容以获取标签推荐')
     return
   }
 
   try {
-    const suggestedTags = await getTagRecommendations(
+    const recommendedTags = await getTagRecommendations(
       questionForm.content,
       questionForm.tags
     )
 
-    if (suggestedTags.length === 0) {
-      ElMessage.info('未找到合适的标签推荐')
-      return
+    if (recommendedTags.length > 0) {
+      // 合并推荐标签和已有标签，去重
+      const uniqueTags = [...new Set([...questionForm.tags, ...recommendedTags])]
+      questionForm.tags = uniqueTags
+      ElMessage.success(`已添加${recommendedTags.length}个推荐标签`)
+    } else {
+      ElMessage.info('未找到合适的推荐标签')
     }
-
-    // 合并现有标签和推荐标签，去重
-    const existingTags = new Set(questionForm.tags)
-    suggestedTags.forEach(tag => existingTags.add(tag))
-    questionForm.tags = Array.from(existingTags)
-
-    ElMessage.success(`已添加${suggestedTags.length}个推荐标签`)
   } catch (error) {
     console.error('获取标签推荐失败:', error)
-    ElMessage.error('获取标签推荐失败')
+    ElMessage.error('获取标签推荐失败，请重试')
   }
 }
 
 // 初始化加载数据
 onMounted(() => {
   fetchQuestions()
-  loadAllTags()
+  loadAllTags() // 获取所有可用标签
 })
 
 // 获取问题列表
@@ -764,20 +856,51 @@ const searchQuestions = async () => {
 
     // 根据标准化状态搜索
     if (searchForm.standardized !== null) {
-      response = await getRawQuestionsByStatus({
-        standardized: searchForm.standardized,
+      // 使用新的API接口
+      const params: {
+        page?: number | string;
+        size?: number | string;
+        sort?: string;
+        keyword?: string[];
+        tags?: string[];
+        unStandardized?: boolean;
+      } = {
         page: pagination.currentPage - 1,
         size: pagination.pageSize,
         sort: 'id,desc'
-      })
+      }
+
+      // 设置关键词
+      if (searchForm.keyword) {
+        params.keyword = [searchForm.keyword]
+      }
+
+      // 设置来源网站
+      if (searchForm.sourceSite) {
+        if (!params.keyword) {
+          params.keyword = []
+        }
+        params.keyword.push(searchForm.sourceSite)
+      }
+
+      // 设置标签
+      if (searchForm.tags.length > 0) {
+        params.tags = searchForm.tags
+      }
+
+      // 设置标准化状态
+      params.unStandardized = !searchForm.standardized
+
+      response = await searchRawQuestions(params)
     } else {
       // 关键词搜索
       const params: {
-        page?: number;
-        size?: number;
+        page?: number | string;
+        size?: number | string;
         sort?: string;
-        keyword?: string;
-        source?: string;
+        keyword?: string[];
+        tags?: string[];
+        unStandardized?: boolean;
       } = {
         page: pagination.currentPage - 1,
         size: pagination.pageSize,
@@ -785,11 +908,21 @@ const searchQuestions = async () => {
       }
 
       if (searchForm.keyword) {
-        params.keyword = searchForm.keyword
+        // 将关键词转换为数组格式
+        params.keyword = [searchForm.keyword]
       }
 
       if (searchForm.sourceSite) {
-        params.source = searchForm.sourceSite
+        // 保留sourceSite作为搜索条件，但不作为API参数
+        // 可以考虑将其添加到keyword中
+        if (!params.keyword) {
+          params.keyword = []
+        }
+        params.keyword.push(searchForm.sourceSite)
+      }
+
+      if (searchForm.tags.length > 0) {
+        params.tags = searchForm.tags
       }
 
       response = await searchRawQuestions(params)
@@ -819,6 +952,7 @@ const resetSearch = () => {
   searchForm.keyword = ''
   searchForm.sourceSite = ''
   searchForm.standardized = null
+  searchForm.tags = []
   pagination.currentPage = 1
   fetchQuestions()
 }
@@ -1083,16 +1217,19 @@ const handleFileChange = (file: UploadFile) => {
           return
         }
 
-        // 验证数据格式
-        const validData = data.filter((item: {
-          title?: string;
-          content?: string;
-          sourceSite?: string;
-          sourceUrl?: string;
-          tags?: string[];
-          otherMetadata?: string;
-        }) => {
-          return item.title && item.content
+        // 验证数据格式并处理StackExchange格式
+        const validData = data.filter((item: any) => {
+          // 支持标准格式
+          if (item.title && item.content) {
+            return true
+          }
+
+          // 支持StackExchange格式
+          if (item.question_title && (item.question_body || item.answer_body)) {
+            return true
+          }
+
+          return false
         })
 
         if (validData.length === 0) {
@@ -1100,22 +1237,74 @@ const handleFileChange = (file: UploadFile) => {
           return
         }
 
+        // 识别数据是否为StackExchange格式
+        const isStackExchangeFormat = validData.some((item: any) =>
+          item.question_title && (item.question_body || item.answer_body)
+        )
+
+        // 保存原始数据格式信息，用于提交时的处理
+        batchDataFormat.value = isStackExchangeFormat ? 'stackexchange' : 'standard'
+
         // 格式化数据
-        batchData.value = validData.map((item: {
-          title?: string;
-          content?: string;
-          sourceSite?: string;
-          sourceUrl?: string;
-          tags?: string[] | string;
-          otherMetadata?: string;
-        }) => ({
-          title: item.title || '',
-          content: item.content || '',
-          sourceSite: item.sourceSite || '',
-          sourceUrl: item.sourceUrl || '',
-          tags: Array.isArray(item.tags) ? item.tags : [],
-          otherMetadata: item.otherMetadata || ''
-        }))
+        if (isStackExchangeFormat) {
+          // 处理StackExchange格式，按问题分组
+          const questionMap = new Map()
+
+          validData.forEach((item: any) => {
+            const questionId = item.source_question_id
+
+            // 清理HTML内容
+            const cleanHtml = (html: string) => {
+              if (!html) return ''
+              return html.replace(/<\/?[^>]+(>|$)/g, ' ').trim()
+            }
+
+            if (!questionMap.has(questionId)) {
+              // 创建新的问题记录
+              questionMap.set(questionId, {
+                question: {
+                  title: item.question_title || '',
+                  content: item.question_body ? cleanHtml(item.question_body) : '',
+                  sourceSite: item.source || 'StackExchange',
+                  sourceUrl: item.source_url || '',
+                  tags: Array.isArray(item.tags) ? item.tags : [],
+                  otherMetadata: JSON.stringify({
+                    source_question_id: item.source_question_id,
+                    source_id: item.source_id
+                  })
+                },
+                answers: []
+              })
+            }
+
+            // 如果有答案内容，添加到该问题的答案列表
+            if (item.answer_body) {
+              questionMap.get(questionId).answers.push({
+                authorInfo: item.author_info || '未知作者',
+                content: cleanHtml(item.answer_body),
+                publishTime: item.publish_time || new Date().toISOString(),
+                upvotes: item.upvotes || 0,
+                isAccepted: item.is_accepted || false,
+                otherMetadata: JSON.stringify({
+                  source_answer_id: item.source_answer_id
+                })
+              })
+            }
+          })
+
+          // 转换为数组形式
+          batchData.value = Array.from(questionMap.values())
+        } else {
+          // 处理标准格式
+          batchData.value = validData.map((item: any) => ({
+            title: item.title || '',
+            content: item.content || '',
+            sourceSite: item.sourceSite || '',
+            sourceUrl: item.sourceUrl || '',
+            tags: Array.isArray(item.tags) ? item.tags : [],
+            otherMetadata: item.otherMetadata || ''
+          }))
+        }
 
         batchDialogVisible.value = true
       } catch (error) {
@@ -1129,6 +1318,7 @@ const handleFileChange = (file: UploadFile) => {
       header: true,
       complete: (results) => {
         handleCsvData(results)
+        batchDataFormat.value = 'standard'
       }
     })
   } else {
@@ -1197,9 +1387,20 @@ const submitBatchImport = async () => {
   isUploading.value = true
 
   try {
-    // 创建一个队列进行批量导入
-    const promises = batchData.value.map(item => createRawQuestion(item))
-    await Promise.all(promises)
+    if (batchDataFormat.value === 'stackexchange') {
+      // 使用问题与答案批量导入接口
+      const promises = batchData.value.map(item =>
+        createQuestionWithAnswers({
+          question: item.question,
+          answers: item.answers
+        })
+      )
+      await Promise.all(promises)
+    } else {
+      // 使用标准问题导入接口
+      const promises = batchData.value.map(item => createRawQuestion(item))
+      await Promise.all(promises)
+    }
 
     ElMessage.success(`成功导入${batchData.value.length}条问题数据`)
     batchDialogVisible.value = false
@@ -1212,6 +1413,41 @@ const submitBatchImport = async () => {
     isUploading.value = false
   }
 }
+
+// 处理标签回车输入
+const handleTagEnter = (event: KeyboardEvent) => {
+  // 获取el-select的输入框
+  const input = event.target as HTMLInputElement
+  const value = input.value.trim()
+
+  if (value && !questionForm.tags.includes(value)) {
+    // 添加新标签
+    questionForm.tags = [...questionForm.tags, value]
+
+    // 尝试清空输入框，但这可能不会直接生效
+    // 因为Element Plus的Select组件管理自己的输入状态
+    setTimeout(() => {
+      input.value = ''
+    }, 0)
+  }
+}
+
+// 处理搜索标签回车输入
+const handleSearchTagEnter = (event: KeyboardEvent) => {
+  // 获取el-select的输入框
+  const input = event.target as HTMLInputElement
+  const value = input.value.trim()
+
+  if (value && !searchForm.tags.includes(value)) {
+    // 添加新标签
+    searchForm.tags = [...searchForm.tags, value]
+
+    // 尝试清空输入框
+    setTimeout(() => {
+      input.value = ''
+    }, 0)
+  }
+}
 </script>
 
 <style scoped>
@@ -1221,6 +1457,13 @@ const submitBatchImport = async () => {
 
 .management-card {
   margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+}
+
+.management-card:hover {
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.08);
 }
 
 .card-header {
@@ -1236,6 +1479,10 @@ const submitBatchImport = async () => {
 
 .search-area {
   margin-bottom: 20px;
+  padding: 20px;
+  background-color: #f5f7fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
 }
 
 .pagination-container {
@@ -1244,14 +1491,42 @@ const submitBatchImport = async () => {
   justify-content: center;
 }
 
+.tag-item {
+  margin-right: 5px;
+  margin-bottom: 5px;
+  transition: all 0.3s;
+}
+
+.tag-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .tag-input-container {
   display: flex;
   align-items: center;
 }
 
-.tag-item {
-  margin-right: 5px;
-  margin-bottom: 5px;
+.answers-input-section {
+  margin-top: 20px;
+}
+
+.answers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.answer-input-container {
+  padding: 10px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.no-answers-input {
+  padding: 20px;
+  text-align: center;
 }
 
 .question-detail {
@@ -1264,9 +1539,8 @@ const submitBatchImport = async () => {
 }
 
 .detail-label {
-  width: 100px;
   font-weight: bold;
-  flex-shrink: 0;
+  min-width: 100px;
 }
 
 .detail-value {
@@ -1280,20 +1554,22 @@ const submitBatchImport = async () => {
 .content-value {
   margin-top: 10px;
   padding: 10px;
-  background-color: #f8f8f8;
+  background-color: #f5f7fa;
   border-radius: 4px;
   white-space: pre-wrap;
 }
 
-.batch-upload-container {
-  padding: 10px;
+.answers-section {
+  margin-top: 20px;
 }
 
-.upload-instructions {
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: #f8f8f8;
-  border-radius: 4px;
+.no-answers {
+  padding: 20px;
+  text-align: center;
+}
+
+.batch-preview {
+  margin-top: 20px;
 }
 
 .batch-summary {
@@ -1302,29 +1578,97 @@ const submitBatchImport = async () => {
   font-weight: bold;
 }
 
-.file-preview {
-  margin-top: 20px;
+/* 标签样式优化 */
+:deep(.el-select__tags) {
+  flex-wrap: wrap;
+  max-height: none;
 }
 
-.answers-input-section {
-  margin-top: 20px;
-}
-
-.answers-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.answer-input-container {
-  padding: 10px;
-  background-color: #f8f8f8;
+:deep(.el-tag) {
+  margin: 2px;
   border-radius: 4px;
+  background-color: #ecf5ff;
+  border-color: #d9ecff;
+  color: #409eff;
 }
 
-.no-answers-input {
-  padding: 10px;
-  text-align: center;
+:deep(.el-tag--info) {
+  background-color: #f4f4f5;
+  border-color: #e9e9eb;
+  color: #909399;
+}
+
+:deep(.el-tag--success) {
+  background-color: #f0f9eb;
+  border-color: #e1f3d8;
+  color: #67c23a;
+}
+
+:deep(.el-select-dropdown__item) {
+  padding: 0 10px;
+  height: 34px;
+  line-height: 34px;
+}
+
+/* 标签选择下拉菜单样式 */
+:deep(.tag-select-dropdown) {
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.tag-select-dropdown .el-select-dropdown__item) {
+  padding: 8px 15px;
+  border-radius: 4px;
+  margin: 4px;
+  transition: all 0.2s;
+}
+
+:deep(.tag-select-dropdown .el-select-dropdown__item:hover) {
+  background-color: #ecf5ff;
+}
+
+:deep(.tag-select-dropdown .el-select-dropdown__item.selected) {
+  background-color: #409eff;
+  color: white;
+}
+
+/* 卡片和表格样式优化 */
+:deep(.el-table) {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:deep(.el-table th) {
+  background-color: #f5f7fa;
+  color: #606266;
+  font-weight: 600;
+}
+
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped td) {
+  background-color: #fafafa;
+}
+
+:deep(.el-table__row:hover > td) {
+  background-color: #ecf5ff !important;
+}
+
+/* 按钮样式优化 */
+:deep(.el-button) {
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+:deep(.el-button:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.el-button--primary) {
+  background: linear-gradient(135deg, #409eff, #3a8ee6);
+}
+
+:deep(.el-pagination) {
+  padding: 15px 0;
+  justify-content: center;
 }
 </style>

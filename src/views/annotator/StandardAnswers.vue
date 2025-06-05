@@ -288,10 +288,9 @@ import SimpleFactEditor from './standard-answers/SimpleFactEditor.vue'
 import SubjectiveEditor from './standard-answers/SubjectiveEditor.vue'
 
 // 导入相关API
-import { getQuestionsWithoutAnswers, getQuestionOriginalData, createStandardAnswer, QuestionType } from '@/api/standardData'
+import { getQuestionsWithoutAnswers, getQuestionOriginalData, createStandardAnswer, QuestionType, getStandardQuestions } from '@/api/standardData'
 import { getCrowdsourcedAnswersByQuestion } from '@/api/crowdsourcedAnswer'
 import { getExpertAnswersByQuestion } from '@/api/expertAnswer'
-import { getStandardQuestions } from '@/api/standardQuestions'
 import { websocketService } from '@/services/websocket'
 import { WebSocketMessageType } from '@/types/websocketTypes'
 
@@ -363,17 +362,30 @@ const filteredQuestions = computed(() => {
 const fetchData = async () => {
   loading.questions = true
   try {
-    const response = await getStandardQuestions({
-      page: currentPage.value - 1,
-      size: pageSize.value,
-      keyword: searchQuery.value
-    })
+    const params = {
+      page: (currentPage.value - 1).toString(), // 后端分页从0开始
+      size: pageSize.value.toString(),
+      onlyLatest: onlyLatest.value, // 是否只获取最新版本的问题
+      onlyLatestVersion: true
+    }
 
-    tableData.value = response.data.content
-    total.value = response.data.totalElements
+    const response = await getQuestionsWithoutAnswers(params)
+
+    console.log('response:', response)
+
+    if (response && response.success) {
+      questions.value = response.questions || []
+      totalQuestions.value = response.total || 0
+    } else {
+      questions.value = []
+      totalQuestions.value = 0
+      console.error('获取未回答标准问题响应格式不符合预期:', response)
+    }
   } catch (error) {
     console.error('获取标准问题失败:', error)
     ElMessage.error('获取标准问题失败')
+    questions.value = []
+    totalQuestions.value = 0
   } finally {
     loading.questions = false
   }
@@ -445,12 +457,10 @@ const getTypeIcon = (type: string) => {
   }
 }
 
-// 创建标准回答
-const createStandardAnswer = (questionId: number) => {
-  router.push({
-    name: 'create-standard-answer',
-    params: { questionId: questionId.toString() }
-  })
+// 这个函数会与导入的API函数冲突，重命名为navigateToCreateAnswer
+const navigateToCreateAnswer = (questionId: number) => {
+  // 如果需要导航到创建答案页面，应该确保路由存在
+  ElMessage.warning('创建标准答案功能已集成到当前页面')
 }
 
 // 启用或禁用实时更新
@@ -511,25 +521,9 @@ onBeforeUnmount(() => {
   }
 })
 
-// 获取未回答标准问题列表
-const fetchQuestionsWithoutAnswers = async () => {
-  loading.questions = true
-  try {
-    const params = {
-      page: (currentPage.value - 1).toString(),
-      size: pageSize.value.toString(),
-      onlyLatest: onlyLatest.value
-    }
-
-    const response = await getQuestionsWithoutAnswers(params)
-    questions.value = response.questions || []
-    totalQuestions.value = response.total || 0
-  } catch (error) {
-    console.error('获取未回答标准问题失败:', error)
-    ElMessage.error('获取未回答标准问题失败')
-  } finally {
-    loading.questions = false
-  }
+// 处理"只显示最新版本"开关变化
+const handleOnlyLatestChange = () => {
+  fetchData() // 重新获取数据
 }
 
 // 日期格式化
@@ -685,7 +679,7 @@ const fetchExpertAnswers = async (questionId: number) => {
 // 处理分页变化
 const handlePageChange = (page: number) => {
   currentPage.value = page
-  fetchQuestionsWithoutAnswers()
+  fetchData()
 }
 
 // 复制文本到编辑器
@@ -772,11 +766,12 @@ const submitStandardAnswer = async () => {
   // 提交答案
   loading.submitting = true
   try {
-    await createStandardAnswer(selectedQuestion.value.id)
+    // 使用导入的API函数创建标准答案
+    await createStandardAnswer(requestData)
     ElMessage.success('标准答案提交成功')
 
     // 刷新问题列表
-    await fetchQuestionsWithoutAnswers()
+    await fetchData()
     selectedQuestion.value = null
 
     // 重置表单
@@ -792,10 +787,7 @@ const submitStandardAnswer = async () => {
   }
 }
 
-// 处理仅显示最新版本的切换
-const handleOnlyLatestChange = () => {
-  fetchQuestionsWithoutAnswers()
-}
+
 </script>
 
 <style scoped>

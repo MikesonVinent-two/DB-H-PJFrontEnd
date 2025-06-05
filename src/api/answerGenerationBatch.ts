@@ -126,6 +126,8 @@ export interface ModelConnectivityResult {
   modelId: number
   provider: string
   responseTime: number
+  success?: boolean
+  timestamp?: number
   runs?: RunStatus[]
 }
 
@@ -230,4 +232,15 @@ export const getUserAnswerGenerationBatches = (
  */
 export const getAllAnswerGenerationBatches = () => {
   return api.get<unknown, AnswerGenerationBatch[]>(apiUrls.answerGeneration.batches)
+}
+
+/**
+ * 测试单个模型连通性
+ * @param modelId 模型ID
+ * @returns 模型连通性测试结果
+ */
+export const testModelConnectivity = (modelId: number | string) => {
+  return api.get<unknown, ModelConnectivityResult>(
+    `${apiUrls.answerGeneration.testModelConnectivity}/${modelId}/test-connectivity`
+  )
 }

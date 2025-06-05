@@ -193,6 +193,30 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  // 获取当前用户信息
+  function getCurrentUser() {
+    // 首先检查store中是否有用户信息
+    if (currentUser.value) {
+      return currentUser.value
+    }
+
+    // 尝试从localStorage加载
+    const userJson = localStorage.getItem('user')
+    if (userJson) {
+      try {
+        const userData = JSON.parse(userJson)
+        // 顺便更新store中的用户信息
+        currentUser.value = userData
+        return userData
+      } catch (err) {
+        console.error('解析存储的用户数据失败', err)
+        localStorage.removeItem('user')
+      }
+    }
+
+    return null
+  }
+
   return {
     currentUser,
     loading,
@@ -207,5 +231,6 @@ export const useUserStore = defineStore('user', () => {
     getCachedUserInfo,
     updateUserInfoCache,
     clearUserInfoCache,
+    getCurrentUser,
   }
 })

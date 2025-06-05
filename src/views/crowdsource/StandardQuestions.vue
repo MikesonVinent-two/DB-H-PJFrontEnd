@@ -16,11 +16,14 @@
               v-model="searchParams.tags"
               multiple
               filterable
+              allow-create
+              default-first-option
               collapse-tags
               collapse-tags-tooltip
-              placeholder="请选择标签"
+              placeholder="请选择或输入标签，回车确认"
               clearable
               style="width: 240px"
+              @keyup.enter="handleTagEnter"
             >
               <el-option v-for="tag in availableTags" :key="tag" :label="tag" :value="tag" />
             </el-select>
@@ -195,6 +198,7 @@ import {
   updateCrowdsourcedAnswer,
   getCrowdsourcedAnswersByQuestion
 } from '@/api/crowdsourcedAnswer'
+import { getAllTags } from '@/api/tags'
 import type {
   SearchQuestionItem,
   SearchQuestionResponse
@@ -218,11 +222,7 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const totalItems = ref(0)
 const filterType = ref('all')
-const availableTags = ref<string[]>([
-  'math', 'physics', 'chemistry', 'biology',
-  'history', 'geography', 'politics', 'economics',
-  'computer_science', 'machine_learning', 'database', 'networking'
-])
+const availableTags = ref<string[]>([])
 
 // 搜索相关
 const searchParams = reactive({
@@ -251,8 +251,44 @@ const currentAnswer = ref<CrowdsourcedAnswerResponse | null>(null)
 
 // 初始加载
 onMounted(async () => {
+  // 获取所有标签
+  await fetchAllTags()
+  // 搜索问题
   await searchQuestions()
 })
+
+// 获取所有标签
+async function fetchAllTags() {
+  try {
+    const response = await getAllTags()
+    if (response && Array.isArray(response)) {
+      // 从返回的对象数组中提取tagName属性
+      availableTags.value = response.map(tag => tag.tagName)
+    } else {
+      console.error('获取标签列表格式不正确:', response)
+      ElMessage.warning('获取标签列表格式不正确')
+    }
+  } catch (error) {
+    console.error('获取标签列表失败:', error)
+    ElMessage.warning('获取标签列表失败，将使用默认标签')
+  }
+}
+
+// 处理标签回车事件
+function handleTagEnter(event: KeyboardEvent) {
+  // 获取输入内容
+  const input = (event.target as HTMLInputElement).value.trim()
+
+  if (input && !searchParams.tags.includes(input)) {
+    // 添加新标签
+    searchParams.tags.push(input)
+
+    // 如果这是一个新标签，也添加到可用标签列表中
+    if (!availableTags.value.includes(input)) {
+      availableTags.value.push(input)
+    }
+  }
+}
 
 // 搜索问题
 async function searchQuestions() {

@@ -129,7 +129,7 @@ export default defineComponent({
     const disconnect = async () => {
       await websocketService.disconnect()
       if (isComponentMounted.value) {
-        updateStats()
+      updateStats()
       }
     }
 
@@ -219,8 +219,8 @@ export default defineComponent({
       // 添加连接状态监听
       removeConnectionListener = websocketService.addConnectionListener((_newStatus) => {
         if (isComponentMounted.value) {
-          updateStats()
-          updateMessages()
+        updateStats()
+        updateMessages()
         }
       })
 

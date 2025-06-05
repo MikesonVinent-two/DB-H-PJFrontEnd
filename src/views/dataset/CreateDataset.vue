@@ -80,6 +80,12 @@
               @change="searchQuestions"
               style="margin-left: 10px;"
             />
+            <el-checkbox
+              v-model="onlyLatestQuestions"
+              label="仅显示最新问题"
+              @change="searchQuestions"
+              style="margin-left: 10px;"
+            />
             <el-button type="primary" @click="searchQuestions" :loading="isSearching">搜索</el-button>
           </div>
         </div>
@@ -214,6 +220,7 @@ const searchPage = ref(1)
 const searchPageSize = ref(10)
 const searchTotal = ref(0)
 const onlyWithStandardAnswers = ref(true)
+const onlyLatestQuestions = ref(true)
 
 // 表格引用
 const questionTableRef = ref<TableInstance | null>(null)
@@ -232,20 +239,13 @@ const searchQuestions = async () => {
       tags: searchTags.value,
       page: (searchPage.value - 1).toString(), // 后端分页从0开始
       size: searchPageSize.value.toString(),
-      onlyLatest: 'true'
+      onlyLatest: onlyLatestQuestions.value ? 'true' : 'false',
+      onlyWithStandardAnswers: onlyWithStandardAnswers.value ? 'true' : undefined
     })
 
     if (response.success) {
-      // 筛选有标准答案的问题
-      let filteredQuestions = response.questions
-      if (onlyWithStandardAnswers.value) {
-        filteredQuestions = filteredQuestions.filter(q => q.hasStandardAnswer)
-      }
-
-      searchResults.value = filteredQuestions
-      searchTotal.value = onlyWithStandardAnswers.value
-        ? filteredQuestions.length // 本地过滤后的数量
-        : response.total // 全部数量
+      searchResults.value = response.questions
+      searchTotal.value = response.total
 
       // 恢复之前的选择状态
       nextTick(() => {

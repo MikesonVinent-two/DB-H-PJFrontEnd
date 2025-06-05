@@ -352,7 +352,7 @@ const goToCreateDataset = () => {
 // 前往编辑数据集页面
 const goToEditDataset = (datasetId: number) => {
   if (datasetId) {
-    router.push(`/dataset/edit/${datasetId}`)
+  router.push(`/dataset/edit/${datasetId}`)
   } else {
     ElMessage.error('数据集ID不存在')
   }

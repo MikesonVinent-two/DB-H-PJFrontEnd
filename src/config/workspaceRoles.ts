@@ -157,23 +157,56 @@ export const WORKSPACES = [
   // },
   {
     id: 'evaluations',
-    name: '评测管理',
+    name: '批次评测管理',
     type: WORKSPACE_TYPES.ASSESSMENT,
     path: '/assessment/evaluations',
-    roles: [ROLES.ADMIN],
-    description: '管理评测结果',
+    roles: [ROLES.ADMIN, ROLES.EXPERT, ROLES.ANNOTATOR, ROLES.REFEREE, ROLES.CROWDSOURCE_USER, ROLES.CURATOR],
+    description: '管理批次评测',
     icon: 'Management',
-    parentId: 'assessment-workbench'
+    requiresEvaluator: true
+  },
+  {
+    id: 'objective-evaluation',
+    name: '客观题评测',
+    type: WORKSPACE_TYPES.ASSESSMENT,
+    path: '/assessment/objective-evaluation/:batchId',
+    roles: [ROLES.ADMIN, ROLES.EXPERT, ROLES.ANNOTATOR, ROLES.REFEREE],
+    description: '客观题机器评测',
+    icon: 'Check',
+    requiresEvaluator: true,
+    parentId: 'evaluations'
+  },
+  {
+    id: 'subjective-llm-evaluation',
+    name: '主观题大模型评测',
+    type: WORKSPACE_TYPES.ASSESSMENT,
+    path: '/assessment/subjective-llm-evaluation/:batchId',
+    roles: [ROLES.ADMIN, ROLES.EXPERT, ROLES.ANNOTATOR, ROLES.REFEREE],
+    description: '主观题大模型评测',
+    icon: 'Cpu',
+    requiresEvaluator: true,
+    parentId: 'evaluations'
+  },
+  {
+    id: 'subjective-human-evaluation',
+    name: '主观题人工评测',
+    type: WORKSPACE_TYPES.ASSESSMENT,
+    path: '/assessment/subjective-human-evaluation/:batchId',
+    roles: [ROLES.ADMIN, ROLES.EXPERT, ROLES.ANNOTATOR, ROLES.REFEREE],
+    description: '主观题人工评测',
+    icon: 'UserFilled',
+    requiresEvaluator: true,
+    parentId: 'evaluations'
   },
   {
     id: 'scoring',
     name: '评分管理',
     type: WORKSPACE_TYPES.ASSESSMENT,
     path: '/assessment/scoring',
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.EXPERT, ROLES.ANNOTATOR, ROLES.REFEREE, ROLES.CROWDSOURCE_USER, ROLES.CURATOR],
     description: '管理评分结果',
     icon: 'StarFilled',
-    parentId: 'assessment-workbench'
+    requiresEvaluator: true
   },
 
   // 评审员工作台

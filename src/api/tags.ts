@@ -32,10 +32,22 @@ export const recommendTags = (params: RecommendTagsRequest) => {
 }
 
 /**
+ * 标签接口
+ */
+export interface Tag {
+  id: number
+  tagName: string
+  tagType?: string
+  createdAt: string
+  hasAnswerPrompt: boolean
+  hasEvaluationPrompt: boolean
+}
+
+/**
  * 获取所有可用标签
  */
 export const getAllTags = () => {
-  return api.get<unknown, { tags: string[] }>(
+  return api.get<unknown, Tag[]>(
     apiUrls.tags.all
   )
 }

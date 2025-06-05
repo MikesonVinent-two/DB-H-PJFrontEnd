@@ -205,39 +205,63 @@ const routes: Array<RouteRecordRaw> = [
   },
 
   // 评测工作台
+
   {
-    path: '/assessment/workbench',
-    name: 'assessment-workbench',
-    component: () => import('../views/assessment/AssessmentWorkbench.vue'),
+    path: '/assessment/evaluations',
+    name: 'Evaluations',
+    component: () => import('../views/assessment/Evaluations.vue'),
     meta: {
       requiresAuth: true,
-      title: '评测工作台',
-      roles: ['ADMIN'],
+      title: '评测管理',
+      roles: ['ADMIN','EXPERT','ANNOTATOR','REFEREE','CROWDSOURCE_USER','CURATOR'],
       requiresEvaluator: true
-    },
-    children: [
-      {
-        path: '/assessment/evaluations',
-        name: 'evaluations',
-        component: () => import('../views/assessment/Evaluations.vue'),
-        meta: {
-          requiresAuth: true,
-          title: '评测管理',
-          roles: ['ADMIN']
-        }
-      },
-      {
-        path: '/assessment/scoring',
-        name: 'scoring',
-        component: () => import('../views/assessment/Scoring.vue'),
-        meta: {
-          requiresAuth: true,
-          title: '评分管理',
-          roles: ['ADMIN']
-        }
-      }
-    ]
+    }
   },
+  {
+    path: '/assessment/objective-evaluation/:batchId',
+    name: 'ObjectiveEvaluation',
+    component: () => import('../views/assessment/ObjectiveEvaluationPage.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '客观题评测',
+      roles: ['ADMIN','EXPERT','ANNOTATOR','REFEREE','CROWDSOURCE_USER','CURATOR'],
+      requiresEvaluator: true
+    }
+  },
+  {
+    path: '/assessment/subjective-llm-evaluation/:batchId',
+    name: 'SubjectiveLlmEvaluation',
+    component: () => import('../views/assessment/SubjectiveLlmEvaluationPage.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '主观题大模型评测',
+      roles: ['ADMIN','EXPERT','ANNOTATOR','REFEREE','CROWDSOURCE_USER','CURATOR'],
+      requiresEvaluator: true
+    }
+  },
+  {
+    path: '/assessment/subjective-human-evaluation/:batchId',
+    name: 'SubjectiveHumanEvaluation',
+    component: () => import('../views/assessment/SubjectiveHumanEvaluationPage.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '主观题人工评测',
+      roles: ['ADMIN','EXPERT','ANNOTATOR','REFEREE','CROWDSOURCE_USER','CURATOR'],
+      requiresEvaluator: true
+    }
+  },
+  {
+    path: '/assessment/scoring',
+    name: 'scoring',
+    component: () => import('../views/assessment/Scoring.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '评分管理',
+      roles: ['ADMIN','EXPERT','ANNOTATOR','REFEREE','CROWDSOURCE_USER','CURATOR'],
+      requiresEvaluator: true
+    }
+  },
+
 
   // 评审员工作台
   {

@@ -727,20 +727,13 @@ const searchQuestions = async () => {
       tags: searchTags.value,
       page: (searchPage.value - 1).toString(), // 后端分页从0开始
       size: searchPageSize.value.toString(),
-      onlyLatest: 'true'
+      onlyLatest: 'true',
+      onlyWithStandardAnswers: 'true'
     })
 
     if (response.success) {
-      // 只保留有标准答案的问题
-      const filteredQuestions = response.questions.filter(q => q.hasStandardAnswer)
-
-      // 如果过滤后没有结果但有搜索结果，显示提示信息
-      if (filteredQuestions.length === 0 && response.questions.length > 0) {
-        ElMessage.warning('搜索结果中没有包含标准答案的问题')
-      }
-
-      searchResults.value = filteredQuestions
-      searchTotal.value = filteredQuestions.length // 使用过滤后的总数
+      searchResults.value = response.questions
+      searchTotal.value = response.total
     } else {
       ElMessage.error('搜索问题失败')
     }

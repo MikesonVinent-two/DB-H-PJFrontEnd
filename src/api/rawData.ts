@@ -180,10 +180,12 @@ export const createQuestionWithAnswers = (data: QuestionWithAnswersDto) => {
  * @returns 分页的问题列表
  */
 export const searchRawQuestions = (params: {
-  keyword?: string
-  page?: number
-  size?: number
+  keyword?: string[]
+  page?: number | string
+  size?: number | string
   sort?: string
+  tags?: string[]
+  unStandardized?: boolean
 }) => {
   return api.get<unknown, PageResponse<RawQuestionSearchItem>>(
     apiUrls.rawData.searchQuestions,

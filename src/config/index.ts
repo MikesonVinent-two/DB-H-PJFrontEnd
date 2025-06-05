@@ -7,7 +7,7 @@ export const appConfig = {
     // baseUrl: 'https://m1.apifoxmock.com/m1/6367019-6063223-default',
     baseUrl: 'http://localhost:8080',
     contentType: 'application/json',
-    timeout: 10000, // 普通请求超时时间：10秒
+    timeout: 100000, // 普通请求超时时间：10秒
     // LLM API特殊配置
     llm: {
       chatTimeout: 600000, // LLM聊天请求超时时间：60秒
@@ -90,8 +90,8 @@ export const apiUrls = {
     updateEvaluationSubjective: '/api/prompts/evaluation/subjective', // 更新评测主观题提示词API
     getEvaluationSubjectiveDetail: '/api/prompts/evaluation/subjective', // 获取评测主观题提示词详情API
     getAllEvaluationSubjective: '/api/prompts/evaluation/subjective', // 获取所有评测主观题提示词API
-    getActiveEvaluationSubjective: '/prompts/evaluation/subjective/active', // 获取所有激活状态的评测主观题提示词API
-    deleteEvaluationSubjective: '/prompts/evaluation/subjective', // 删除评测主观题提示词API（软删除）
+    getActiveEvaluationSubjective: '/api/prompts/evaluation/subjective/active', // 获取所有激活状态的评测主观题提示词API
+    deleteEvaluationSubjective: '/api/ prompts/evaluation/subjective', // 删除评测主观题提示词API（软删除）
   },
   promptAssembly: {
     answerConfigs: '/api/prompt-assembly/answer-configs', // 回答提示词组装配置相关API
@@ -108,6 +108,7 @@ export const apiUrls = {
     resumeBatch: '/api/answer-generation/batches',
     getBatchStatus: '/api/answer-generation/batches',
     testConnectivity: '/api/answer-generation/batches',
+    testModelConnectivity: '/api/answer-generation/models',
     getUserBatches: '/api/answer-generation/batches/user'
   },
   llmModels: {
@@ -127,6 +128,7 @@ export const apiUrls = {
     getAllAi: '/api/evaluators/ai', // 获取所有AI评测者API
     getAllHuman: '/api/evaluators/human', // 获取所有人类评测者API
     getByUserId: '/api/evaluators/user', // 根据用户ID获取评测者API
+    testAiConnectivity: '/api/evaluators/ai/connectivity-test', // 测试AI评测员连通性API
   },
   crowdsourced: {
     base: '/api/crowdsourced-answers',  // 基础路径
@@ -170,6 +172,11 @@ export const apiUrls = {
     batchObjectiveQuestions: '/api/evaluations/batch',  // 评测一个批次中的所有客观题
     batchSubjective: '/api/evaluations/batch/subjective',  // 批量评测主观题
     humanEvaluation: '/api/evaluations/human',  // 评测员评测某个回答
+    humanPending: '/api/evaluations/human/pending',  // 获取待人工评测的回答列表
+    humanCompleted: '/api/evaluations/human/completed',  // 获取已完成人工评测的回答列表
+    subjectiveResults: '/api/evaluations/subjective/results',  // 获取主观题大模型评测详细结果
+    subjectiveResultsAllEvaluators: '/api/evaluations/subjective/results/all-evaluators',  // 获取主观题所有评测员的评测详细结果
+    objectiveResults: '/api/evaluations/objective/results',  // 获取批次中客观题的详细评测结果
     batchUnevaluated: '/api/evaluations/batch',  // 返回评测员评测任务
     runResults: '/api/evaluations/runs',  // 获取评测运行的统计结果
   },

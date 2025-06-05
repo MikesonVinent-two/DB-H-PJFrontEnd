@@ -91,6 +91,8 @@ export interface SingleModelConnectivityTestResult {
   error?: string
 }
 
+
+
 /**
  * 注册LLM模型
  * @param data 注册模型数据
@@ -131,5 +133,6 @@ export const testSystemModelConnectivity = () => {
  * @returns 单个模型连通性测试结果
  */
 export const testSingleModelConnectivity = (modelId: number | string) => {
-  return api.get<unknown, SingleModelConnectivityTestResult>(`${apiUrls.answerGeneration.testModelConnectivity}/${modelId}/test-connectivity`)
-}
+  return api.get<unknown, SingleModelConnectivityTestResult>(
+    `${apiUrls.answerGeneration.testModelConnectivity}/${modelId}/test-connectivity`
+  )}

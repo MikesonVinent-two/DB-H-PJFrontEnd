@@ -442,6 +442,7 @@ export const searchStandardQuestions = (params: {
   page?: string
   size?: string
   onlyLatest?: boolean | string // 是否只返回叶子节点的标准问题
+  onlyWithStandardAnswers?: boolean | string // 是否只返回有标准答案的问题
 }) => {
   return api.get<SearchQuestionResponse>(
     apiUrls.standardData.searchQuestions,
