@@ -1,249 +1,264 @@
 <template>
   <div class="subjective-human-evaluation-page">
-    <el-card class="page-header">
-      <template #header>
-        <div class="card-header">
-          <div class="title-section">
-            <h2>主观题人工评测</h2>
-            <el-tag class="batch-tag" type="info">批次: {{ batchName }}</el-tag>
-          </div>
-          <div class="header-actions">
-            <el-button @click="goBack">
-              <el-icon><Back /></el-icon>
-              返回
-            </el-button>
-            <el-button type="primary" @click="loadNextAnswer" :loading="loading">
-              <el-icon><RefreshRight /></el-icon>
-              {{ currentAnswer ? '下一题' : '开始评测' }}
-            </el-button>
-          </div>
-        </div>
-      </template>
-
-      <!-- 评测进度统计 -->
-      <el-row class="evaluation-progress" :gutter="20">
-        <el-col :span="8">
-          <el-card shadow="hover" class="progress-card">
-            <template #header>
-              <div class="progress-header">
-                <el-icon><Histogram /></el-icon>
-                <span>评测进度</span>
-              </div>
-            </template>
-            <el-progress
-              :percentage="evaluationProgress"
-              :format="progressFormat"
-              :status="evaluationProgress === 100 ? 'success' : ''"
-              :stroke-width="18"
-            />
-            <div class="progress-stats">
-              <div class="stat-item">
-                <span class="stat-label">已评测:</span>
-                <span class="stat-value">{{ evaluationStats.completed }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">未评测:</span>
-                <span class="stat-value">{{ evaluationStats.pending }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">总数量:</span>
-                <span class="stat-value">{{ evaluationStats.total }}</span>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="16">
-          <el-card shadow="hover" class="progress-card">
-            <template #header>
-              <div class="progress-header">
-                <el-icon><DataAnalysis /></el-icon>
-                <span>评分统计</span>
-              </div>
-            </template>
-            <div class="score-stats">
-              <div class="stat-item">
-                <span class="stat-label">平均分:</span>
-                <span class="stat-value">{{ evaluationStats.averageScore.toFixed(1) }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">最高分:</span>
-                <span class="stat-value">{{ evaluationStats.maxScore }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">最低分:</span>
-                <span class="stat-value">{{ evaluationStats.minScore }}</span>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <!-- 评测内容 -->
-      <div v-if="currentAnswer" class="evaluation-content">
-        <div class="answer-info">
-          <h3>问题信息</h3>
-          <div class="info-row">
-            <span class="info-label">问题:</span>
-            <span>{{ currentQuestion?.questionText }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">类型:</span>
-            <span>{{ getQuestionTypeText(currentQuestion?.questionType) }}</span>
-          </div>
-
-          <h3>模型回答</h3>
-          <div class="info-row">
-            <span>{{ currentAnswer.answer?.answerText }}</span>
-          </div>
-
-          <h3>标准答案</h3>
-          <div class="info-row" v-if="currentAnswer.standardAnswer">
-            <span>{{ currentAnswer.standardAnswer.answerText }}</span>
-          </div>
-          <div class="info-row" v-else>
-            <span>暂无标准答案</span>
-          </div>
-        </div>
-
-        <el-divider>评分</el-divider>
-
-        <div class="evaluation-form">
-          <el-form :model="evaluationForm" label-width="120px">
-            <el-form-item label="总体评分">
-              <el-slider
-                v-model="evaluationForm.overallScore"
-                :min="0"
-                :max="100"
-                :step="1"
-                show-input
-                :marks="{0: '0', 60: '60', 80: '80', 100: '100'}"
-              />
-            </el-form-item>
-
-            <el-form-item label="评语">
-              <el-input
-                v-model="evaluationForm.comments"
-                type="textarea"
-                :rows="3"
-                placeholder="请输入评语"
-              />
-            </el-form-item>
-
-            <el-divider>详细评分项</el-divider>
-
-            <div v-for="(item, index) in evaluationForm.detailScores" :key="index" class="criterion-item">
-              <span class="criterion-name">{{ item.criterionName }}</span>
-              <el-slider
-                v-model="item.score"
-                :min="0"
-                :max="100"
-                :step="1"
-                show-input
-              />
-              <el-input
-                v-model="item.comments"
-                type="textarea"
-                :rows="2"
-                :placeholder="`${item.criterionName}评语`"
-              />
-            </div>
-
-            <div class="form-actions">
-              <el-button type="primary" @click="submitEvaluation" :loading="submitting">
-                提交评测
-              </el-button>
-            </div>
-          </el-form>
-        </div>
-      </div>
-
-      <!-- 无题目提示 -->
-      <div v-else-if="noMoreAnswers" class="no-answers">
-        <el-empty description="该批次暂无需要评测的答案" />
-      </div>
-
-      <!-- 加载中 -->
-      <div v-else-if="loading" class="loading-container">
-        <el-skeleton :rows="10" animated />
-      </div>
-
-      <!-- 已评测答案列表 -->
-      <el-divider>已评测答案</el-divider>
-      <div class="evaluated-answers">
-        <el-table
-          v-loading="loadingEvaluated"
-          :data="evaluatedAnswers"
-          stripe
-          style="width: 100%"
-          max-height="400"
-        >
-          <el-table-column prop="questionText" label="问题" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="answerText" label="回答" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="score" label="评分" width="100">
-            <template #default="scope">
-              <el-tag :type="getScoreTagType(scope.row.score)">
-                {{ scope.row.score }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="comments" label="评语" min-width="150" show-overflow-tooltip />
-          <el-table-column prop="evaluationTime" label="评测时间" width="180">
-            <template #default="scope">
-              {{ formatDate(scope.row.evaluationTime) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="120">
-            <template #default="scope">
-              <el-button type="primary" link @click="viewEvaluationDetail(scope.row)">
-                查看详情
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <div class="pagination-container">
-          <el-pagination
-            v-model:current-page="evaluatedAnswersPage"
-            v-model:page-size="evaluatedAnswersPageSize"
-            :page-sizes="[5, 10, 20, 50]"
-            layout="total, sizes, prev, pager, next, jumper"
-            :total="evaluatedAnswersTotal"
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
-          />
-        </div>
-      </div>
+    <!-- 批次ID无效时的提示 -->
+    <el-card v-if="!isValidBatchId" class="error-card">
+      <el-result
+        icon="error"
+        title="无效的批次ID"
+        sub-title="未找到有效的批次信息，请返回评测页面重新选择批次。"
+      >
+        <template #extra>
+          <el-button type="primary" @click="goBack">返回评测页面</el-button>
+        </template>
+      </el-result>
     </el-card>
 
-    <!-- 评测详情对话框 -->
-    <el-dialog
-      v-model="evaluationDetailDialog.visible"
-      title="评测详情"
-      width="60%"
-      destroy-on-close
-    >
-      <div v-if="evaluationDetailDialog.data" class="evaluation-detail">
-        <div class="detail-section">
-          <h3>问题</h3>
-          <p>{{ evaluationDetailDialog.data.questionText }}</p>
+    <template v-else>
+      <el-card class="page-header">
+        <template #header>
+          <div class="card-header">
+            <div class="title-section">
+              <h2>主观题人工评测</h2>
+              <el-tag class="batch-tag" type="info">批次: {{ batchName }}</el-tag>
+            </div>
+            <div class="header-actions">
+              <el-button @click="goBack">
+                <el-icon><Back /></el-icon>
+                返回
+              </el-button>
+              <el-button type="primary" @click="loadNextAnswer" :loading="loading">
+                <el-icon><RefreshRight /></el-icon>
+                {{ currentAnswer ? '下一题' : '开始评测' }}
+              </el-button>
+            </div>
+          </div>
+        </template>
+
+        <!-- 评测进度统计 -->
+        <el-row class="evaluation-progress" :gutter="20">
+          <el-col :span="8">
+            <el-card shadow="hover" class="progress-card">
+              <template #header>
+                <div class="progress-header">
+                  <el-icon><Histogram /></el-icon>
+                  <span>评测进度</span>
+                </div>
+              </template>
+              <el-progress
+                :percentage="evaluationProgress"
+                :format="progressFormat"
+                :status="evaluationProgress === 100 ? 'success' : ''"
+                :stroke-width="18"
+              />
+              <div class="progress-stats">
+                <div class="stat-item">
+                  <span class="stat-label">已评测:</span>
+                  <span class="stat-value">{{ evaluationStats.completed }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">未评测:</span>
+                  <span class="stat-value">{{ evaluationStats.pending }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">总数量:</span>
+                  <span class="stat-value">{{ evaluationStats.total }}</span>
+                </div>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :span="16">
+            <el-card shadow="hover" class="progress-card">
+              <template #header>
+                <div class="progress-header">
+                  <el-icon><DataAnalysis /></el-icon>
+                  <span>评分统计</span>
+                </div>
+              </template>
+              <div class="score-stats">
+                <div class="stat-item">
+                  <span class="stat-label">平均分:</span>
+                  <span class="stat-value">{{ evaluationStats.averageScore.toFixed(1) }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">最高分:</span>
+                  <span class="stat-value">{{ evaluationStats.maxScore }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">最低分:</span>
+                  <span class="stat-value">{{ evaluationStats.minScore }}</span>
+                </div>
+              </div>
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <!-- 评测内容 -->
+        <div v-if="currentAnswer" class="evaluation-content">
+          <div class="answer-info">
+            <h3>问题信息</h3>
+            <div class="info-row">
+              <span class="info-label">问题:</span>
+              <span>{{ currentQuestion?.questionText }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">类型:</span>
+              <span>{{ getQuestionTypeText(currentQuestion?.questionType) }}</span>
+            </div>
+
+            <h3>模型回答</h3>
+            <div class="info-row">
+              <span>{{ currentAnswer.answer?.answerText }}</span>
+            </div>
+
+            <h3>标准答案</h3>
+            <div class="info-row" v-if="currentAnswer.standardAnswer">
+              <span>{{ currentAnswer.standardAnswer.answerText }}</span>
+            </div>
+            <div class="info-row" v-else>
+              <span>暂无标准答案</span>
+            </div>
+          </div>
+
+          <el-divider>评分</el-divider>
+
+          <div class="evaluation-form">
+            <el-form :model="evaluationForm" label-width="120px">
+              <el-form-item label="总体评分">
+                <el-slider
+                  v-model="evaluationForm.overallScore"
+                  :min="0"
+                  :max="100"
+                  :step="1"
+                  show-input
+                  :marks="{0: '0', 60: '60', 80: '80', 100: '100'}"
+                />
+              </el-form-item>
+
+              <el-form-item label="评语">
+                <el-input
+                  v-model="evaluationForm.comments"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="请输入评语"
+                />
+              </el-form-item>
+
+              <el-divider>详细评分项</el-divider>
+
+              <div v-for="(item, index) in evaluationForm.detailScores" :key="index" class="criterion-item">
+                <span class="criterion-name">{{ item.criterionName }}</span>
+                <el-slider
+                  v-model="item.score"
+                  :min="0"
+                  :max="100"
+                  :step="1"
+                  show-input
+                />
+                <el-input
+                  v-model="item.comments"
+                  type="textarea"
+                  :rows="2"
+                  :placeholder="`${item.criterionName}评语`"
+                />
+              </div>
+
+              <div class="form-actions">
+                <el-button type="primary" @click="submitEvaluation" :loading="submitting">
+                  提交评测
+                </el-button>
+              </div>
+            </el-form>
+          </div>
         </div>
-        <div class="detail-section">
-          <h3>模型回答</h3>
-          <p>{{ evaluationDetailDialog.data.answerText }}</p>
+
+        <!-- 无题目提示 -->
+        <div v-else-if="noMoreAnswers" class="no-answers">
+          <el-empty description="该批次暂无需要评测的答案" />
         </div>
-        <div class="detail-section">
-          <h3>评分: {{ evaluationDetailDialog.data.score }}</h3>
-          <p>{{ evaluationDetailDialog.data.comments }}</p>
+
+        <!-- 加载中 -->
+        <div v-else-if="loading" class="loading-container">
+          <el-skeleton :rows="10" animated />
         </div>
-        <div class="detail-section">
-          <h3>详细评分</h3>
-          <el-table :data="evaluationDetailDialog.data.evaluationDetails || []" border>
-            <el-table-column prop="criterionName" label="评分项" />
-            <el-table-column prop="score" label="分数" width="100" />
-            <el-table-column prop="comments" label="评语" min-width="200" show-overflow-tooltip />
+
+        <!-- 已评测答案列表 -->
+        <el-divider>已评测答案</el-divider>
+        <div class="evaluated-answers">
+          <el-table
+            v-loading="loadingEvaluated"
+            :data="evaluatedAnswers"
+            stripe
+            style="width: 100%"
+            max-height="400"
+          >
+            <el-table-column prop="questionText" label="问题" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="answerText" label="回答" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="score" label="评分" width="100">
+              <template #default="scope">
+                <el-tag :type="getScoreTagType(scope.row.score)">
+                  {{ scope.row.score }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="comments" label="评语" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="evaluationTime" label="评测时间" width="180">
+              <template #default="scope">
+                {{ formatDate(scope.row.evaluationTime) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="120">
+              <template #default="scope">
+                <el-button type="primary" link @click="viewEvaluationDetail(scope.row)">
+                  查看详情
+                </el-button>
+              </template>
+            </el-table-column>
           </el-table>
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="evaluatedAnswersPage"
+              v-model:page-size="evaluatedAnswersPageSize"
+              :page-sizes="[5, 10, 20, 50]"
+              layout="total, sizes, prev, pager, next, jumper"
+              :total="evaluatedAnswersTotal"
+              @size-change="handleSizeChange"
+              @current-change="handleCurrentChange"
+            />
+          </div>
         </div>
-      </div>
-    </el-dialog>
+      </el-card>
+
+      <!-- 评测详情对话框 -->
+      <el-dialog
+        v-model="evaluationDetailDialog.visible"
+        title="评测详情"
+        width="60%"
+        destroy-on-close
+      >
+        <div v-if="evaluationDetailDialog.data" class="evaluation-detail">
+          <div class="detail-section">
+            <h3>问题</h3>
+            <p>{{ evaluationDetailDialog.data.questionText }}</p>
+          </div>
+          <div class="detail-section">
+            <h3>模型回答</h3>
+            <p>{{ evaluationDetailDialog.data.answerText }}</p>
+          </div>
+          <div class="detail-section">
+            <h3>评分: {{ evaluationDetailDialog.data.score }}</h3>
+            <p>{{ evaluationDetailDialog.data.comments }}</p>
+          </div>
+          <div class="detail-section">
+            <h3>详细评分</h3>
+            <el-table :data="evaluationDetailDialog.data.evaluationDetails || []" border>
+              <el-table-column prop="criterionName" label="评分项" />
+              <el-table-column prop="score" label="分数" width="100" />
+              <el-table-column prop="comments" label="评语" min-width="200" show-overflow-tooltip />
+            </el-table>
+          </div>
+        </div>
+      </el-dialog>
+    </template>
   </div>
 </template>
 
@@ -270,6 +285,11 @@ const userStore = useUserStore()
 // 批次信息
 const batchId = computed(() => route.params.batchId as string)
 const batchName = computed(() => route.query.batchName as string || '未命名批次')
+
+// 检查批次ID是否有效
+const isValidBatchId = computed(() => {
+  return !!batchId.value && batchId.value !== 'undefined' && batchId.value !== 'null'
+})
 
 // 状态
 const loading = ref(false)
@@ -570,15 +590,11 @@ const handleCurrentChange = (page: number) => {
 
 // 初始化
 onMounted(() => {
-  if (!batchId.value) {
-    ElMessage.error('批次ID不存在')
-    goBack()
-    return
+  // 只有在批次ID有效时才加载评测统计和已评测答案
+  if (isValidBatchId.value) {
+    loadEvaluationStats()
+    loadEvaluatedAnswers()
   }
-
-  // 加载评测统计和已评测答案
-  loadEvaluationStats()
-  loadEvaluatedAnswers()
 })
 
 // 定义组件名称
@@ -729,5 +745,10 @@ defineOptions({
   margin-bottom: 10px;
   padding-bottom: 5px;
   border-bottom: 1px solid #ebeef5;
+}
+
+.error-card {
+  margin: 100px auto;
+  max-width: 600px;
 }
 </style>

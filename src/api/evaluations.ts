@@ -68,17 +68,29 @@ export const evaluateBatchObjectiveQuestions = (
  * 批量评测主观题请求接口
  */
 export interface BatchSubjectiveEvaluationRequest {
-  batchId: string
+  batchId: number
   evaluatorId: number
   userId: number
-  subjectivePromptId?: number
-  evaluationAssemblyConfigId?: number
+  subjectivePromptId: number
+  evaluationAssemblyConfigId: number
+  criteriaIds: number[]
+}
+
+/**
+ * 批量评测主观题响应接口
+ */
+export interface BatchSubjectiveEvaluationResponse {
+  success: boolean
+  message: string
+  evaluationRunId: number
+  batchId: number
+  status: string
 }
 
 /**
  * 批量评测主观题
  * @param data 批量评测主观题请求数据
- * @returns 空对象
+ * @returns 评测运行信息
  *
  * 接口路径: /api/evaluations/batch/subjective
  * 请求方法: POST
@@ -86,14 +98,17 @@ export interface BatchSubjectiveEvaluationRequest {
  * 示例请求:
  * ```json
  * {
- *     "batchId": "number",     // 批次ID
- *     "evaluatorId": "number", // 评测者ID（必须是AI模型类型）
- *     "userId": "number"       // 操作用户ID
+ *   "batchId": 1001,                      // 批次ID
+ *   "evaluatorId": 2001,                  // 评测者ID
+ *   "userId": 3001,                       // 用户ID
+ *   "subjectivePromptId": 4001,          // 主观题提示ID
+ *   "evaluationAssemblyConfigId": 5001,   // 评测组装配置ID
+ *   "criteriaIds": [1, 2, 3]             // 评分标准ID列表
  * }
  * ```
  */
 export const evaluateBatchSubjective = (data: BatchSubjectiveEvaluationRequest) => {
-  return api.post<unknown, Record<string, never>>(
+  return api.post<unknown, BatchSubjectiveEvaluationResponse>(
     apiUrls.evaluations.batchSubjective,
     data
   )

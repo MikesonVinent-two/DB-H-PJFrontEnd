@@ -1,126 +1,141 @@
 <template>
   <div class="objective-evaluation-page">
-    <el-card class="page-header">
-      <template #header>
-        <div class="card-header">
-          <div class="title-section">
-            <h2>客观题评测</h2>
-            <el-tag class="batch-tag" type="info">批次: {{ batchName }}</el-tag>
-          </div>
-          <div class="header-actions">
-            <el-button @click="goBack">
-              <el-icon><Back /></el-icon>
-              返回
-            </el-button>
-            <el-button type="primary" @click="startEvaluation" :loading="loading" :disabled="evaluating">
-              <el-icon><VideoPlay /></el-icon>
-              开始评测
-            </el-button>
-          </div>
-        </div>
-      </template>
-
-      <!-- 评测状态 -->
-      <div v-if="evaluating" class="evaluation-status">
-        <el-alert
-          title="评测进行中..."
-          type="info"
-          :closable="false"
-          show-icon
-        >
-          <template #description>
-            <div class="status-description">
-              <p>系统正在对客观题进行自动评测，请耐心等待。</p>
-              <el-progress :percentage="evaluationProgress" :status="evaluationStatus"></el-progress>
-            </div>
-          </template>
-        </el-alert>
-      </div>
-
-      <!-- 评测结果 -->
-      <div v-if="evaluationResult" class="evaluation-result">
-        <el-descriptions title="评测结果统计" :column="2" border>
-          <el-descriptions-item label="总答案数量">{{ evaluationResult.totalAnswers }}</el-descriptions-item>
-          <el-descriptions-item label="平均得分">{{ evaluationResult.averageScore.toFixed(2) }}</el-descriptions-item>
-          <el-descriptions-item label="成功数量">{{ evaluationResult.successCount }}</el-descriptions-item>
-          <el-descriptions-item label="失败数量">{{ evaluationResult.failedCount }}</el-descriptions-item>
-        </el-descriptions>
-
-        <h3>各题型统计</h3>
-        <el-table :data="questionTypeStats" style="width: 100%">
-          <el-table-column prop="type" label="题型" />
-          <el-table-column prop="count" label="数量" />
-          <el-table-column prop="averageScore" label="平均分" />
-        </el-table>
-      </div>
-
-      <!-- 详细评测结果 -->
-      <div v-if="detailResults" class="detail-results">
-        <el-divider>
-          <h3>详细评测结果</h3>
-        </el-divider>
-
-        <!-- 模型平均分 -->
-        <h4>各模型平均分</h4>
-        <div class="model-averages">
-          <el-card v-for="(score, modelId) in detailResults.modelAverages" :key="modelId" class="average-card">
-            <template #header>
-              <div class="average-header">
-                {{ getModelName(modelId) }}
-              </div>
-            </template>
-            <div class="average-score">{{ score.toFixed(2) }}</div>
-          </el-card>
-        </div>
-
-        <!-- 题型平均分 -->
-        <h4>各题型平均分</h4>
-        <div class="type-averages">
-          <el-card v-for="(score, type) in detailResults.typeAverages" :key="type" class="average-card">
-            <template #header>
-              <div class="average-header">
-                {{ getQuestionTypeText(type) }}
-              </div>
-            </template>
-            <div class="average-score">{{ score.toFixed(2) }}</div>
-          </el-card>
-        </div>
-
-        <!-- 答案详情表格 -->
-        <h4>答案详情</h4>
-        <el-table :data="detailResults.items" style="width: 100%" border stripe>
-          <el-table-column prop="questionText" label="问题" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="questionType" label="题型" width="120">
-            <template #default="{ row }">
-              {{ getQuestionTypeText(row.questionType) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="modelName" label="模型" width="120" />
-          <el-table-column prop="answerText" label="答案" min-width="150" show-overflow-tooltip />
-          <el-table-column prop="score" label="得分" width="80" />
-          <el-table-column prop="isCorrect" label="是否正确" width="100">
-            <template #default="{ row }">
-              <el-tag :type="getCorrectTagType(row.score)">
-                {{ getCorrectText(row.score) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <!-- 分页器 -->
-        <div class="pagination-container">
-          <el-pagination
-            v-model:current-page="detailPage"
-            v-model:page-size="detailPageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            layout="total, sizes, prev, pager, next, jumper"
-            :total="detailResults.totalItems"
-            @size-change="handleDetailSizeChange"
-            @current-change="handleDetailPageChange"
-          />
-        </div>
-      </div>
+    <!-- 批次ID无效时的提示 -->
+    <el-card v-if="!isValidBatchId" class="error-card">
+      <el-result
+        icon="error"
+        title="无效的批次ID"
+        sub-title="未找到有效的批次信息，请返回评测页面重新选择批次。"
+      >
+        <template #extra>
+          <el-button type="primary" @click="goBack">返回评测页面</el-button>
+        </template>
+      </el-result>
     </el-card>
+
+    <template v-else>
+      <el-card class="page-header">
+        <template #header>
+          <div class="card-header">
+            <div class="title-section">
+              <h2>客观题评测</h2>
+              <el-tag class="batch-tag" type="info">批次: {{ batchName }}</el-tag>
+            </div>
+            <div class="header-actions">
+              <el-button @click="goBack">
+                <el-icon><Back /></el-icon>
+                返回
+              </el-button>
+              <el-button type="primary" @click="startEvaluation" :loading="loading" :disabled="evaluating">
+                <el-icon><VideoPlay /></el-icon>
+                开始评测
+              </el-button>
+            </div>
+          </div>
+        </template>
+
+        <!-- 评测状态 -->
+        <div v-if="evaluating" class="evaluation-status">
+          <el-alert
+            title="评测进行中..."
+            type="info"
+            :closable="false"
+            show-icon
+          >
+            <template #description>
+              <div class="status-description">
+                <p>系统正在对客观题进行自动评测，请耐心等待。</p>
+                <el-progress :percentage="evaluationProgress" :status="evaluationStatus"></el-progress>
+              </div>
+            </template>
+          </el-alert>
+        </div>
+
+        <!-- 评测结果 -->
+        <div v-if="evaluationResult" class="evaluation-result">
+          <el-descriptions title="评测结果统计" :column="2" border>
+            <el-descriptions-item label="总答案数量">{{ evaluationResult.totalAnswers }}</el-descriptions-item>
+            <el-descriptions-item label="平均得分">{{ evaluationResult.averageScore.toFixed(2) }}</el-descriptions-item>
+            <el-descriptions-item label="成功数量">{{ evaluationResult.successCount }}</el-descriptions-item>
+            <el-descriptions-item label="失败数量">{{ evaluationResult.failedCount }}</el-descriptions-item>
+          </el-descriptions>
+
+          <h3>各题型统计</h3>
+          <el-table :data="questionTypeStats" style="width: 100%">
+            <el-table-column prop="type" label="题型" />
+            <el-table-column prop="count" label="数量" />
+            <el-table-column prop="averageScore" label="平均分" />
+          </el-table>
+        </div>
+
+        <!-- 详细评测结果 -->
+        <div v-if="detailResults" class="detail-results">
+          <el-divider>
+            <h3>详细评测结果</h3>
+          </el-divider>
+
+          <!-- 模型平均分 -->
+          <h4>各模型平均分</h4>
+          <div class="model-averages">
+            <el-card v-for="(score, modelId) in detailResults.modelAverages" :key="modelId" class="average-card">
+              <template #header>
+                <div class="average-header">
+                  {{ getModelName(modelId) }}
+                </div>
+              </template>
+              <div class="average-score">{{ score.toFixed(2) }}</div>
+            </el-card>
+          </div>
+
+          <!-- 题型平均分 -->
+          <h4>各题型平均分</h4>
+          <div class="type-averages">
+            <el-card v-for="(score, type) in detailResults.typeAverages" :key="type" class="average-card">
+              <template #header>
+                <div class="average-header">
+                  {{ getQuestionTypeText(type) }}
+                </div>
+              </template>
+              <div class="average-score">{{ score.toFixed(2) }}</div>
+            </el-card>
+          </div>
+
+          <!-- 答案详情表格 -->
+          <h4>答案详情</h4>
+          <el-table :data="detailResults.items" style="width: 100%" border stripe>
+            <el-table-column prop="questionText" label="问题" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="questionType" label="题型" width="120">
+              <template #default="{ row }">
+                {{ getQuestionTypeText(row.questionType) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="modelName" label="模型" width="120" />
+            <el-table-column prop="answerText" label="答案" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="score" label="得分" width="80" />
+            <el-table-column prop="isCorrect" label="是否正确" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getCorrectTagType(row.score)">
+                  {{ getCorrectText(row.score) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 分页器 -->
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="detailPage"
+              v-model:page-size="detailPageSize"
+              :page-sizes="[10, 20, 50, 100]"
+              layout="total, sizes, prev, pager, next, jumper"
+              :total="detailResults.totalItems"
+              @size-change="handleDetailSizeChange"
+              @current-change="handleDetailPageChange"
+            />
+          </div>
+        </div>
+      </el-card>
+    </template>
   </div>
 </template>
 
@@ -146,6 +161,11 @@ const userStore = useUserStore()
 // 批次信息
 const batchId = computed(() => route.params.batchId as string)
 const batchName = computed(() => route.query.batchName as string || '未命名批次')
+
+// 检查批次ID是否有效
+const isValidBatchId = computed(() => {
+  return !!batchId.value && batchId.value !== 'undefined' && batchId.value !== 'null'
+})
 
 // 状态
 const loading = ref(false)
@@ -294,6 +314,25 @@ const getCorrectText = (score: number) => {
   return '部分正确'
 }
 
+// 获取评测结果
+const fetchEvaluationResults = async () => {
+  try {
+    loading.value = true
+
+    // 尝试获取已有的评测结果
+    const hasExistingResults = await tryFetchExistingResults()
+
+    if (!hasExistingResults) {
+      ElMessage.info('未找到现有评测结果，请点击"开始评测"按钮进行评测')
+    }
+  } catch (error) {
+    console.error('获取评测结果失败:', error)
+    ElMessage.warning('获取评测结果失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 尝试获取已有的评测结果
 const tryFetchExistingResults = async () => {
   try {
@@ -358,18 +397,11 @@ const tryFetchExistingResults = async () => {
 }
 
 // 初始化
-onMounted(async () => {
-  if (!batchId.value) {
-    ElMessage.error('批次ID不存在')
-    goBack()
-    return
-  }
-
-  // 尝试获取已有的评测结果
-  const hasExistingResults = await tryFetchExistingResults()
-
-  if (!hasExistingResults) {
-    ElMessage.info('未找到现有评测结果，请点击"开始评测"按钮进行评测')
+onMounted(() => {
+  // 只有在批次ID有效时才加载评测结果
+  if (isValidBatchId.value) {
+    // 检查是否已有评测结果
+    fetchEvaluationResults()
   }
 })
 
@@ -462,5 +494,10 @@ h4 {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+
+.error-card {
+  margin: 100px auto;
+  max-width: 600px;
 }
 </style>

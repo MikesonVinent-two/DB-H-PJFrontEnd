@@ -1,142 +1,321 @@
 <template>
   <div class="subjective-llm-evaluation-page">
-    <el-card class="page-header">
-      <template #header>
-        <div class="card-header">
-          <div class="title-section">
-            <h2>主观题大模型评测</h2>
-            <el-tag class="batch-tag" type="info">批次: {{ batchName }}</el-tag>
-          </div>
-          <div class="header-actions">
-            <el-button @click="goBack">
-              <el-icon><Back /></el-icon>
-              返回
-            </el-button>
-          </div>
-        </div>
-      </template>
-
-      <!-- 模型选择和评测设置 -->
-      <div v-if="!evaluating && !evaluationCompleted" class="model-selection">
-        <h3>选择评测模型</h3>
-
-        <el-alert
-          type="info"
-          :closable="false"
-          show-icon
-          style="margin-bottom: 20px;"
-        >
-          <p>请选择评测模型和评测配置。系统将使用选定的模型对主观题答案进行自动评分。</p>
-        </el-alert>
-
-        <div class="model-selection-form">
-          <el-form :model="evaluationForm" label-width="120px">
-            <el-form-item label="评测模型" required>
-              <el-select v-model="evaluationForm.modelId" placeholder="请选择评测模型" style="width: 100%">
-                <el-option
-                  v-for="model in availableModels"
-                  :key="model.id"
-                  :label="model.name"
-                  :value="model.id"
-                >
-                  <div class="model-option">
-                    <span>{{ model.name }}</span>
-                    <el-tag size="small" type="info" v-if="model.aiEvaluator">AI模型</el-tag>
-                  </div>
-                </el-option>
-              </el-select>
-            </el-form-item>
-
-            <el-form-item label="评测配置">
-              <el-radio-group v-model="evaluationForm.useCustomPrompt">
-                <el-radio :label="false">使用系统评测配置</el-radio>
-                <el-radio :label="true" disabled>自定义提示词（不可用）</el-radio>
-              </el-radio-group>
-            </el-form-item>
-
-            <template v-if="!evaluationForm.useCustomPrompt">
-              <el-form-item label="提示词模板" required>
-                <el-select v-model="evaluationForm.subjectivePromptId" placeholder="请选择提示词模板" style="width: 100%">
-                  <el-option
-                    v-for="prompt in availablePrompts"
-                    :key="prompt.id"
-                    :label="prompt.name"
-                    :value="prompt.id"
-                  >
-                    <div class="prompt-option">
-                      <span>{{ prompt.name }}</span>
-                      <el-tooltip :content="prompt.description" placement="top">
-                        <el-icon><InfoFilled /></el-icon>
-                      </el-tooltip>
-                    </div>
-                  </el-option>
-                </el-select>
-              </el-form-item>
-
-              <el-form-item label="评测组装配置" required>
-                <el-select v-model="evaluationForm.evaluationAssemblyConfigId" placeholder="请选择评测组装配置" style="width: 100%">
-                  <el-option
-                    v-for="config in availableConfigs"
-                    :key="config.id"
-                    :label="config.name"
-                    :value="config.id"
-                  >
-                    <div class="config-option">
-                      <span>{{ config.name }}</span>
-                      <el-tooltip :content="config.description" placement="top">
-                        <el-icon><InfoFilled /></el-icon>
-                      </el-tooltip>
-                    </div>
-                  </el-option>
-                </el-select>
-              </el-form-item>
-            </template>
-
-            <el-form-item>
-              <el-button type="primary" @click="startEvaluation" :loading="submitting">
-                <el-icon><VideoPlay /></el-icon>
-                开始评测
-              </el-button>
-              <el-button type="info" @click="testSelectedModel" :loading="testing">
-                <el-icon><Connection /></el-icon>
-                测试模型连通性
-              </el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-      </div>
-
-      <!-- 评测状态 -->
-      <div v-if="evaluating" class="evaluation-status">
-        <el-alert
-          title="评测进行中..."
-          type="success"
-          :closable="false"
-          show-icon
-        >
-          <template #description>
-            <div class="status-description">
-              <p>系统正在使用大模型对主观题进行评测，请耐心等待。</p>
-              <p>评测模型: {{ selectedModelName }}</p>
-              <el-progress :percentage="evaluationProgress" :status="evaluationStatus"></el-progress>
-            </div>
-          </template>
-        </el-alert>
-      </div>
-
-      <!-- 评测结果提示 -->
-      <div v-if="evaluationCompleted" class="evaluation-result">
-        <el-result
-          icon="success"
-          title="评测任务已提交"
-          sub-title="系统正在后台处理评测任务，完成后可在评测结果页面查看详细信息。"
-        >
-          <template #extra>
-            <el-button type="primary" @click="goBack">返回批次列表</el-button>
-          </template>
-        </el-result>
-      </div>
+    <!-- 批次ID无效时的提示 -->
+    <el-card v-if="!isValidBatchId" class="error-card">
+      <el-result
+        icon="error"
+        title="无效的批次ID"
+        sub-title="未找到有效的批次信息，请返回评测页面重新选择批次。"
+      >
+        <template #extra>
+          <el-button type="primary" @click="goBack">返回评测页面</el-button>
+        </template>
+      </el-result>
     </el-card>
+
+    <template v-else>
+      <el-card class="page-header">
+        <template #header>
+          <div class="card-header">
+            <div class="title-section">
+              <h2>主观题大模型评测</h2>
+              <el-tag class="batch-tag" type="info">批次: {{ batchName }}</el-tag>
+            </div>
+            <div class="header-actions">
+              <el-button @click="goBack">
+                <el-icon><Back /></el-icon>
+                返回
+              </el-button>
+            </div>
+          </div>
+        </template>
+
+        <!-- 评测进度统计 -->
+        <el-row class="evaluation-progress" :gutter="20">
+          <el-col :span="8">
+            <el-card shadow="hover" class="progress-card">
+              <template #header>
+                <div class="progress-header">
+                  <el-icon><Histogram /></el-icon>
+                  <span>评测进度</span>
+                </div>
+              </template>
+              <el-progress
+                :percentage="evaluationStats.progress"
+                :format="progressFormat"
+                :status="evaluationStats.progress === 100 ? 'success' : ''"
+                :stroke-width="18"
+              />
+              <div class="progress-stats">
+                <div class="stat-item">
+                  <span class="stat-label">已评测:</span>
+                  <span class="stat-value">{{ evaluationStats.completed }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">未评测:</span>
+                  <span class="stat-value">{{ evaluationStats.pending }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">总数量:</span>
+                  <span class="stat-value">{{ evaluationStats.total }}</span>
+                </div>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :span="16">
+            <el-card shadow="hover" class="progress-card">
+              <template #header>
+                <div class="progress-header">
+                  <el-icon><DataAnalysis /></el-icon>
+                  <span>评分统计</span>
+                </div>
+              </template>
+              <div class="score-stats">
+                <div class="stat-item">
+                  <span class="stat-label">平均分:</span>
+                  <span class="stat-value">{{ evaluationStats.averageScore.toFixed(1) }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">最高分:</span>
+                  <span class="stat-value">{{ evaluationStats.maxScore }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">最低分:</span>
+                  <span class="stat-value">{{ evaluationStats.minScore }}</span>
+                </div>
+              </div>
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <!-- 模型选择和评测设置 -->
+        <div v-if="!evaluating && !evaluationCompleted" class="model-selection">
+          <h3>选择评测模型</h3>
+
+          <el-alert
+            type="info"
+            :closable="false"
+            show-icon
+            style="margin-bottom: 20px;"
+          >
+            <p>请选择评测模型和评测配置。系统将使用选定的模型对主观题答案进行自动评分。</p>
+          </el-alert>
+
+          <div class="model-selection-form">
+            <el-form :model="evaluationForm" label-width="120px">
+              <el-form-item label="评测模型" required>
+                <el-select v-model="evaluationForm.modelId" placeholder="请选择评测模型" style="width: 100%">
+                  <el-option
+                    v-for="model in availableModels"
+                    :key="model.id"
+                    :label="model.name"
+                    :value="model.id"
+                  >
+                    <div class="model-option">
+                      <span>{{ model.name }}</span>
+                      <el-tag size="small" type="info" v-if="model.aiEvaluator">AI模型</el-tag>
+                    </div>
+                  </el-option>
+                </el-select>
+              </el-form-item>
+
+              <el-form-item label="评测配置">
+                <el-radio-group v-model="evaluationForm.useCustomPrompt">
+                  <el-radio :label="false">使用系统评测配置</el-radio>
+                  <el-radio :label="true" disabled>自定义提示词（不可用）</el-radio>
+                </el-radio-group>
+              </el-form-item>
+
+              <template v-if="!evaluationForm.useCustomPrompt">
+                <el-form-item label="提示词模板" required>
+                  <el-select v-model="evaluationForm.subjectivePromptId" placeholder="请选择提示词模板" style="width: 100%">
+                    <el-option
+                      v-for="prompt in availablePrompts"
+                      :key="prompt.id"
+                      :label="prompt.name"
+                      :value="prompt.id"
+                    >
+                      <div class="prompt-option">
+                        <span>{{ prompt.name }}</span>
+                        <el-tooltip :content="prompt.description" placement="top">
+                          <el-icon><InfoFilled /></el-icon>
+                        </el-tooltip>
+                      </div>
+                    </el-option>
+                  </el-select>
+                </el-form-item>
+
+                <el-form-item label="评测组装配置" required>
+                  <el-select v-model="evaluationForm.evaluationAssemblyConfigId" placeholder="请选择评测组装配置" style="width: 100%">
+                    <el-option
+                      v-for="config in availableConfigs"
+                      :key="config.id"
+                      :label="config.name"
+                      :value="config.id"
+                    >
+                      <div class="config-option">
+                        <span>{{ config.name }}</span>
+                        <el-tooltip :content="config.description" placement="top">
+                          <el-icon><InfoFilled /></el-icon>
+                        </el-tooltip>
+                      </div>
+                    </el-option>
+                  </el-select>
+                </el-form-item>
+
+                <el-form-item label="评测标准" required>
+                  <el-select v-model="evaluationForm.criteriaIds" multiple placeholder="请选择评测标准" style="width: 100%">
+                    <el-option
+                      v-for="criterion in availableCriteria"
+                      :key="criterion.id"
+                      :label="criterion.name"
+                      :value="criterion.id"
+                    >
+                      <div class="criterion-option">
+                        <span>{{ criterion.name }}</span>
+                        <el-tag size="small" :type="getQuestionTypeTagType(criterion.questionType)">
+                          {{ getQuestionTypeDisplay(criterion.questionType) }}
+                        </el-tag>
+                        <el-tooltip :content="criterion.description" placement="top">
+                          <el-icon><InfoFilled /></el-icon>
+                        </el-tooltip>
+                      </div>
+                    </el-option>
+                  </el-select>
+                </el-form-item>
+              </template>
+
+              <el-form-item>
+                <el-button type="primary" @click="startEvaluation" :loading="submitting">
+                  <el-icon><VideoPlay /></el-icon>
+                  开始评测
+                </el-button>
+                <el-button type="info" @click="testSelectedModel" :loading="testing">
+                  <el-icon><Connection /></el-icon>
+                  测试模型连通性
+                </el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+        </div>
+
+        <!-- 评测状态 -->
+        <div v-if="evaluating" class="evaluation-status">
+          <el-alert
+            title="评测进行中..."
+            type="success"
+            :closable="false"
+            show-icon
+          >
+            <template #description>
+              <div class="status-description">
+                <p>系统正在使用大模型对主观题进行评测，请耐心等待。</p>
+                <p>评测模型: {{ selectedModelName }}</p>
+                <el-progress :percentage="evaluationProgress" :status="evaluationStatus"></el-progress>
+              </div>
+            </template>
+          </el-alert>
+        </div>
+
+        <!-- 评测结果提示 -->
+        <div v-if="evaluationCompleted" class="evaluation-result">
+          <el-result
+            icon="success"
+            title="评测任务已提交"
+            sub-title="系统正在后台处理评测任务，完成后可在评测结果页面查看详细信息。"
+          >
+            <template #extra>
+              <el-button type="primary" @click="goBack">返回批次列表</el-button>
+            </template>
+          </el-result>
+        </div>
+
+        <!-- 已评测答案列表 -->
+        <el-divider>已评测答案</el-divider>
+        <div class="evaluated-answers">
+          <el-table
+            v-loading="loadingEvaluated"
+            :data="evaluatedAnswers"
+            stripe
+            style="width: 100%"
+            max-height="600"
+          >
+            <el-table-column prop="question_text" label="问题" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="answer_text" label="回答" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="model_name" label="模型" width="120" />
+            <el-table-column prop="score" label="评分" width="100">
+              <template #default="scope">
+                <el-tag :type="getScoreTagType(scope.row.score)">
+                  {{ scope.row.score }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="comments" label="评语" min-width="150" show-overflow-tooltip />
+            <el-table-column label="操作" width="120">
+              <template #default="scope">
+                <el-button type="primary" link @click="viewEvaluationDetail(scope.row)">
+                  查看详情
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="evaluatedAnswersPage"
+              v-model:page-size="evaluatedAnswersPageSize"
+              :page-sizes="[5, 10, 20, 50]"
+              layout="total, sizes, prev, pager, next, jumper"
+              :total="evaluatedAnswersTotal"
+              @size-change="handleSizeChange"
+              @current-change="handleCurrentChange"
+            />
+          </div>
+        </div>
+      </el-card>
+
+      <!-- 评测详情对话框 -->
+      <el-dialog
+        v-model="evaluationDetailDialog.visible"
+        title="评测详情"
+        width="70%"
+        destroy-on-close
+      >
+        <div v-if="evaluationDetailDialog.data" class="evaluation-detail">
+          <div class="detail-section">
+            <h3>问题</h3>
+            <p>{{ evaluationDetailDialog.data.question_text }}</p>
+          </div>
+          <div class="detail-section">
+            <h3>模型回答</h3>
+            <p>{{ evaluationDetailDialog.data.answer_text }}</p>
+          </div>
+          <div class="detail-section">
+            <h3>评分: {{ evaluationDetailDialog.data.score }}</h3>
+            <p>{{ evaluationDetailDialog.data.comments }}</p>
+          </div>
+          <div class="detail-section" v-if="evaluationDetailDialog.data.evaluation_results?.criteriaScores?.length">
+            <h3>详细评分</h3>
+            <el-table :data="evaluationDetailDialog.data.evaluation_results.criteriaScores" border>
+              <el-table-column prop="criterionName" label="评分项" />
+              <el-table-column prop="score" label="分数" width="100" />
+              <el-table-column prop="comments" label="评语" min-width="200" show-overflow-tooltip />
+            </el-table>
+          </div>
+          <div class="detail-section" v-if="evaluationDetailDialog.data.evaluation_results?.strengths">
+            <h3>优点</h3>
+            <p>{{ evaluationDetailDialog.data.evaluation_results.strengths }}</p>
+          </div>
+          <div class="detail-section" v-if="evaluationDetailDialog.data.evaluation_results?.weaknesses">
+            <h3>缺点</h3>
+            <p>{{ evaluationDetailDialog.data.evaluation_results.weaknesses }}</p>
+          </div>
+          <div class="detail-section" v-if="evaluationDetailDialog.data.evaluation_results?.suggestions">
+            <h3>建议</h3>
+            <p>{{ evaluationDetailDialog.data.evaluation_results.suggestions }}</p>
+          </div>
+        </div>
+      </el-dialog>
+    </template>
   </div>
 </template>
 
@@ -144,12 +323,18 @@
 import { ref, onMounted, computed, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Back, VideoPlay, Connection, InfoFilled } from '@element-plus/icons-vue'
+import { Back, VideoPlay, Connection, InfoFilled, Histogram, DataAnalysis } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import { evaluateBatchSubjective } from '@/api/evaluations'
+import {
+  evaluateBatchSubjective,
+  getSubjectiveEvaluationResults,
+  getBatchUnevaluatedAnswers,
+  type SubjectiveEvaluationResultItem
+} from '@/api/evaluations'
 import { getEvaluators, type EvaluatorInfo, testAiEvaluatorConnectivity } from '@/api/evaluator'
 import { getActiveEvaluationSubjectivePrompts, type EvaluationSubjectivePromptInfo } from '@/api/evaluationSubjectivePrompt'
 import { getAllActiveEvaluationConfigs, type EvaluationConfigInfo } from '@/api/evaluationPromptAssembly'
+import { getAllEvaluationCriteria, type EvaluationCriterion } from '@/api/evaluationCriteria'
 
 // 路由
 const route = useRoute()
@@ -160,6 +345,11 @@ const userStore = useUserStore()
 const batchId = computed(() => route.params.batchId as string)
 const batchName = computed(() => route.query.batchName as string || '未命名批次')
 
+// 检查批次ID是否有效
+const isValidBatchId = computed(() => {
+  return !!batchId.value && batchId.value !== 'undefined' && batchId.value !== 'null'
+})
+
 // 状态
 const loading = ref(false)
 const submitting = ref(false)
@@ -168,6 +358,7 @@ const evaluating = ref(false)
 const evaluationCompleted = ref(false)
 const evaluationProgress = ref(0)
 const selectedModelName = ref('')
+const loadingEvaluated = ref(false)
 
 // 可用模型
 const availableModels = ref<EvaluatorInfo[]>([])
@@ -175,6 +366,8 @@ const availableModels = ref<EvaluatorInfo[]>([])
 const availablePrompts = ref<EvaluationSubjectivePromptInfo[]>([])
 // 可用评测组装配置
 const availableConfigs = ref<EvaluationConfigInfo[]>([])
+// 可用评测标准
+const availableCriteria = ref<EvaluationCriterion[]>([])
 
 // 评测表单
 const evaluationForm = reactive({
@@ -182,7 +375,31 @@ const evaluationForm = reactive({
   prompt: '请评估以下回答的质量，考虑准确性、完整性、逻辑性和表达清晰度。给出1-100的分数和详细评价。',
   subjectivePromptId: null as number | null,
   evaluationAssemblyConfigId: null as number | null,
-  useCustomPrompt: false  // 默认使用系统评测配置
+  useCustomPrompt: false,  // 默认使用系统评测配置
+  criteriaIds: [] as number[]
+})
+
+// 评测统计
+const evaluationStats = reactive({
+  completed: 0,
+  pending: 0,
+  total: 0,
+  progress: 0,
+  averageScore: 0,
+  maxScore: 0,
+  minScore: 0
+})
+
+// 已评测答案分页
+const evaluatedAnswers = ref<SubjectiveEvaluationResultItem[]>([])
+const evaluatedAnswersPage = ref(1)
+const evaluatedAnswersPageSize = ref(10)
+const evaluatedAnswersTotal = ref(0)
+
+// 评测详情对话框
+const evaluationDetailDialog = reactive({
+  visible: false,
+  data: null as SubjectiveEvaluationResultItem | null
 })
 
 // 评测状态
@@ -191,17 +408,55 @@ const evaluationStatus = computed(() => {
   return 'success'
 })
 
+// 格式化进度显示
+const progressFormat = (percentage: number) => {
+  return `${percentage}%`
+}
+
+// 根据分数获取标签类型
+const getScoreTagType = (score: number) => {
+  if (score >= 90) return 'success'
+  if (score >= 80) return 'primary'
+  if (score >= 60) return 'warning'
+  return 'danger'
+}
+
 // 返回上一页
 const goBack = () => {
   router.push({ name: 'Evaluations' })
 }
 
-// 加载模型列表和提示词配置
+// 加载数据
 const loadData = async () => {
   try {
     loading.value = true
 
-    // 获取可用模型
+    // 加载可用模型
+    await loadAvailableModels()
+
+    // 加载提示词模板
+    await loadPromptTemplates()
+
+    // 加载评测组装配置
+    await loadAssemblyConfigs()
+
+    // 加载评测标准
+    await loadEvaluationCriteria()
+
+    // 加载评测统计和已评测答案
+    await loadEvaluationStats()
+    await loadEvaluatedAnswers()
+  } catch (error) {
+    console.error('加载数据失败:', error)
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 加载可用模型
+const loadAvailableModels = async () => {
+  try {
     const evaluators = await getEvaluators()
     // 过滤出LLM类型的评测器作为可用模型
     availableModels.value = evaluators.filter(evaluator => evaluator.evaluatorType === 'AI_MODEL')
@@ -211,36 +466,149 @@ const loadData = async () => {
     } else {
       ElMessage.warning('没有可用的评测模型')
     }
+  } catch (error) {
+    console.error('加载可用模型失败:', error)
+    ElMessage.error('加载可用模型失败')
+  }
+}
 
-    // 获取提示词模板
-    try {
-      const prompts = await getActiveEvaluationSubjectivePrompts()
-      availablePrompts.value = prompts
-      if (prompts.length > 0) {
-        evaluationForm.subjectivePromptId = prompts[0].id
-      }
-    } catch (error) {
-      console.error('获取提示词模板失败:', error)
-      ElMessage.warning('获取提示词模板失败')
-    }
-
-    // 获取评测组装配置
-    try {
-      const response = await getAllActiveEvaluationConfigs()
-      availableConfigs.value = response.configs
-      if (response.configs.length > 0) {
-        evaluationForm.evaluationAssemblyConfigId = response.configs[0].id
-      }
-    } catch (error) {
-      console.error('获取评测组装配置失败:', error)
-      ElMessage.warning('获取评测组装配置失败')
+// 加载提示词模板
+const loadPromptTemplates = async () => {
+  try {
+    const prompts = await getActiveEvaluationSubjectivePrompts()
+    availablePrompts.value = prompts
+    if (prompts.length > 0) {
+      evaluationForm.subjectivePromptId = prompts[0].id
     }
   } catch (error) {
-    console.error('获取可用模型失败:', error)
-    ElMessage.error('获取可用模型失败')
-  } finally {
-    loading.value = false
+    console.error('加载提示词模板失败:', error)
+    ElMessage.warning('加载提示词模板失败')
   }
+}
+
+// 加载评测组装配置
+const loadAssemblyConfigs = async () => {
+  try {
+    const response = await getAllActiveEvaluationConfigs()
+    availableConfigs.value = response.configs
+    if (response.configs.length > 0) {
+      evaluationForm.evaluationAssemblyConfigId = response.configs[0].id
+    }
+  } catch (error) {
+    console.error('加载评测组装配置失败:', error)
+    ElMessage.warning('加载评测组装配置失败')
+  }
+}
+
+// 加载评测标准
+const loadEvaluationCriteria = async () => {
+  try {
+    const criteria = await getAllEvaluationCriteria()
+    availableCriteria.value = criteria.filter(criterion => criterion.questionType === 'SUBJECTIVE')
+    if (availableCriteria.value.length > 0) {
+      // 默认选择前3个评测标准
+      evaluationForm.criteriaIds = availableCriteria.value.slice(0, 3).map(c => c.id)
+    }
+  } catch (error) {
+    console.error('加载评测标准失败:', error)
+    ElMessage.warning('加载评测标准失败')
+  }
+}
+
+// 加载评测统计
+const loadEvaluationStats = async () => {
+  try {
+    // 获取已评测答案数量
+    const completedResponse = await getSubjectiveEvaluationResults({
+      batchId: batchId.value,
+      page: 0,
+      size: 1
+    })
+
+    // 获取未评测答案数量
+    const pendingResponse = await getBatchUnevaluatedAnswers(batchId.value, {
+      page: 0,
+      size: 1
+    })
+
+    // 更新统计数据
+    evaluationStats.completed = completedResponse.totalItems || 0
+    evaluationStats.pending = pendingResponse.totalElements || 0
+    evaluationStats.total = evaluationStats.completed + evaluationStats.pending
+    evaluationStats.progress = evaluationStats.total > 0
+      ? Math.round((evaluationStats.completed / evaluationStats.total) * 100)
+      : 0
+
+    // 计算平均分、最高分和最低分
+    if (completedResponse.items && completedResponse.items.length > 0) {
+      // 获取所有评测结果以计算统计信息
+      const allResults = await getSubjectiveEvaluationResults({
+        batchId: batchId.value,
+        page: 0,
+        size: 1000 // 获取足够多的结果以计算统计
+      })
+
+      if (allResults.items && allResults.items.length > 0) {
+        const scores = allResults.items.map(item => item.score)
+        evaluationStats.averageScore = scores.reduce((a, b) => a + b, 0) / scores.length
+        evaluationStats.maxScore = Math.max(...scores)
+        evaluationStats.minScore = Math.min(...scores)
+      } else {
+        resetEvaluationStats()
+      }
+    } else {
+      resetEvaluationStats()
+    }
+  } catch (error) {
+    console.error('加载评测统计失败:', error)
+    resetEvaluationStats()
+  }
+}
+
+// 重置评测统计
+const resetEvaluationStats = () => {
+  evaluationStats.averageScore = 0
+  evaluationStats.maxScore = 0
+  evaluationStats.minScore = 0
+}
+
+// 加载已评测答案
+const loadEvaluatedAnswers = async () => {
+  try {
+    loadingEvaluated.value = true
+
+    const response = await getSubjectiveEvaluationResults({
+      batchId: batchId.value,
+      page: evaluatedAnswersPage.value - 1,
+      size: evaluatedAnswersPageSize.value
+    })
+
+    evaluatedAnswers.value = response.items || []
+    evaluatedAnswersTotal.value = response.totalItems || 0
+  } catch (error) {
+    console.error('加载已评测答案失败:', error)
+    ElMessage.error('加载已评测答案失败')
+  } finally {
+    loadingEvaluated.value = false
+  }
+}
+
+// 查看评测详情
+const viewEvaluationDetail = (row: SubjectiveEvaluationResultItem) => {
+  evaluationDetailDialog.data = row
+  evaluationDetailDialog.visible = true
+}
+
+// 分页大小变化
+const handleSizeChange = (size: number) => {
+  evaluatedAnswersPageSize.value = size
+  loadEvaluatedAnswers()
+}
+
+// 当前页变化
+const handleCurrentChange = (page: number) => {
+  evaluatedAnswersPage.value = page
+  loadEvaluatedAnswers()
 }
 
 // 测试模型连通性
@@ -287,6 +655,10 @@ const startEvaluation = async () => {
       ElMessage.warning('请选择评测组装配置')
       return
     }
+    if (!evaluationForm.criteriaIds || evaluationForm.criteriaIds.length === 0) {
+      ElMessage.warning('请选择至少一个评测标准')
+      return
+    }
   } else {
     // 使用自定义提示词时，需要提示用户这个功能可能不可用
     ElMessage.warning('注意：自定义提示词功能可能不再支持，建议选择系统提示词模板')
@@ -313,7 +685,7 @@ const startEvaluation = async () => {
 
     // 准备API请求参数
     const requestParams = {
-      batchId: batchId.value,
+      batchId: parseInt(batchId.value),
       evaluatorId: parseInt(evaluationForm.modelId),
       userId: userData?.id || 0
     } as any
@@ -325,6 +697,11 @@ const startEvaluation = async () => {
 
     if (!evaluationForm.useCustomPrompt && evaluationForm.evaluationAssemblyConfigId) {
       requestParams.evaluationAssemblyConfigId = evaluationForm.evaluationAssemblyConfigId
+    }
+
+    // 添加评测标准ID列表
+    if (!evaluationForm.useCustomPrompt && evaluationForm.criteriaIds && evaluationForm.criteriaIds.length > 0) {
+      requestParams.criteriaIds = evaluationForm.criteriaIds
     }
 
     // 调用评测API
@@ -352,6 +729,13 @@ const startProgressSimulation = () => {
     if (progress >= 100) {
       clearInterval(interval)
       evaluationCompleted.value = true
+
+      // 评测完成后，重新加载评测统计和已评测答案
+      setTimeout(() => {
+        loadEvaluationStats()
+        loadEvaluatedAnswers()
+      }, 2000)
+
       return
     }
 
@@ -362,19 +746,51 @@ const startProgressSimulation = () => {
     if (evaluationProgress.value >= 100) {
       clearInterval(interval)
       evaluationCompleted.value = true
+
+      // 评测完成后，重新加载评测统计和已评测答案
+      setTimeout(() => {
+        loadEvaluationStats()
+        loadEvaluatedAnswers()
+      }, 2000)
     }
   }, 1000)
 }
 
+// 获取题型显示名称
+const getQuestionTypeDisplay = (type: string) => {
+  const typeMap: Record<string, string> = {
+    'SUBJECTIVE': '主观题',
+    'SINGLE_CHOICE': '单选题',
+    'MULTIPLE_CHOICE': '多选题',
+    'SIMPLE_FACT': '简单事实题'
+  }
+  return typeMap[type] || type
+}
+
+// 获取题型标签类型
+const getQuestionTypeTagType = (type: string) => {
+  const typeMap: Record<string, string> = {
+    'SUBJECTIVE': 'danger',
+    'SINGLE_CHOICE': 'success',
+    'MULTIPLE_CHOICE': 'warning',
+    'SIMPLE_FACT': 'info'
+  }
+  return typeMap[type] || ''
+}
+
 // 初始化
 onMounted(() => {
-  if (!batchId.value) {
-    ElMessage.error('批次ID不存在')
-    goBack()
-  }
+  // 加载基础数据（无论批次ID是否有效）
+  loadAvailableModels()
+  loadPromptTemplates()
+  loadAssemblyConfigs()
+  loadEvaluationCriteria()
 
-  // 加载数据
-  loadData()
+  // 只有在批次ID有效时才加载评测统计和已评测答案
+  if (isValidBatchId.value) {
+    loadEvaluationStats()
+    loadEvaluatedAnswers()
+  }
 })
 
 // 定义组件名称
@@ -413,6 +829,43 @@ defineOptions({
   gap: 10px;
 }
 
+.evaluation-progress {
+  margin-bottom: 20px;
+}
+
+.progress-card {
+  height: 100%;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: bold;
+}
+
+.progress-stats, .score-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 15px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: bold;
+  display: block;
+  margin-top: 5px;
+}
+
 .model-selection {
   margin: 20px 0;
 }
@@ -434,6 +887,17 @@ defineOptions({
   width: 100%;
 }
 
+.criterion-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.criterion-option .el-tag {
+  margin: 0 8px;
+}
+
 .evaluation-status {
   margin: 20px 0;
 }
@@ -444,5 +908,34 @@ defineOptions({
 
 .evaluation-result {
   margin-top: 30px;
+}
+
+.evaluated-answers {
+  margin-top: 20px;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.evaluation-detail {
+  padding: 10px;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+}
+
+.detail-section h3 {
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.error-card {
+  margin: 100px auto;
+  max-width: 600px;
 }
 </style>

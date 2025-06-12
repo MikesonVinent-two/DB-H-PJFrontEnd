@@ -381,6 +381,16 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/system/evaluation-criteria',
+    name: 'evaluation-criteria',
+    component: () => import('../views/admin/EvaluationCriteriaManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '评测标准管理',
+      roles: ['ADMIN']
+    }
+  },
+  {
     path: '/system/config',
     name: 'config',
     component: () => import('../views/annotator/ConfigManagement.vue'),

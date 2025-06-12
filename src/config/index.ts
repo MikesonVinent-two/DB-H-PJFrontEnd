@@ -180,6 +180,13 @@ export const apiUrls = {
     batchUnevaluated: '/api/evaluations/batch',  // 返回评测员评测任务
     runResults: '/api/evaluations/runs',  // 获取评测运行的统计结果
   },
+  evaluationCriteria: {
+    all: '/api/evaluations/criteria/all',  // 获取所有评测标准
+    detail: '/api/evaluations/criteria',   // 获取评测标准详情
+    create: '/api/evaluations/criteria',   // 创建评测标准
+    update: '/api/evaluations/criteria',   // 更新评测标准
+    delete: '/api/evaluations/criteria',   // 删除评测标准
+  },
   modelScores: {
     base: '/api/model-batch-scores',  // 模型评分基础路径
     calculateBatchModelScore: '/api/model-batch-scores/batches',  // 计算模型在批次中的评分

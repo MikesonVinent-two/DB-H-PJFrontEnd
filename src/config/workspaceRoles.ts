@@ -306,6 +306,15 @@ export const WORKSPACES = [
     description: '管理人类和AI评测员',
     icon: 'UserFilled'
   },
+  {
+    id: 'evaluation-criteria-management',
+    name: '评测标准管理',
+    type: WORKSPACE_TYPES.SYSTEM,
+    path: '/system/evaluation-criteria',
+    roles: [ROLES.ADMIN],
+    description: '管理评测标准',
+    icon: 'List'
+  },
 
   // 数据集工作台
   {
@@ -337,15 +346,15 @@ export const WORKSPACES = [
   },
 
   // 运行工作台
-  {
-    id: 'batch-monitor',
-    name: '批次实时监控',
-    type: WORKSPACE_TYPES.RUNTIME,
-    path: '/admin/batch-monitor',
-    roles: [ROLES.ADMIN, ROLES.ANNOTATOR],
-    description: '使用WebSocket实时监控批次状态',
-    icon: 'Monitor'
-  },
+  // {
+  //   id: 'batch-monitor',
+  //   name: '批次实时监控',
+  //   type: WORKSPACE_TYPES.RUNTIME,
+  //   path: '/admin/batch-monitor',
+  //   roles: [ROLES.ADMIN, ROLES.ANNOTATOR],
+  //   description: '使用WebSocket实时监控批次状态',
+  //   icon: 'Monitor'
+  // },
   {
     id: 'answer-generation-batches',
     name: '回答生成批次',

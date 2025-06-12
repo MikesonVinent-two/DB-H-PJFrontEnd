@@ -140,6 +140,25 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 查看用户详情对话框 -->
+    <el-dialog
+      v-model="viewDialogVisible"
+      title="用户详情"
+      width="500px">
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="用户名">{{ viewingUser.username }}</el-descriptions-item>
+        <el-descriptions-item label="姓名">{{ viewingUser.name || '未设置' }}</el-descriptions-item>
+        <el-descriptions-item label="联系方式">{{ viewingUser.contactInfo }}</el-descriptions-item>
+        <el-descriptions-item label="角色">
+          <el-tag :type="getRoleTagType(viewingUser.role)">
+            {{ getRoleDisplayName(viewingUser.role) }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ formatDate(viewingUser.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ formatDate(viewingUser.updatedAt) }}</el-descriptions-item>
+      </el-descriptions>
+    </el-dialog>
   </div>
 </template>
 
@@ -206,6 +225,18 @@ const roleOptions = {
   [UserRole.CROWDSOURCE_USER]: '众包用户'
 }
 
+// 查看用户相关
+const viewDialogVisible = ref(false)
+const viewingUser = ref<UserInfo>({
+  id: 0,
+  username: '',
+  name: '',
+  contactInfo: '',
+  role: UserRole.CROWDSOURCE_USER,
+  createdAt: '',
+  updatedAt: ''
+})
+
 // 初始化加载用户数据
 onMounted(() => {
   fetchUserList()
@@ -253,8 +284,8 @@ const handleCurrentChange = (page: number) => {
 
 // 查看用户详情
 const handleViewUser = (user: UserInfo) => {
-  // 实现查看用户详情的逻辑
-  console.log('查看用户详情', user)
+  viewingUser.value = { ...user }
+  viewDialogVisible.value = true
 }
 
 // 编辑用户
@@ -397,7 +428,7 @@ const getRoleTagType = (role: UserRole) => {
     [UserRole.EXPERT]: 'success',
     [UserRole.ANNOTATOR]: 'info',
     [UserRole.REFEREE]: 'warning',
-    [UserRole.CROWDSOURCE_USER]: ''
+    [UserRole.CROWDSOURCE_USER]: 'info'
   }
   return typeMap[role] || ''
 }
