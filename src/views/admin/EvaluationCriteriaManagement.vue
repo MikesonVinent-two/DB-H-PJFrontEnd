@@ -478,7 +478,12 @@ const handleDeleteCriterion = (criterion: EvaluationCriterion) => {
   )
     .then(async () => {
       try {
-        const result = await deleteEvaluationCriterion(criterion.id)
+        // 获取当前用户ID
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+        const userId = currentUser.id
+
+        // 传入userId参数
+        const result = await deleteEvaluationCriterion(criterion.id, userId)
         if (result.success) {
           ElMessage({
             type: 'success',
@@ -528,7 +533,12 @@ const submitForm = async () => {
             options: form.options
           }
 
-          await updateEvaluationCriterion(form.id, updateData)
+          // 获取当前用户ID
+          const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+          const userId = currentUser.id
+
+          // 传入userId参数
+          await updateEvaluationCriterion(form.id, updateData, userId)
           ElMessage.success('评测标准更新成功')
         } else {
           // 创建模式
@@ -547,7 +557,12 @@ const submitForm = async () => {
             options: form.options
           }
 
-          await createEvaluationCriterion(createData)
+          // 获取当前用户ID
+          const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+          const userId = currentUser.id
+
+          // 传入userId参数
+          await createEvaluationCriterion(createData, userId)
           ElMessage.success('评测标准创建成功')
         }
 

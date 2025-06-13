@@ -143,6 +143,15 @@ export const WORKSPACES = [
     description: '管理评测阶段的组装提示词',
     icon: 'Connection'
   },
+  {
+    id: 'evaluation-criteria-management',
+    name: '评测标准管理',
+    type: WORKSPACE_TYPES.PROMPT,
+    path: '/system/evaluation-criteria',
+    roles: [ROLES.ADMIN],
+    description: '管理评测标准',
+    icon: 'List'
+  },
 
   // 评测工作台
   // {
@@ -306,15 +315,7 @@ export const WORKSPACES = [
     description: '管理人类和AI评测员',
     icon: 'UserFilled'
   },
-  {
-    id: 'evaluation-criteria-management',
-    name: '评测标准管理',
-    type: WORKSPACE_TYPES.SYSTEM,
-    path: '/system/evaluation-criteria',
-    roles: [ROLES.ADMIN],
-    description: '管理评测标准',
-    icon: 'List'
-  },
+
 
   // 数据集工作台
   {
