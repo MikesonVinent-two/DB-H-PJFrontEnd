@@ -34,7 +34,7 @@
 ### 1. 克隆项目
 ```bash
 git clone https://github.com/MikesonVinent-two/DB-H-PJFrontEnd.git
-cd FrontEnd
+cd DB-H-PJFrontEnd
 ```
 
 ### 2. 安装依赖
