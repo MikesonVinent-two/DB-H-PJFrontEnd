@@ -179,6 +179,9 @@ export const apiUrls = {
     objectiveResults: '/api/evaluations/objective/results',  // 获取批次中客观题的详细评测结果
     batchUnevaluated: '/api/evaluations/batch',  // 返回评测员评测任务
     runResults: '/api/evaluations/runs',  // 获取评测运行的统计结果
+    batchComprehensiveScores: '/api/evaluations/batch',  // 批次综合评分展示
+    batchSubjectiveProgress: '/api/evaluations/batch/subjective',  // 主观题评测进度
+    criteria: '/api/evaluations/criteria',  // 评测标准接口
   },
   evaluationCriteria: {
     all: '/api/evaluations/criteria/all',  // 获取所有评测标准
@@ -194,6 +197,7 @@ export const apiUrls = {
     detailedScores: '/api/llm-models/batch',  // 获取模型在批次中针对特定问题的详细评分
     modelRankings: '/api/llm-models/batch',  // 获取批次内模型排名
     performanceByQuestionType: '/api/llm-models/batch',  // 获取问题类型维度的模型表现
+    batchRankings: '/api/model-detailed-scores/batch',  // 模型排名接口
   },
   tags: {
     recommend: '/api/tags/recommend',

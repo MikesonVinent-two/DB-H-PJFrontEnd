@@ -42,6 +42,8 @@ export interface WebSocketMessage {
     newStatus?: string;
     entityId?: number;
     entityType?: string;
+    questionId?: number;
+    completedCount?: number;
   };
   timestamp: string;
 }

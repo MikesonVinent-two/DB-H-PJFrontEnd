@@ -512,6 +512,10 @@ class WebSocketService {
         case WebSocketMessageType.TASK_FAILED:
           this.handleTaskUpdate(webSocketMessage.payload)
           break
+        case WebSocketMessageType.QUESTION_COMPLETED:
+        case WebSocketMessageType.QUESTION_FAILED:
+          this.handleQuestionUpdate(webSocketMessage.payload)
+          break
       }
 
       // 将消息添加到消息列表
@@ -563,6 +567,20 @@ class WebSocketService {
     }
 
     console.log(`批次 ${data.batchId} 的任务状态更新为: ${data.status}`)
+  }
+
+  // 处理问题更新消息
+  private handleQuestionUpdate(data: WebSocketMessage['payload']): void {
+    console.log('收到问题更新消息:', data)
+
+    // 可以在这里添加特定的问题更新处理逻辑
+    if (data.questionId) {
+      console.log(`问题 ${data.questionId} 状态更新`)
+    }
+
+    if (data.batchId) {
+      console.log(`批次 ${data.batchId} 中的问题状态更新`)
+    }
   }
 
   // 重连

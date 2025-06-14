@@ -659,3 +659,401 @@ export const getObjectiveEvaluationResults = (params?: {
     { params }
   )
 }
+
+/**
+ * 批次信息接口
+ */
+export interface BatchInfo {
+  id: number
+  name: string
+  description: string
+  creation_time: string
+  dataset_name: string
+  dataset_version: string
+}
+
+/**
+ * 模型信息接口
+ */
+export interface ModelInfo {
+  id: number
+  name: string
+  provider: string
+  version?: string
+}
+
+/**
+ * 客观题评分统计接口
+ */
+export interface ObjectiveScores {
+  total_answers: number
+  average_score: number
+  max_score: number
+  min_score: number
+  single_choice_count: number
+  multiple_choice_count: number
+  simple_fact_count: number
+  single_choice_avg: number
+  multiple_choice_avg: number
+  simple_fact_avg: number
+}
+
+/**
+ * 评分标准统计接口
+ */
+export interface CriteriaScore {
+  criterion_name: string
+  average_score: number
+  count: number
+}
+
+/**
+ * 主观题AI评分统计接口
+ */
+export interface SubjectiveAiScores {
+  total_answers: number
+  average_score: number
+  max_score: number
+  min_score: number
+  evaluator_count: number
+  criteriaScores: CriteriaScore[]
+}
+
+/**
+ * 主观题人工评分统计接口
+ */
+export interface SubjectiveHumanScores {
+  total_answers: number
+  average_score: number
+  max_score: number
+  min_score: number
+  evaluator_count: number
+  criteriaScores: CriteriaScore[]
+}
+
+/**
+ * 详细统计信息接口
+ */
+export interface DetailStats {
+  total_evaluations: number
+  total_answers: number
+  total_evaluators: number
+  success_count: number
+  failed_count: number
+}
+
+/**
+ * 模型评分信息接口
+ */
+export interface ModelScore {
+  rank: number
+  modelInfo: ModelInfo
+  overallScore: number
+  objectiveScores: ObjectiveScores
+  subjectiveAiScores: SubjectiveAiScores
+  subjectiveHumanScores: SubjectiveHumanScores
+  detailStats: DetailStats
+}
+
+/**
+ * 批次概览信息接口
+ */
+export interface BatchOverview {
+  total_models: number
+  total_answers: number
+  total_evaluations: number
+  total_evaluators: number
+  single_choice_count: number
+  multiple_choice_count: number
+  simple_fact_count: number
+  subjective_count: number
+  ai_evaluation_count: number
+  human_evaluation_count: number
+}
+
+/**
+ * 分页信息接口
+ */
+export interface PaginationInfo {
+  currentPage: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
+}
+
+/**
+ * 批次综合评分响应接口
+ */
+export interface BatchComprehensiveScoresResponse {
+  success: boolean
+  batchInfo: BatchInfo
+  models: ModelInfo[]
+  modelScores: ModelScore[]
+  overview: BatchOverview
+  pagination: PaginationInfo
+}
+
+/**
+ * 获取批次综合评分展示数据
+ * @param batchId 批次ID
+ * @param options 可选参数
+ * @returns 批次综合评分数据
+ *
+ * 接口路径: /api/evaluations/batch/{batchId}/comprehensive-scores
+ * 请求方法: GET
+ *
+ * 可选参数:
+ * - modelIds: 模型ID列表，用于筛选特定模型
+ * - page: 页码（从0开始）
+ * - size: 每页大小
+ */
+export const getBatchComprehensiveScores = (
+  batchId: number | string,
+  options?: {
+    modelIds?: string
+    page?: number | string
+    size?: number | string
+  }
+) => {
+  const params = options || {}
+  return api.get<BatchComprehensiveScoresResponse>(
+    `${apiUrls.evaluations.batchComprehensiveScores}/${batchId}/comprehensive-scores`,
+    { params }
+  )
+}
+
+/**
+ * 客观题详细结果项接口
+ */
+export interface ObjectiveResultItem {
+  questionId: number
+  questionText: string
+  questionType: string
+  standardAnswer: string
+  modelAnswers: {
+    modelId: number
+    modelName: string
+    answerText: string
+    isCorrect: boolean
+    score: number
+    evaluationTime: string
+  }[]
+}
+
+/**
+ * 客观题统计信息接口
+ */
+export interface ObjectiveStatistics {
+  totalQuestions: number
+  averageScore: number
+  accuracyRate: number
+  questionTypeStats: {
+    [key: string]: {
+      count: number
+      averageScore: number
+      accuracyRate: number
+    }
+  }
+}
+
+/**
+ * 客观题详细结果响应接口
+ */
+export interface ObjectiveResultsResponse {
+  success: boolean
+  results: ObjectiveResultItem[]
+  statistics: ObjectiveStatistics
+  pagination: PaginationInfo
+}
+
+/**
+ * 获取客观题详细评测结果
+ * @param options 查询参数
+ * @returns 客观题详细结果
+ *
+ * 接口路径: /api/evaluations/objective/results
+ * 请求方法: GET
+ */
+export const getObjectiveDetailedResults = (options?: {
+  batchId?: number | string
+  modelIds?: string
+  page?: number | string
+  size?: number | string
+}) => {
+  const params = options || {}
+  return api.get<ObjectiveResultsResponse>(
+    apiUrls.evaluations.objectiveResults,
+    { params }
+  )
+}
+
+/**
+ * 主观题评测详情接口
+ */
+export interface SubjectiveEvaluation {
+  evaluatorId: number
+  evaluatorName: string
+  evaluatorType: string
+  overallScore: number
+  comments: string
+  criteriaScores: {
+    criterionName: string
+    score: number
+    comments: string
+  }[]
+  evaluationTime: string
+}
+
+/**
+ * 主观题详细结果项接口
+ */
+export interface SubjectiveResultItem {
+  questionId: number
+  questionText: string
+  questionType: string
+  referenceAnswer: string
+  modelAnswers: {
+    modelId: number
+    modelName: string
+    answerText: string
+    evaluations: SubjectiveEvaluation[]
+  }[]
+}
+
+/**
+ * 主观题统计信息接口
+ */
+export interface SubjectiveStatistics {
+  totalQuestions: number
+  averageScore: number
+  evaluatorStats: {
+    evaluatorId: number
+    evaluatorName: string
+    evaluatorType: string
+    evaluatedCount: number
+    averageScore: number
+  }[]
+  criteriaStats: {
+    criterionName: string
+    averageScore: number
+    evaluatedCount: number
+  }[]
+}
+
+/**
+ * 主观题详细结果响应接口
+ */
+export interface SubjectiveResultsResponse {
+  success: boolean
+  results: SubjectiveResultItem[]
+  statistics: SubjectiveStatistics
+  pagination: PaginationInfo
+}
+
+/**
+ * 获取主观题详细评测结果
+ * @param options 查询参数
+ * @returns 主观题详细结果
+ *
+ * 接口路径: /api/evaluations/subjective/results
+ * 请求方法: GET
+ */
+export const getSubjectiveDetailedResults = (options?: {
+  batchId?: number | string
+  modelIds?: string
+  evaluatorId?: number | string
+  page?: number | string
+  size?: number | string
+}) => {
+  const params = options || {}
+  return api.get<SubjectiveResultsResponse>(
+    apiUrls.evaluations.subjectiveResults,
+    { params }
+  )
+}
+
+/**
+ * 评测进度信息接口
+ */
+export interface EvaluationProgress {
+  status: string
+  progressPercentage: number
+  completedAnswers: number
+  totalAnswers: number
+  failedAnswers: number
+  startTime: string
+  estimatedEndTime: string
+  lastActivityTime: string
+}
+
+/**
+ * 评测进度响应接口
+ */
+export interface EvaluationProgressResponse {
+  success: boolean
+  batchId: number
+  evaluatorId: number
+  progress: EvaluationProgress
+}
+
+/**
+ * 获取批次主观题评测进度
+ * @param batchId 批次ID
+ * @param evaluatorId 评测者ID
+ * @returns 评测进度信息
+ *
+ * 接口路径: /api/evaluations/batch/subjective/{batchId}/progress
+ * 请求方法: GET
+ */
+export const getBatchSubjectiveProgress = (
+  batchId: number | string,
+  evaluatorId: number | string
+) => {
+  return api.get<EvaluationProgressResponse>(
+    `${apiUrls.evaluations.batchSubjectiveProgress}/${batchId}/progress`,
+    { params: { evaluatorId } }
+  )
+}
+
+/**
+ * 评测标准接口
+ */
+export interface EvaluationCriterion {
+  id: number
+  name: string
+  description: string
+  dataType: string
+  scoreRange: string
+  weight: number
+  isRequired: boolean
+  orderIndex: number
+}
+
+/**
+ * 评测标准响应接口
+ */
+export interface EvaluationCriteriaResponse {
+  success: boolean
+  criteria: EvaluationCriterion[]
+  pagination: PaginationInfo
+}
+
+/**
+ * 获取评测标准列表
+ * @param options 查询参数
+ * @returns 评测标准列表
+ *
+ * 接口路径: /api/evaluations/criteria
+ * 请求方法: GET
+ */
+export const getEvaluationCriteria = (options?: {
+  questionType?: string
+  page?: number | string
+  size?: number | string
+}) => {
+  const params = options || {}
+  return api.get<EvaluationCriteriaResponse>(
+    apiUrls.evaluations.criteria,
+    { params }
+  )
+}

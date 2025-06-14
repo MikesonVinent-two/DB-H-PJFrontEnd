@@ -55,7 +55,7 @@
         <div v-if="evaluationResult" class="evaluation-result">
           <el-descriptions title="评测结果统计" :column="2" border>
             <el-descriptions-item label="总答案数量">{{ evaluationResult.totalAnswers }}</el-descriptions-item>
-            <el-descriptions-item label="平均得分">{{ evaluationResult.averageScore.toFixed(2) }}</el-descriptions-item>
+            <el-descriptions-item label="平均得分">{{ (evaluationResult.averageScore || 0).toFixed(2) }}</el-descriptions-item>
             <el-descriptions-item label="成功数量">{{ evaluationResult.successCount }}</el-descriptions-item>
             <el-descriptions-item label="失败数量">{{ evaluationResult.failedCount }}</el-descriptions-item>
           </el-descriptions>
@@ -83,7 +83,7 @@
                   {{ getModelName(modelId) }}
                 </div>
               </template>
-              <div class="average-score">{{ score.toFixed(2) }}</div>
+              <div class="average-score">{{ (score || 0).toFixed(2) }}</div>
             </el-card>
           </div>
 
@@ -96,7 +96,7 @@
                   {{ getQuestionTypeText(type) }}
                 </div>
               </template>
-              <div class="average-score">{{ score.toFixed(2) }}</div>
+              <div class="average-score">{{ (score || 0).toFixed(2) }}</div>
             </el-card>
           </div>
 
@@ -140,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Back, VideoPlay } from '@element-plus/icons-vue'
@@ -164,7 +164,8 @@ const batchName = computed(() => route.query.batchName as string || '未命名�
 
 // 检查批次ID是否有效
 const isValidBatchId = computed(() => {
-  return !!batchId.value && batchId.value !== 'undefined' && batchId.value !== 'null'
+  const id = batchId.value
+  return !!(id && id.trim() && id !== 'undefined' && id !== 'null' && id !== '' && !isNaN(Number(id)))
 })
 
 // 状态
@@ -190,7 +191,7 @@ const questionTypeStats = computed(() => {
   return Object.entries(evaluationResult.value.typeStatistics).map(([type, stats]) => ({
     type,
     count: stats.count,
-    averageScore: stats.averageScore.toFixed(2)
+    averageScore: (stats.averageScore || 0).toFixed(2)
   }))
 })
 
@@ -220,6 +221,12 @@ const goBack = () => {
 
 // 获取详细评测结果
 const fetchDetailResults = async () => {
+  // 验证batchId是否有效
+  if (!isValidBatchId.value) {
+    console.warn('batchId无效，跳过获取详细评测结果')
+    return
+  }
+
   try {
     loadingDetails.value = true
 
@@ -263,7 +270,9 @@ const startEvaluation = async () => {
     ElMessage.success('客观题评测完成')
 
     // 获取详细评测结果
-    await fetchDetailResults()
+    if (isValidBatchId.value) {
+      await fetchDetailResults()
+    }
   } catch (error) {
     console.error('客观题评测失败:', error)
     ElMessage.error('客观题评测失败')
@@ -292,12 +301,16 @@ const startProgressSimulation = () => {
 // 详细结果分页处理
 const handleDetailSizeChange = (val: number) => {
   detailPageSize.value = val
-  fetchDetailResults()
+  if (isValidBatchId.value) {
+    fetchDetailResults()
+  }
 }
 
 const handleDetailPageChange = (val: number) => {
   detailPage.value = val
-  fetchDetailResults()
+  if (isValidBatchId.value) {
+    fetchDetailResults()
+  }
 }
 
 // 获取正确状态的标签类型
@@ -316,6 +329,12 @@ const getCorrectText = (score: number) => {
 
 // 获取评测结果
 const fetchEvaluationResults = async () => {
+  // 验证batchId是否有效
+  if (!isValidBatchId.value) {
+    console.warn('batchId无效，跳过获取评测结果')
+    return
+  }
+
   try {
     loading.value = true
 
@@ -335,6 +354,12 @@ const fetchEvaluationResults = async () => {
 
 // 尝试获取已有的评测结果
 const tryFetchExistingResults = async () => {
+  // 验证batchId是否有效
+  if (!isValidBatchId.value) {
+    console.warn('batchId无效，跳过获取已有评测结果')
+    return false
+  }
+
   try {
     loading.value = true
 
@@ -397,11 +422,19 @@ const tryFetchExistingResults = async () => {
 }
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
+  // 等待路由参数完全加载
+  await nextTick()
+
+  console.log('客观题评测页面初始化 - batchId:', batchId.value, 'isValid:', isValidBatchId.value)
+
   // 只有在批次ID有效时才加载评测结果
-  if (isValidBatchId.value) {
+  if (isValidBatchId.value && batchId.value && batchId.value !== 'undefined' && batchId.value !== 'null') {
+    console.log('batchId有效，开始检查评测结果')
     // 检查是否已有评测结果
     fetchEvaluationResults()
+  } else {
+    console.log('batchId无效，跳过加载评测结果')
   }
 })
 

@@ -78,6 +78,18 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
 
+  // WebSocket测试页面
+  {
+    path: '/websocket-test',
+    name: 'websocket-test',
+    component: () => import('../components/WebSocketTestPage.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'WebSocket消息测试',
+      roles: ['ADMIN', 'CURATOR', 'EXPERT', 'ANNOTATOR', 'REFEREE', 'CROWDSOURCE_USER']
+    }
+  },
+
   // 数据管理功能
   {
     path: '/data/original-questions',

@@ -45,6 +45,18 @@
               <el-tag :type="getRoleTagType(scope.row.role)">{{ getRoleDisplayName(scope.row.role) }}</el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="评测员状态" width="120">
+            <template #default="scope">
+              <el-tag v-if="scope.row.isEvaluator" type="success" size="small">
+                <el-icon><UserFilled /></el-icon>
+                评测员
+              </el-tag>
+              <el-tag v-else type="info" size="small">
+                <el-icon><User /></el-icon>
+                普通用户
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="createdAt" label="创建时间" width="180">
             <template #default="scope">
               {{ formatDate(scope.row.createdAt) }}
@@ -55,21 +67,39 @@
               {{ formatDate(scope.row.updatedAt) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" fixed="right" width="150">
+          <el-table-column label="操作" fixed="right" width="200">
             <template #default="scope">
-              <el-button size="small" @click="handleViewUser(scope.row)">查看</el-button>
-              <el-dropdown trigger="click" @command="(command) => handleCommand(command, scope.row)">
-                <el-button size="small" type="primary">
-                  更多操作<el-icon class="el-icon--right"><arrow-down /></el-icon>
+              <div class="action-buttons">
+                <el-button size="small" @click="handleViewUser(scope.row)">查看</el-button>
+                <el-button
+                  v-if="!scope.row.isEvaluator"
+                  size="small"
+                  type="success"
+                  :loading="evaluatorLoading === scope.row.id"
+                  @click="handleSetAsEvaluator(scope.row)">
+                  设为评测员
                 </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="edit">编辑</el-dropdown-item>
-                    <el-dropdown-item command="deactivate" divided>注销账户</el-dropdown-item>
-                    <el-dropdown-item command="delete" divided style="color: #F56C6C;">删除用户</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
+                <el-button
+                  v-else
+                  size="small"
+                  type="warning"
+                  :loading="evaluatorLoading === scope.row.id"
+                  @click="handleRemoveEvaluator(scope.row)">
+                  取消评测员
+                </el-button>
+                <el-dropdown trigger="click" @command="(command) => handleCommand(command, scope.row)">
+                  <el-button size="small" type="primary">
+                    更多<el-icon class="el-icon--right"><arrow-down /></el-icon>
+                  </el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                      <el-dropdown-item command="deactivate" divided>注销账户</el-dropdown-item>
+                      <el-dropdown-item command="delete" divided style="color: #F56C6C;">删除用户</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -155,6 +185,16 @@
             {{ getRoleDisplayName(viewingUser.role) }}
           </el-tag>
         </el-descriptions-item>
+        <el-descriptions-item label="评测员状态">
+          <el-tag v-if="viewingUser.isEvaluator" type="success" size="small">
+            <el-icon><UserFilled /></el-icon>
+            评测员 (ID: {{ viewingUser.evaluatorId }})
+          </el-tag>
+          <el-tag v-else type="info" size="small">
+            <el-icon><User /></el-icon>
+            普通用户
+          </el-tag>
+        </el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ formatDate(viewingUser.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="更新时间">{{ formatDate(viewingUser.updatedAt) }}</el-descriptions-item>
       </el-descriptions>
@@ -165,9 +205,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, ArrowDown } from '@element-plus/icons-vue'
+import { Search, ArrowDown, User, UserFilled } from '@element-plus/icons-vue'
 import { searchUsers, UserRole, deleteUser, updateUser, deactivateUser } from '@/api/user'
 import type { UserInfo, UpdateUserData } from '@/api/user'
+import { createEvaluator, deleteEvaluator, EvaluatorType } from '@/api/evaluator'
+import { useUserStore } from '@/stores/user'
 import type { FormInstance, FormRules } from 'element-plus'
 
 // 搜索关键词
@@ -188,6 +230,12 @@ const editDialogVisible = ref(false)
 const editFormRef = ref<FormInstance>()
 const submitting = ref(false)
 const currentUserId = ref<number | null>(null)
+
+// 用户store
+const userStore = useUserStore()
+
+// 评测员操作相关
+const evaluatorLoading = ref<number | null>(null)
 
 // 编辑表单数据
 const editForm = reactive<UpdateUserData>({
@@ -239,6 +287,21 @@ const viewingUser = ref<UserInfo>({
 
 // 初始化加载用户数据
 onMounted(() => {
+  // 确保用户store已初始化
+  userStore.initializeFromStorage()
+
+  // 调试：检查localStorage中的用户数据
+  const storedUser = localStorage.getItem('user')
+  console.log('localStorage中的用户数据:', storedUser)
+  if (storedUser) {
+    try {
+      const userData = JSON.parse(storedUser)
+      console.log('解析后的用户数据:', userData)
+    } catch (e) {
+      console.error('解析用户数据失败:', e)
+    }
+  }
+
   fetchUserList()
 })
 
@@ -433,6 +496,107 @@ const getRoleTagType = (role: UserRole) => {
   return typeMap[role] || ''
 }
 
+// 设为评测员
+const handleSetAsEvaluator = async (user: UserInfo) => {
+  try {
+    const result = await ElMessageBox.confirm(
+      `确定要将用户 "${user.username}" 设为评测员吗？`,
+      '设为评测员',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info',
+      }
+    )
+
+    if (result === 'confirm') {
+      evaluatorLoading.value = user.id
+
+      const currentUser = userStore.getCurrentUser()
+      console.log('当前用户信息:', currentUser)
+
+      if (!currentUser) {
+        ElMessage.error('未获取到当前用户信息，请重新登录')
+        return
+      }
+
+      if (!currentUser.id) {
+        ElMessage.error('当前用户ID为空，请重新登录')
+        console.error('当前用户对象:', currentUser)
+        return
+      }
+
+      // 创建评测员
+      const evaluatorData = {
+        name: `${user.username}的评测账号`,
+        evaluatorType: EvaluatorType.HUMAN,
+        user: {
+          id: user.id
+        },
+        createdByUser: {
+          id: currentUser.id
+        }
+      }
+
+      console.log('创建评测员请求数据:', evaluatorData)
+      await createEvaluator(evaluatorData)
+
+      ElMessage.success(`用户 "${user.username}" 已成功设为评测员`)
+      // 重新加载用户列表
+      fetchUserList()
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('设为评测员失败:', error)
+      ElMessage.error(error?.response?.data?.message || '设为评测员失败')
+    }
+  } finally {
+    evaluatorLoading.value = null
+  }
+}
+
+// 取消评测员
+const handleRemoveEvaluator = async (user: UserInfo) => {
+  if (!user.evaluatorId) {
+    ElMessage.error('未找到评测员信息')
+    return
+  }
+
+  try {
+    const result = await ElMessageBox.confirm(
+      `确定要取消用户 "${user.username}" 的评测员身份吗？此操作将删除相关的评测员记录。`,
+      '取消评测员',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    if (result === 'confirm') {
+      evaluatorLoading.value = user.id
+
+      // 删除评测员
+      const deleteResult = await deleteEvaluator(user.evaluatorId)
+
+      if (deleteResult.success) {
+        ElMessage.success(`用户 "${user.username}" 的评测员身份已成功取消`)
+        // 重新加载用户列表
+        fetchUserList()
+      } else {
+        ElMessage.error(deleteResult.message || '取消评测员失败')
+      }
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('取消评测员失败:', error)
+      ElMessage.error(error?.response?.data?.message || '取消评测员失败')
+    }
+  } finally {
+    evaluatorLoading.value = null
+  }
+}
+
 // 处理下拉菜单命令
 const handleCommand = (command: string, user: UserInfo) => {
   switch (command) {
@@ -489,5 +653,16 @@ const handleCommand = (command: string, user: UserInfo) => {
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.action-buttons .el-button {
+  margin: 0;
 }
 </style>

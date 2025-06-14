@@ -32,6 +32,8 @@ export interface UserInfo {
   createdAt: string
   updatedAt: string
   email?: string
+  isEvaluator?: boolean    // 新增：是否是评测员
+  evaluatorId?: number     // 新增：评测员ID（仅当isEvaluator为true时存在）
 }
 
 // 登录响应结构

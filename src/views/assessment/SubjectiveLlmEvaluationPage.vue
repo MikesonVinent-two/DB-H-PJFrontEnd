@@ -73,7 +73,7 @@
               <div class="score-stats">
                 <div class="stat-item">
                   <span class="stat-label">平均分:</span>
-                  <span class="stat-value">{{ evaluationStats.averageScore.toFixed(1) }}</span>
+                  <span class="stat-value">{{ (evaluationStats.averageScore || 0).toFixed(1) }}</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-label">最高分:</span>
@@ -173,8 +173,11 @@
                     >
                       <div class="criterion-option">
                         <span>{{ criterion.name }}</span>
-                        <el-tag size="small" :type="getQuestionTypeTagType(criterion.questionType)">
-                          {{ getQuestionTypeDisplay(criterion.questionType) }}
+                        <el-tag size="small" :type="criterion.questionType ? getQuestionTypeTagType(criterion.questionType) : 'info'">
+                          {{ criterion.questionType ? getQuestionTypeDisplay(criterion.questionType) : (criterion.dataType || '评分') }}
+                        </el-tag>
+                        <el-tag size="small" type="warning" v-if="criterion.scoreRange">
+                          {{ criterion.scoreRange }}
                         </el-tag>
                         <el-tooltip :content="criterion.description" placement="top">
                           <el-icon><InfoFilled /></el-icon>
@@ -230,8 +233,26 @@
           </el-result>
         </div>
 
-        <!-- 已评测答案列表 -->
-        <el-divider>已评测答案</el-divider>
+        <!-- 答案列表 -->
+        <el-divider>批次答案列表</el-divider>
+
+        <div style="margin-bottom: 16px;">
+          <el-alert
+            type="info"
+            :closable="false"
+            show-icon
+            style="margin-bottom: 12px;"
+          >
+            <p>该区域显示该批次的所有答案及其评测状态。</p>
+            <p>绿色标签表示已评测，灰色表示未评测。点击"刷新评测结果"按钮查看最新数据。</p>
+          </el-alert>
+          <div style="display: flex; justify-content: flex-end;">
+            <el-button type="primary" @click="refreshEvaluationResults" :loading="loadingEvaluated">
+              <el-icon><Refresh /></el-icon>
+              刷新评测结果
+            </el-button>
+          </div>
+        </div>
         <div class="evaluated-answers">
           <el-table
             v-loading="loadingEvaluated"
@@ -240,17 +261,45 @@
             style="width: 100%"
             max-height="600"
           >
-            <el-table-column prop="question_text" label="问题" min-width="200" show-overflow-tooltip />
-            <el-table-column prop="answer_text" label="回答" min-width="200" show-overflow-tooltip />
-            <el-table-column prop="model_name" label="模型" width="120" />
-            <el-table-column prop="score" label="评分" width="100">
+            <template #empty>
+              <div style="padding: 40px; text-align: center; color: #909399;">
+                <el-icon size="48" style="margin-bottom: 16px;"><DataAnalysis /></el-icon>
+                <p>暂无数据</p>
+                <p style="font-size: 12px; margin-top: 8px;">
+                  该批次可能还没有答案数据，或者答案尚未进行评测。<br/>
+                  点击上方"刷新评测结果"按钮查看最新数据
+                </p>
+              </div>
+            </template>
+            <el-table-column prop="questionText" label="问题" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="answerText" label="回答" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="modelName" label="模型" width="120" />
+            <el-table-column label="评测状态" width="100">
               <template #default="scope">
-                <el-tag :type="getScoreTagType(scope.row.score)">
-                  {{ scope.row.score }}
+                <el-tag v-if="scope.row.evaluations && scope.row.evaluations.length > 0" type="success">
+                  已评测
+                </el-tag>
+                <el-tag v-else type="info">
+                  未评测
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="comments" label="评语" min-width="150" show-overflow-tooltip />
+            <el-table-column label="评分" width="100">
+              <template #default="scope">
+                <el-tag v-if="scope.row.evaluations && scope.row.evaluations.length > 0" :type="getScoreTagType(scope.row.evaluations[0].score)">
+                  {{ scope.row.evaluations[0].score }}
+                </el-tag>
+                <span v-else style="color: #909399;">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="评语" min-width="150" show-overflow-tooltip>
+              <template #default="scope">
+                <span v-if="scope.row.evaluations && scope.row.evaluations.length > 0">
+                  {{ scope.row.evaluations[0].comments || '无评语' }}
+                </span>
+                <span v-else style="color: #909399;">-</span>
+              </template>
+            </el-table-column>
             <el-table-column label="操作" width="120">
               <template #default="scope">
                 <el-button type="primary" link @click="viewEvaluationDetail(scope.row)">
@@ -283,15 +332,19 @@
         <div v-if="evaluationDetailDialog.data" class="evaluation-detail">
           <div class="detail-section">
             <h3>问题</h3>
-            <p>{{ evaluationDetailDialog.data.question_text }}</p>
+            <p>{{ evaluationDetailDialog.data.questionText }}</p>
           </div>
           <div class="detail-section">
             <h3>模型回答</h3>
-            <p>{{ evaluationDetailDialog.data.answer_text }}</p>
+            <p>{{ evaluationDetailDialog.data.answerText }}</p>
           </div>
-          <div class="detail-section">
-            <h3>评分: {{ evaluationDetailDialog.data.score }}</h3>
-            <p>{{ evaluationDetailDialog.data.comments }}</p>
+          <div class="detail-section" v-if="evaluationDetailDialog.data.evaluations && evaluationDetailDialog.data.evaluations.length > 0">
+            <h3>评分: {{ evaluationDetailDialog.data.evaluations[0].score }}</h3>
+            <p>{{ evaluationDetailDialog.data.evaluations[0].comments || '无评语' }}</p>
+          </div>
+          <div class="detail-section" v-else>
+            <h3>评分状态</h3>
+            <p class="text-gray-400">该答案尚未进行评测</p>
           </div>
           <div class="detail-section" v-if="evaluationDetailDialog.data.evaluation_results?.criteriaScores?.length">
             <h3>详细评分</h3>
@@ -320,10 +373,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, reactive } from 'vue'
+import { ref, onMounted, computed, reactive, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Back, VideoPlay, Connection, InfoFilled, Histogram, DataAnalysis } from '@element-plus/icons-vue'
+import { Back, VideoPlay, Connection, InfoFilled, Histogram, DataAnalysis, Refresh } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import {
   evaluateBatchSubjective,
@@ -347,7 +400,8 @@ const batchName = computed(() => route.query.batchName as string || '未命名�
 
 // 检查批次ID是否有效
 const isValidBatchId = computed(() => {
-  return !!batchId.value && batchId.value !== 'undefined' && batchId.value !== 'null'
+  const id = batchId.value
+  return !!(id && id.trim() && id !== 'undefined' && id !== 'null' && id !== '' && !isNaN(Number(id)))
 })
 
 // 状态
@@ -504,10 +558,27 @@ const loadAssemblyConfigs = async () => {
 const loadEvaluationCriteria = async () => {
   try {
     const criteria = await getAllEvaluationCriteria()
-    availableCriteria.value = criteria.filter(criterion => criterion.questionType === 'SUBJECTIVE')
-    if (availableCriteria.value.length > 0) {
-      // 默认选择前3个评测标准
-      evaluationForm.criteriaIds = availableCriteria.value.slice(0, 3).map(c => c.id)
+    console.log('获取到的评测标准数据:', criteria)
+
+    // 检查数据结构，如果没有questionType字段，则显示所有标准
+    if (criteria.length > 0) {
+      console.log('第一个评测标准的结构:', criteria[0])
+
+      // 如果数据有questionType字段，则过滤主观题；否则显示所有
+      if (criteria[0].hasOwnProperty('questionType')) {
+        availableCriteria.value = criteria.filter(criterion => criterion.questionType === 'SUBJECTIVE')
+        console.log('过滤后的主观题评测标准:', availableCriteria.value)
+      } else {
+        // 没有questionType字段，显示所有标准
+        availableCriteria.value = criteria
+        console.log('没有questionType字段，显示所有评测标准:', availableCriteria.value)
+      }
+
+      if (availableCriteria.value.length > 0) {
+        // 默认选择前3个评测标准
+        evaluationForm.criteriaIds = availableCriteria.value.slice(0, 3).map(c => c.id)
+        console.log('默认选择的评测标准ID:', evaluationForm.criteriaIds)
+      }
     }
   } catch (error) {
     console.error('加载评测标准失败:', error)
@@ -517,6 +588,12 @@ const loadEvaluationCriteria = async () => {
 
 // 加载评测统计
 const loadEvaluationStats = async () => {
+  // 验证batchId是否有效
+  if (!isValidBatchId.value) {
+    console.warn('batchId无效，跳过加载评测统计')
+    return
+  }
+
   try {
     // 获取已评测答案数量
     const completedResponse = await getSubjectiveEvaluationResults({
@@ -549,10 +626,18 @@ const loadEvaluationStats = async () => {
       })
 
       if (allResults.items && allResults.items.length > 0) {
-        const scores = allResults.items.map(item => item.score)
-        evaluationStats.averageScore = scores.reduce((a, b) => a + b, 0) / scores.length
-        evaluationStats.maxScore = Math.max(...scores)
-        evaluationStats.minScore = Math.min(...scores)
+        // 提取有评测结果的项目的分数
+        const scores = allResults.items
+          .filter(item => item.evaluations && item.evaluations.length > 0)
+          .map(item => item.evaluations[0].score)
+
+        if (scores.length > 0) {
+          evaluationStats.averageScore = scores.reduce((a, b) => a + b, 0) / scores.length
+          evaluationStats.maxScore = Math.max(...scores)
+          evaluationStats.minScore = Math.min(...scores)
+        } else {
+          resetEvaluationStats()
+        }
       } else {
         resetEvaluationStats()
       }
@@ -574,6 +659,12 @@ const resetEvaluationStats = () => {
 
 // 加载已评测答案
 const loadEvaluatedAnswers = async () => {
+  // 验证batchId是否有效
+  if (!isValidBatchId.value) {
+    console.warn('batchId无效，跳过加载已评测答案')
+    return
+  }
+
   try {
     loadingEvaluated.value = true
 
@@ -583,8 +674,17 @@ const loadEvaluatedAnswers = async () => {
       size: evaluatedAnswersPageSize.value
     })
 
+    console.log('获取到的评测结果数据:', response)
+    console.log('评测结果项目数量:', response.items?.length || 0)
+    if (response.items && response.items.length > 0) {
+      console.log('第一个评测结果项目结构:', response.items[0])
+    }
+
     evaluatedAnswers.value = response.items || []
     evaluatedAnswersTotal.value = response.totalItems || 0
+
+    console.log('设置到表格的数据:', evaluatedAnswers.value)
+    console.log('总数量:', evaluatedAnswersTotal.value)
   } catch (error) {
     console.error('加载已评测答案失败:', error)
     ElMessage.error('加载已评测答案失败')
@@ -602,13 +702,32 @@ const viewEvaluationDetail = (row: SubjectiveEvaluationResultItem) => {
 // 分页大小变化
 const handleSizeChange = (size: number) => {
   evaluatedAnswersPageSize.value = size
-  loadEvaluatedAnswers()
+  if (isValidBatchId.value) {
+    loadEvaluatedAnswers()
+  }
 }
 
 // 当前页变化
 const handleCurrentChange = (page: number) => {
   evaluatedAnswersPage.value = page
-  loadEvaluatedAnswers()
+  if (isValidBatchId.value) {
+    loadEvaluatedAnswers()
+  }
+}
+
+// 刷新评测结果
+const refreshEvaluationResults = async () => {
+  if (!isValidBatchId.value) {
+    ElMessage.warning('批次ID无效，无法加载评测结果')
+    return
+  }
+
+  console.log('手动刷新评测结果')
+  await Promise.all([
+    loadEvaluationStats(),
+    loadEvaluatedAnswers()
+  ])
+  ElMessage.success('评测结果已刷新')
 }
 
 // 测试模型连通性
@@ -730,10 +849,9 @@ const startProgressSimulation = () => {
       clearInterval(interval)
       evaluationCompleted.value = true
 
-      // 评测完成后，重新加载评测统计和已评测答案
+      // 评测完成后，自动刷新评测结果
       setTimeout(() => {
-        loadEvaluationStats()
-        loadEvaluatedAnswers()
+        refreshEvaluationResults()
       }, 2000)
 
       return
@@ -747,10 +865,9 @@ const startProgressSimulation = () => {
       clearInterval(interval)
       evaluationCompleted.value = true
 
-      // 评测完成后，重新加载评测统计和已评测答案
+      // 评测完成后，自动刷新评测结果
       setTimeout(() => {
-        loadEvaluationStats()
-        loadEvaluatedAnswers()
+        refreshEvaluationResults()
       }, 2000)
     }
   }, 1000)
@@ -779,18 +896,21 @@ const getQuestionTypeTagType = (type: string) => {
 }
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
+  // 等待路由参数完全加载
+  await nextTick()
+
+  console.log('主观题大模型评测页面初始化 - batchId:', batchId.value, 'isValid:', isValidBatchId.value)
+
   // 加载基础数据（无论批次ID是否有效）
   loadAvailableModels()
   loadPromptTemplates()
   loadAssemblyConfigs()
   loadEvaluationCriteria()
 
-  // 只有在批次ID有效时才加载评测统计和已评测答案
-  if (isValidBatchId.value) {
-    loadEvaluationStats()
-    loadEvaluatedAnswers()
-  }
+  // 对于主观题大模型评测页面，不在初始化时自动加载已有结果
+  // 用户需要先选择模型和配置，或者手动刷新查看已有结果
+  console.log('主观题大模型评测页面已初始化，等待用户选择评测配置')
 })
 
 // 定义组件名称

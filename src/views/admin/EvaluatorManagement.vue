@@ -239,8 +239,8 @@ const form = reactive({
   modelId: undefined as number | undefined
 })
 
-// 表单验证规则
-const rules = reactive<FormRules>({
+// 表单验证规则 - 使用计算属性实现动态验证
+const rules = computed<FormRules>(() => ({
   name: [
     { required: true, message: '请输入评测员名称', trigger: 'blur' },
     { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
@@ -248,13 +248,13 @@ const rules = reactive<FormRules>({
   evaluatorType: [
     { required: true, message: '请选择评测员类型', trigger: 'change' }
   ],
-  userId: [
+  userId: form.evaluatorType === EvaluatorType.HUMAN ? [
     { required: true, message: '请选择关联用户', trigger: 'change' }
-  ],
-  modelId: [
+  ] : [],
+  modelId: form.evaluatorType === EvaluatorType.AI_MODEL ? [
     { required: true, message: '请选择关联模型', trigger: 'change' }
-  ]
-})
+  ] : []
+}))
 
 // 获取评测员列表
 const fetchEvaluators = async () => {
@@ -356,11 +356,19 @@ const resetForm = () => {
 
 // 处理表单类型变化
 const handleFormTypeChange = () => {
-  // 清除不相关字段的值
+  // 清除不相关字段的值和验证错误
   if (form.evaluatorType === EvaluatorType.HUMAN) {
     form.modelId = undefined
+    // 清除modelId字段的验证错误
+    if (formRef.value) {
+      formRef.value.clearValidate('modelId')
+    }
   } else {
     form.userId = undefined
+    // 清除userId字段的验证错误
+    if (formRef.value) {
+      formRef.value.clearValidate('userId')
+    }
   }
 }
 
@@ -428,7 +436,19 @@ const submitForm = async () => {
   if (!formRef.value) return
 
   try {
+    // 验证表单
     await formRef.value.validate()
+
+    // 额外的业务逻辑验证
+    if (form.evaluatorType === EvaluatorType.HUMAN && !form.userId) {
+      ElMessage.error('请选择关联用户')
+      return
+    }
+
+    if (form.evaluatorType === EvaluatorType.AI_MODEL && !form.modelId) {
+      ElMessage.error('请选择关联模型')
+      return
+    }
 
     isSubmitting.value = true
 
@@ -478,9 +498,19 @@ const submitForm = async () => {
     // 关闭对话框并刷新列表
     createDialogVisible.value = false
     fetchEvaluators()
-  } catch (error) {
+  } catch (error: any) {
     console.error('提交表单失败:', error)
-    ElMessage.error('提交失败，请检查表单')
+
+    // 如果是表单验证错误，显示具体的验证信息
+    if (error && typeof error === 'object' && error.userId) {
+      ElMessage.error('请选择关联用户')
+    } else if (error && typeof error === 'object' && error.modelId) {
+      ElMessage.error('请选择关联模型')
+    } else if (error?.response?.data?.message) {
+      ElMessage.error(error.response.data.message)
+    } else {
+      ElMessage.error('提交失败，请检查表单')
+    }
   } finally {
     isSubmitting.value = false
   }

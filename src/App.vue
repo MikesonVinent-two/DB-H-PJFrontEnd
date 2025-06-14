@@ -28,7 +28,7 @@ const sidebarWidth = computed(() => {
   const hasValidUser = storedUser && storedUser !== '{}'
 
   if (!hasValidUser) return '0px'
-  return sidebarCollapsed.value ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)'
+  return sidebarCollapsed.value ? '64px' : '200px'
 })
 
 // 监听侧边栏折叠状态变化
@@ -205,6 +205,7 @@ a {
   transition: margin-left 0.3s;
   background-color: var(--background-color);
   z-index: 1;
+  box-sizing: border-box;
 }
 
 /* 响应式布局调整 */

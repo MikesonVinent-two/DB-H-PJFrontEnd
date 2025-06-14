@@ -399,3 +399,62 @@ export const getModelPerformanceByQuestionType = (batchId: number | string, mode
     `${apiUrls.modelScores.performanceByQuestionType}/${batchId}/model/${modelId}/performance-by-question-type`
   )
 }
+
+/**
+ * 模型排名信息接口
+ */
+export interface ModelRankingItem {
+  rank: number
+  model_id: number
+  model_name: string
+  provider: string
+  version: string
+  average_score: number
+  total_answers: number
+  scored_answers: number
+  max_score: number
+  min_score: number
+  calculated_at: string
+}
+
+/**
+ * 模型排名响应接口
+ */
+export interface ModelRankingsResponse {
+  success: boolean
+  batchId: number
+  scoreType: string
+  rankings: ModelRankingItem[]
+  totalModels: number
+}
+
+/**
+ * 获取批次中模型的排名信息
+ * @param batchId 批次ID
+ * @param scoreType 排名依据的评分类型
+ * @returns 模型排名信息
+ *
+ * 接口路径: /api/model-detailed-scores/batch/{batchId}/rankings
+ * 请求方法: GET
+ *
+ * 示例用法:
+ * ```typescript
+ * import { getModelRankings } from '@/api/modelScores'
+ *
+ * // 获取总体评分排名
+ * getModelRankings(123, 'OVERALL').then(result => {
+ *   result.rankings.forEach(model => {
+ *     console.log(`排名${model.rank}: ${model.model_name} - ${model.average_score}分`)
+ *   })
+ * })
+ * ```
+ */
+export const getModelRankings = (
+  batchId: number | string,
+  scoreType: string = 'OVERALL'
+) => {
+  return api.get<ModelRankingsResponse>(
+    `${apiUrls.modelScores.batchRankings}/${batchId}/rankings`,
+    { params: { scoreType } }
+  )
+}
