@@ -33,7 +33,7 @@
 
 ### 1. 克隆项目
 ```bash
-git clone <repository-url>
+git clone https://github.com/MikesonVinent-two/DB-H-PJFrontEnd.git
 cd FrontEnd
 ```
 
@@ -73,7 +73,7 @@ VITE_WS_URL=ws://localhost:8080/api/ws
 npm run dev
 ```
 
-访问 http://localhost:3000 查看应用
+访问 http://localhost:5173 查看应用
 
 ## 📦 可用脚本
 
