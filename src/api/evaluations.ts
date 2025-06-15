@@ -1057,3 +1057,159 @@ export const getEvaluationCriteria = (options?: {
     { params }
   )
 }
+
+// ==================== 评分详情接口 ====================
+
+/**
+ * 评测标准详细评分接口
+ */
+export interface EvaluationDetail {
+  id: number
+  criterionId: number
+  criterionName: string
+  score: number
+  comments: string
+  criterionFullName: string
+  criterionDescription: string
+  criterionMaxScore: number
+  criterionWeight: number
+}
+
+/**
+ * 标准答案接口（根据题型不同而不同）
+ */
+export interface StandardAnswerDetail {
+  type: 'OBJECTIVE' | 'SIMPLE' | 'SUBJECTIVE'
+  answerText?: string
+  scoringGuidance?: string
+  options?: string
+  correctIds?: string
+  alternativeAnswers?: string
+}
+
+/**
+ * 评分详情项接口
+ */
+export interface AnswerEvaluationDetailItem {
+  // 回答基本信息
+  answerId: number
+  answerText: string
+  repeatIndex: number
+  generationTime: string
+
+  // 问题信息
+  questionId: number
+  questionText: string
+  questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'SIMPLE_FACT' | 'SUBJECTIVE'
+  difficultyLevel: string
+
+  // 模型信息
+  modelId: number
+  modelName: string
+  modelProvider: string
+
+  // 运行信息
+  runId: number
+  runName: string
+  batchId: number
+  batchName: string
+
+  // 评测信息
+  evaluationId: number
+  overallScore: number
+  evaluationTime: string
+  evaluationType: 'AI_MODEL' | 'HUMAN'
+  evaluationStatus: string
+  evaluationComments: string
+
+  // 评测员信息
+  evaluatorId: number
+  evaluatorName: string
+  evaluatorType: 'AI_MODEL' | 'HUMAN'
+
+  // 评测结果详情
+  evaluationResults: {
+    总分: number
+    评测依据: Record<string, {
+      评分: number
+      评语: string
+    }>
+    建议?: string
+  }
+
+  // 各评测标准详细评分
+  evaluationDetails: EvaluationDetail[]
+
+  // 标准答案
+  standardAnswer: StandardAnswerDetail
+}
+
+/**
+ * 评分详情响应接口
+ */
+export interface AnswerEvaluationDetailResponse {
+  success: boolean
+  items: AnswerEvaluationDetailItem[]
+  totalItems: number
+  totalPages: number
+  currentPage: number
+  pageSize: number
+}
+
+/**
+ * 获取回答的所有评分详情（分页）
+ * @param params 查询参数
+ * @returns 评分详情列表
+ *
+ * 接口路径: /api/evaluations/answer-evaluations
+ * 请求方法: GET
+ *
+ * 支持的查询参数:
+ * - answerId: 指定回答ID，查看特定回答的评分
+ * - batchId: 指定批次ID，查看特定批次的评分
+ * - questionId: 指定问题ID，查看特定问题的评分
+ * - modelIds: 模型ID列表，筛选特定模型的回答
+ * - evaluatorIds: 评测员ID列表，筛选特定评测员的评分
+ * - questionType: 问题类型筛选
+ * - page: 页码（从0开始）
+ * - size: 每页大小
+ *
+ * 示例用法:
+ * ```typescript
+ * // 查看特定批次的所有评分
+ * getAnswerEvaluationDetails({ batchId: 202, page: 0, size: 10 })
+ *
+ * // 查看特定问题的所有模型回答评分
+ * getAnswerEvaluationDetails({ questionId: 456, modelIds: [1, 2, 3], page: 0, size: 20 })
+ *
+ * // 查看特定评测员对主观题的评分
+ * getAnswerEvaluationDetails({ evaluatorIds: [404], questionType: 'SUBJECTIVE', page: 0, size: 15 })
+ *
+ * // 查看特定回答的详细评分
+ * getAnswerEvaluationDetails({ answerId: 123 })
+ * ```
+ */
+export const getAnswerEvaluationDetails = (params?: {
+  answerId?: number | string
+  batchId?: number | string
+  questionId?: number | string
+  modelIds?: number[] | string
+  evaluatorIds?: number[] | string
+  questionType?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'SIMPLE_FACT' | 'SUBJECTIVE'
+  page?: number | string
+  size?: number | string
+}) => {
+  // 处理数组参数
+  const processedParams = { ...params }
+  if (params?.modelIds && Array.isArray(params.modelIds)) {
+    processedParams.modelIds = params.modelIds.join(',')
+  }
+  if (params?.evaluatorIds && Array.isArray(params.evaluatorIds)) {
+    processedParams.evaluatorIds = params.evaluatorIds.join(',')
+  }
+
+  return api.get<AnswerEvaluationDetailResponse>(
+    '/api/evaluations/answer-evaluations',
+    { params: processedParams }
+  )
+}

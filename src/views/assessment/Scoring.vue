@@ -27,7 +27,7 @@
             />
           </el-select>
         </div>
-        <div class="selection-item">
+        <!-- <div class="selection-item">
           <label>筛选模型：</label>
           <el-select
             v-model="selectedModelIds"
@@ -44,11 +44,15 @@
               :value="model.id"
             />
           </el-select>
-        </div>
+        </div> -->
         <div class="selection-actions">
           <el-button type="primary" @click="refreshData" :loading="loading">
             <el-icon><Refresh /></el-icon>
             刷新数据
+          </el-button>
+          <el-button type="success" @click="viewEvaluationDetails" :disabled="!selectedBatchId">
+            <el-icon><Document /></el-icon>
+            查看评分详情
           </el-button>
           <el-button @click="exportData" :disabled="!batchData">
             <el-icon><Download /></el-icon>
@@ -123,44 +127,7 @@
         </el-row>
       </div>
 
-      <!-- 图表区域 -->
-      <div class="charts-section">
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-card class="chart-card">
-              <template #header>
-                <span>评分分布</span>
-              </template>
-              <div ref="scoreDistributionChart" class="chart-container"></div>
-            </el-card>
-          </el-col>
-          <el-col :span="12">
-            <el-card class="chart-card">
-              <template #header>
-                <span>题型统计</span>
-              </template>
-              <div class="type-stats">
-                <div v-for="(stat, type) in questionTypeStats" :key="type" class="type-item">
-                  <div class="type-header">
-                    <el-tag :type="getQuestionTypeTagType(type)" size="small">
-                      {{ getQuestionTypeName(type) }}
-                    </el-tag>
-                    <span class="type-count">{{ stat.count }}题</span>
-                  </div>
-                  <div class="type-progress">
-                    <el-progress
-                      :percentage="Math.round((stat.averageScore / 100) * 100)"
-                      :color="getScoreColor(stat.averageScore)"
-                      :show-text="false"
-                    />
-                    <span class="score-value">{{ safeNumber(stat.averageScore).toFixed(1) }}分</span>
-                  </div>
-                </div>
-              </div>
-            </el-card>
-          </el-col>
-        </el-row>
-      </div>
+
 
       <!-- 模型排名 -->
       <div class="ranking-section">
@@ -168,11 +135,11 @@
           <template #header>
             <div class="ranking-header">
               <span>模型排名</span>
-              <el-radio-group v-model="sortBy" size="small" @change="onSortChange">
+              <!-- <el-radio-group v-model="sortBy" size="small" @change="onSortChange">
                 <el-radio-button label="overall">综合评分</el-radio-button>
                 <el-radio-button label="objective">客观题</el-radio-button>
                 <el-radio-button label="subjective">主观题</el-radio-button>
-              </el-radio-group>
+              </el-radio-group> -->
             </div>
           </template>
 
@@ -291,14 +258,159 @@
         @close="showCompareDialog = false"
       />
     </el-dialog>
+
+    <!-- 评分详情弹窗 -->
+    <el-dialog
+      v-model="showEvaluationDetailDialog"
+      title="评分详情"
+      width="90%"
+      :before-close="handleEvaluationDetailDialogClose"
+      top="2vh"
+      :modal="true"
+      :append-to-body="true"
+      :z-index="3000"
+      class="evaluation-detail-dialog"
+    >
+      <div class="evaluation-detail-container">
+        <!-- 筛选条件 -->
+        <el-card class="filter-card" shadow="never">
+          <div class="filter-row">
+            <!-- <div class="filter-item">
+              <label>题型筛选：</label>
+              <el-select
+                v-model="selectedFilters.questionType"
+                placeholder="选择题型"
+                clearable
+                @change="handleEvaluationDetailFilterChange"
+                style="width: 150px"
+              >
+                <el-option label="单选题" value="SINGLE_CHOICE" />
+                <el-option label="多选题" value="MULTIPLE_CHOICE" />
+                <el-option label="简单事实题" value="SIMPLE_FACT" />
+                <el-option label="主观题" value="SUBJECTIVE" />
+              </el-select>
+            </div>
+            <div class="filter-item">
+              <label>模型筛选：</label>
+              <el-select
+                v-model="selectedFilters.modelIds"
+                placeholder="选择模型"
+                multiple
+                collapse-tags
+                clearable
+                @change="handleEvaluationDetailFilterChange"
+                style="width: 250px"
+              >
+                <el-option
+                  v-for="model in availableModels"
+                  :key="model.id"
+                  :label="`${model.name} (${model.provider})`"
+                  :value="model.id"
+                />
+              </el-select>
+            </div> -->
+          </div>
+        </el-card>
+
+        <!-- 评分详情表格 -->
+        <el-card class="detail-table-card">
+                     <el-table
+             :data="evaluationDetailData?.items || []"
+             v-loading="evaluationDetailLoading"
+             stripe
+             border
+             :height="400"
+             :max-height="500"
+           >
+            <el-table-column prop="questionText" label="问题" min-width="200" show-overflow-tooltip />
+
+            <el-table-column label="题型" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag size="small" :type="getQuestionTypeTagType(row.questionType)">
+                  {{ getQuestionTypeText(row.questionType) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="模型" width="150">
+              <template #default="{ row }">
+                <div>
+                  <div class="model-name">{{ row.modelName }}</div>
+                  <div class="model-provider">{{ row.modelProvider }}</div>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column prop="answerText" label="回答内容" min-width="250" show-overflow-tooltip />
+
+            <el-table-column label="评测员" width="120">
+              <template #default="{ row }">
+                <div>
+                  <div class="evaluator-name">{{ row.evaluatorName }}</div>
+                  <el-tag size="small" :type="row.evaluatorType === 'AI_MODEL' ? 'primary' : 'success'">
+                    {{ getEvaluationTypeText(row.evaluationType) }}
+                  </el-tag>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="总分" width="80" align="center">
+              <template #default="{ row }">
+                <div class="score-cell">
+                  <div class="score-number">{{ safeNumber(row.overallScore).toFixed(1) }}</div>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="详细评分" width="200">
+              <template #default="{ row }">
+                <div class="detail-scores">
+                  <div
+                    v-for="detail in row.evaluationDetails?.slice(0, 3) || []"
+                    :key="detail.id"
+                    class="score-item"
+                  >
+                    <span class="criterion-name">{{ detail.criterionName }}:</span>
+                    <span class="criterion-score">{{ detail.score.toFixed(1) }}</span>
+                  </div>
+                  <div v-if="(row.evaluationDetails?.length || 0) > 3" class="more-scores">
+                    +{{ (row.evaluationDetails?.length || 0) - 3 }}项...
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column prop="evaluationComments" label="评语" min-width="200" show-overflow-tooltip />
+
+            <el-table-column label="评测时间" width="150" align="center">
+              <template #default="{ row }">
+                {{ formatDateTime(row.evaluationTime) }}
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 分页 -->
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="evaluationDetailPagination.currentPage"
+              v-model:page-size="evaluationDetailPagination.pageSize"
+              :page-sizes="[10, 20, 50, 100]"
+              :total="evaluationDetailPagination.total"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="handleEvaluationDetailSizeChange"
+              @current-change="handleEvaluationDetailPageChange"
+            />
+          </div>
+        </el-card>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import * as echarts from 'echarts'
 import {
   Refresh,
   Download,
@@ -315,7 +427,10 @@ import {
   type BatchComprehensiveScoresResponse,
   type ModelScore,
   type BatchInfo,
-  type ModelInfo
+  type ModelInfo,
+  getAnswerEvaluationDetails,
+  type AnswerEvaluationDetailResponse,
+  type AnswerEvaluationDetailItem
 } from '@/api/evaluations'
 import { getAllAnswerGenerationBatches, type AnswerGenerationBatch } from '@/api/answerGenerationBatch'
 
@@ -341,9 +456,22 @@ const showCompareDialog = ref(false)
 const selectedModelForDetail = ref<ModelScore | null>(null)
 const selectedModelsForCompare = ref<ModelScore[]>([])
 
-// 图表引用
-const scoreDistributionChart = ref<HTMLElement>()
-let chartInstance: echarts.ECharts | null = null
+// 评分详情相关
+const showEvaluationDetailDialog = ref(false)
+const evaluationDetailLoading = ref(false)
+const evaluationDetailData = ref<AnswerEvaluationDetailResponse | null>(null)
+const evaluationDetailPagination = ref({
+  currentPage: 0,
+  pageSize: 10,
+  total: 0
+})
+const selectedFilters = ref({
+  questionType: '',
+  modelIds: [] as number[],
+  evaluatorIds: [] as number[]
+})
+
+
 
 // 工具函数
 const safeNumber = (value: any): number => {
@@ -360,29 +488,7 @@ const overallAverageScore = computed(() => {
   return total / batchData.value.modelScores.length
 })
 
-const questionTypeStats = computed(() => {
-  if (!batchData.value?.overview) return {}
 
-  const overview = batchData.value.overview
-  return {
-    'SINGLE_CHOICE': {
-      count: overview.single_choice_count || 0,
-      averageScore: overview.single_choice_avg || 0
-    },
-    'MULTIPLE_CHOICE': {
-      count: overview.multiple_choice_count || 0,
-      averageScore: overview.multiple_choice_avg || 0
-    },
-    'SIMPLE_FACT': {
-      count: overview.simple_fact_count || 0,
-      averageScore: overview.simple_fact_avg || 0
-    },
-    'SUBJECTIVE': {
-      count: overview.subjective_count || 0,
-      averageScore: overview.subjective_avg || 0
-    }
-  }
-})
 
 const sortedModelScores = computed(() => {
   if (!batchData.value?.modelScores) return []
@@ -434,25 +540,7 @@ const getRankTagType = (rank: number): string => {
   return 'info'
 }
 
-const getQuestionTypeTagType = (type: string): string => {
-  const typeMap: Record<string, string> = {
-    'SINGLE_CHOICE': 'success',
-    'MULTIPLE_CHOICE': 'warning',
-    'SIMPLE_FACT': 'info',
-    'SUBJECTIVE': 'danger'
-  }
-  return typeMap[type] || 'info'
-}
 
-const getQuestionTypeName = (type: string): string => {
-  const typeMap: Record<string, string> = {
-    'SINGLE_CHOICE': '单选题',
-    'MULTIPLE_CHOICE': '多选题',
-    'SIMPLE_FACT': '简单事实题',
-    'SUBJECTIVE': '主观题'
-  }
-  return typeMap[type] || type
-}
 
 // 数据加载函数
 const loadAvailableBatches = async () => {
@@ -482,11 +570,6 @@ const loadBatchData = async () => {
     if (response.modelScores) {
       availableModels.value = response.modelScores.map(score => score.modelInfo)
     }
-
-    // 渲染图表
-    nextTick(() => {
-      renderScoreDistributionChart()
-    })
   } catch (error) {
     console.error('加载批次数据失败:', error)
     ElMessage.error('加载批次数据失败')
@@ -536,42 +619,102 @@ const handleCompareDialogClose = () => {
   selectedModelsForCompare.value = []
 }
 
-// 图表渲染
-const renderScoreDistributionChart = () => {
-  if (!scoreDistributionChart.value || !batchData.value) return
+// 评分详情相关函数
+const loadEvaluationDetails = async (page = 0) => {
+  if (!selectedBatchId.value) return
 
-  if (chartInstance) {
-    chartInstance.dispose()
+  try {
+    evaluationDetailLoading.value = true
+    const params: any = {
+      batchId: selectedBatchId.value,
+      page,
+      size: evaluationDetailPagination.value.pageSize
+    }
+
+    // 添加筛选条件
+    if (selectedFilters.value.questionType) {
+      params.questionType = selectedFilters.value.questionType
+    }
+    if (selectedFilters.value.modelIds.length > 0) {
+      params.modelIds = selectedFilters.value.modelIds
+    }
+    if (selectedFilters.value.evaluatorIds.length > 0) {
+      params.evaluatorIds = selectedFilters.value.evaluatorIds
+    }
+
+    const response = await getAnswerEvaluationDetails(params)
+    evaluationDetailData.value = response
+    evaluationDetailPagination.value = {
+      currentPage: response.currentPage,
+      pageSize: response.pageSize,
+      total: response.totalItems
+    }
+  } catch (error) {
+    console.error('加载评分详情失败:', error)
+    ElMessage.error('加载评分详情失败')
+  } finally {
+    evaluationDetailLoading.value = false
   }
-
-  chartInstance = echarts.init(scoreDistributionChart.value)
-
-  const option = {
-    title: {
-      text: '评分分布',
-      left: 'center'
-    },
-    tooltip: {
-      trigger: 'item'
-    },
-    xAxis: {
-      type: 'category',
-      data: ['0-60', '60-70', '70-80', '80-90', '90-100']
-    },
-    yAxis: {
-      type: 'value'
-    },
-    series: [{
-      data: [5, 10, 15, 20, 8], // 示例数据
-      type: 'bar',
-      itemStyle: {
-        color: '#409EFF'
-      }
-    }]
-  }
-
-  chartInstance.setOption(option)
 }
+
+const viewEvaluationDetails = () => {
+  showEvaluationDetailDialog.value = true
+  loadEvaluationDetails()
+}
+
+const handleEvaluationDetailPageChange = (page: number) => {
+  loadEvaluationDetails(page - 1) // Element Plus 分页从1开始，API从0开始
+}
+
+const handleEvaluationDetailSizeChange = (size: number) => {
+  evaluationDetailPagination.value.pageSize = size
+  loadEvaluationDetails()
+}
+
+const handleEvaluationDetailFilterChange = () => {
+  loadEvaluationDetails()
+}
+
+const handleEvaluationDetailDialogClose = () => {
+  showEvaluationDetailDialog.value = false
+  evaluationDetailData.value = null
+  selectedFilters.value = {
+    questionType: '',
+    modelIds: [],
+    evaluatorIds: []
+  }
+}
+
+const getQuestionTypeText = (type: string): string => {
+  const typeMap: Record<string, string> = {
+    'SINGLE_CHOICE': '单选题',
+    'MULTIPLE_CHOICE': '多选题',
+    'SIMPLE_FACT': '简单事实题',
+    'SUBJECTIVE': '主观题'
+  }
+  return typeMap[type] || type
+}
+
+const getQuestionTypeTagType = (type: string): string => {
+  const typeMap: Record<string, string> = {
+    'SINGLE_CHOICE': 'success',
+    'MULTIPLE_CHOICE': 'warning',
+    'SIMPLE_FACT': 'info',
+    'SUBJECTIVE': 'danger'
+  }
+  return typeMap[type] || 'info'
+}
+
+const getEvaluationTypeText = (type: string): string => {
+  return type === 'AI_MODEL' ? 'AI评测' : '人工评测'
+}
+
+const formatDateTime = (dateTime: string): string => {
+  if (!dateTime) return '-'
+  return new Date(dateTime).toLocaleString('zh-CN')
+}
+
+
 
 // 生命周期
 onMounted(async () => {
@@ -587,16 +730,7 @@ onMounted(async () => {
   }
 })
 
-// 监听窗口大小变化
-watch(() => showDetailDialog.value, () => {
-  if (!showDetailDialog.value) {
-    nextTick(() => {
-      if (chartInstance) {
-        chartInstance.resize()
-      }
-    })
-  }
-})
+
 </script>
 
 <style scoped>
@@ -714,69 +848,7 @@ watch(() => showDetailDialog.value, () => {
   color: #606266;
 }
 
-.charts-section {
-  margin-bottom: 20px;
-}
 
-.chart-card {
-  height: 350px;
-}
-
-.chart-card .el-card__body {
-  height: calc(100% - 57px);
-  display: flex;
-  flex-direction: column;
-}
-
-.chart-container {
-  height: 280px;
-}
-
-.type-stats {
-  padding: 0;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-}
-
-.type-item {
-  margin-bottom: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 8px 0;
-}
-
-.type-item:last-child {
-  margin-bottom: 0;
-}
-
-.type-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.type-count {
-  font-size: 12px;
-  color: #909399;
-}
-
-.type-progress {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.score-value {
-  font-weight: 500;
-  color: #303133;
-  min-width: 50px;
-  text-align: right;
-}
 
 .ranking-section {
   margin-bottom: 20px;
@@ -828,6 +900,150 @@ watch(() => showDetailDialog.value, () => {
   min-height: 400px;
   background: white;
   border-radius: 8px;
+}
+
+/* 评分详情弹窗样式 */
+.evaluation-detail-dialog {
+  z-index: 3000 !important;
+}
+
+.evaluation-detail-dialog .el-dialog {
+  margin: 0 !important;
+  position: fixed !important;
+  top: 2vh !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  max-height: 96vh !important;
+  overflow: hidden !important;
+}
+
+.evaluation-detail-dialog .el-dialog__body {
+  padding: 10px 20px !important;
+  max-height: calc(96vh - 120px) !important;
+  overflow-y: auto !important;
+}
+
+/* 评分详情容器样式 */
+.evaluation-detail-container {
+  max-height: calc(96vh - 140px);
+  overflow-y: auto;
+}
+
+.filter-card {
+  margin-bottom: 16px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-item label {
+  font-weight: 500;
+  color: #606266;
+  white-space: nowrap;
+}
+
+.detail-table-card {
+  margin-bottom: 16px;
+}
+
+.model-name {
+  font-weight: 500;
+  color: #303133;
+  font-size: 14px;
+}
+
+.model-provider {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
+}
+
+.evaluator-name {
+  font-size: 14px;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.score-cell {
+  text-align: center;
+}
+
+.score-number {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.detail-scores {
+  font-size: 12px;
+}
+
+.score-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.criterion-name {
+  color: #606266;
+  flex: 1;
+}
+
+.criterion-score {
+  color: #303133;
+  font-weight: 500;
+}
+
+.more-scores {
+  color: #909399;
+  font-style: italic;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+/* 确保弹窗遮罩层正确显示 */
+.evaluation-detail-dialog .el-overlay {
+  z-index: 2999 !important;
+}
+
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .evaluation-detail-dialog .el-dialog {
+    width: 95% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .evaluation-detail-dialog .el-dialog {
+    width: 98% !important;
+    top: 1vh !important;
+    max-height: 98vh !important;
+  }
+
+  .evaluation-detail-container {
+    max-height: calc(98vh - 120px);
+  }
+
+  .filter-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 768px) {
