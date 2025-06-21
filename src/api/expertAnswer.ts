@@ -1,7 +1,7 @@
 import api from './index'
 import { apiUrls } from '@/config'
 import type {
-  CreateExpertAnswerRequest,
+  ExpertCandidateAnswerDTO,
   UpdateExpertAnswerRequest,
   ExpertAnswerResponse,
   ExpertAnswerPageResponse,
@@ -9,11 +9,12 @@ import type {
 } from '@/types/expertAnswer'
 
 /**
- * 创建专家回答
- * @param data 专家回答数据
+ * 创建专家候选回答
+ * POST /api/expert-candidate-answers
+ * @param data 专家候选回答数据
  * @returns 创建的专家回答信息
  */
-export const createExpertAnswer = (data: CreateExpertAnswerRequest) => {
+export const createExpertAnswer = (data: ExpertCandidateAnswerDTO) => {
   return api.post<ExpertAnswerResponse>(
     apiUrls.expert.create,
     data

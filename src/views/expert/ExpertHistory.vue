@@ -5,9 +5,12 @@
         <div class="card-header">
           <h2>历史回答记录</h2>
           <div class="header-actions">
-            <el-select v-model="filters.category" placeholder="问题类别" clearable style="width: 150px;">
-              <el-option v-for="item in categories" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
+            <el-input
+              v-model="filters.category"
+              placeholder="输入问题类别"
+              clearable
+              style="width: 150px;"
+            />
             <el-select v-model="filters.status" placeholder="状态" clearable style="width: 150px;">
               <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
@@ -202,14 +205,7 @@ const filters = reactive({
   dateRange: null
 })
 
-// 类别选项
-const categories = [
-  { value: '计算机科学', label: '计算机科学' },
-  { value: '医学健康', label: '医学健康' },
-  { value: '金融经济', label: '金融经济' },
-  { value: '法律', label: '法律' },
-  { value: '教育', label: '教育' }
-]
+// 类别选项已改为自由输入文本框
 
 // 状态选项
 const statusOptions = [

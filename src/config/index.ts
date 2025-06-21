@@ -29,7 +29,7 @@ export const apiUrls = {
     logout: '/api/users/logout',
   },
   user: {
-    profile: '/api/users/profile',
+    profile: '/api/users',
     search: '/api/users/search',
     delete: '/api/users',
     update: '/api/users',

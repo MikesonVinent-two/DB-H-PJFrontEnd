@@ -10,6 +10,16 @@ export interface CreateExpertAnswerRequest {
 }
 
 /**
+ * 专家候选回答数据传输对象
+ * 用于POST /api/expert-candidate-answers接口
+ */
+export interface ExpertCandidateAnswerDTO {
+  standardQuestionId: string | number
+  userId: string | number
+  candidateAnswerText: string
+}
+
+/**
  * 专家回答响应接口
  */
 export interface ExpertAnswerResponse {

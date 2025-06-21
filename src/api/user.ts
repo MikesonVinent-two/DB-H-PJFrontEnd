@@ -200,9 +200,15 @@ export const deactivateUser = (userId: string | number) => {
 
 /**
  * 更新用户信息
+ * @param userId 用户ID
+ * @param data 要更新的用户信息
+ * @returns 更新后的用户信息
  */
-export const updateUserInfo = (data: Partial<UserInfo>) => {
-  return api.put<unknown, UserInfo>(apiUrls.user.profile, data)
+export const updateUserInfo = (userId: string | number, data: Partial<UserInfo>) => {
+  if (!userId) {
+    throw new Error('用户ID不能为空')
+  }
+  return api.put<unknown, UserInfo>(`${apiUrls.user.profile}/${userId}`, data)
 }
 
 /**

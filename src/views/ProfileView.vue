@@ -278,12 +278,11 @@ const submitForm = async () => {
     submitting.value = true
 
     const updatedData = {
-      id: userProfile.value.id,
       name: form.name,
       contactInfo: form.contactInfo
     }
 
-    const result = await updateUserInfo(updatedData)
+    const result = await updateUserInfo(userProfile.value.id, updatedData)
 
     // 更新本地数据
     userProfile.value = result

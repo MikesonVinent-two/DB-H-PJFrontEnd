@@ -5,9 +5,12 @@
         <div class="card-header">
           <h2>专家问题回答</h2>
           <div class="header-actions">
-            <el-select v-model="filters.category" placeholder="问题类别" clearable style="width: 150px;">
-              <el-option v-for="item in categories" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
+            <el-input
+              v-model="filters.category"
+              placeholder="输入问题类别"
+              clearable
+              style="width: 150px;"
+            />
             <el-select v-model="filters.difficulty" placeholder="难度等级" clearable style="width: 150px;">
               <el-option v-for="item in difficulties" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
@@ -260,14 +263,7 @@ const filters = reactive({
   status: ''
 })
 
-// 类别选项（标签）
-const categories = [
-  { value: '计算机科学', label: '计算机科学' },
-  { value: '医学健康', label: '医学健康' },
-  { value: '金融经济', label: '金融经济' },
-  { value: '法律', label: '法律' },
-  { value: '教育', label: '教育' }
-]
+// 类别选项已改为自由输入文本框
 
 // 难度选项
 const difficulties = [
@@ -482,13 +478,11 @@ const submitAnswer = async () => {
     if (valid) {
       submitting.value = true
       try {
-        // 调用API提交专家回答
+        // 调用API提交专家候选回答
         const response = await createExpertAnswer({
           standardQuestionId: currentQuestion.value.id.toString(),
-          expertId: userStore.currentUser.id.toString(),
-          answerText: answerForm.content,
-          explanation: '',  // 可选
-          references: answerForm.references
+          userId: userStore.currentUser.id.toString(),
+          candidateAnswerText: answerForm.content
         })
 
         // 更新问题状态
